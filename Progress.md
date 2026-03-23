@@ -12,5 +12,10 @@ Objective:
   + Read about Coinduction
     * Coinduction All the Way Up
 
+## 24/03
+Todo:
+- Setup Iris: https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/editor.md
+- Learn Iris: https://github.com/logsem/iris-tutorial
+
 ## 23/03
-Reading about RTL
+Read about RTL  and CompCert.
