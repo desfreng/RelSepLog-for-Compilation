@@ -1,86 +1,52 @@
-From Corelib Require Import Setoid.
-
 From Stdlib Require Import Utf8.
-From Stdlib Require Import Lists.List.
-From Stdlib Require Import Strings.String.
-From Stdlib Require Import FSets.FMapPositive.
-From Stdlib Require Import PArith.PArith.
-From Stdlib Require Import ZArith.ZArith.
-From Stdlib Require Import Lia.
-From Stdlib Require Import Logic.FunctionalExtensionality.
 
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import ZArith.ZArith.
+From Stdlib Require Import Relations.Relations.
+
+From RSL Require Import Tactics.
+From RSL Require Import NatMap.
 From RSL Require Import RTL.
 From RSL Require Import Notations.
 
 Import RTLNotations.
 Import ListNotations.
 
-(* [regval] is a mapping from registers to a value *)
-Definition regval : Type := PositiveMap.t val.
+(* [regmap] is a mapping from registers to a value *)
+Definition regmap : Type := NatMap.t val.
 
 (* [memory] is a mapping from location to a value *)
-Definition memory : Type := PositiveMap.t val.
+Definition memory : Type := NatMap.t val.
 
-(* A [pstate] is tuple of [(regval, memory)] *)
-Structure pstate : Type :=
-  { regs : regval;
-    mem : memory
-  }.
-
-Definition get_val (σ: pstate) (r: reg) : val :=
-  match PositiveMap.find r (regs σ) with
+Definition get_reg (ρ: regmap) (r: reg) : val :=
+  match NatMap.find r ρ with
   | Some v => v
   | None => 0%Z (* Dummy val *)
   end.
 
-Definition get_vals (σ: pstate) (l: list reg) : list val :=
-  map (fun r => get_val σ r) l.
+Definition get_regs (ρ: regmap) (l: list reg) : list val :=
+  map (fun r => get_reg ρ r) l.
 
-Definition set_val (σ: pstate) (r: reg) (v: val) : pstate :=
-  {|
-    regs := PositiveMap.add r v (regs σ);
-    mem := mem σ
-  |}.
+Definition set_reg (ρ: regmap) (r: reg) (v: val) : regmap :=
+  NatMap.add r v ρ.
 
-Definition get_at (σ: pstate) (addr: val) : option val :=
-  PositiveMap.find (Z.to_pos addr) (mem σ).
+Definition get_at (m: memory) (addr: val) : option val :=
+  if (addr >=? 0)%Z
+  then NatMap.find (Z.to_nat addr) m
+  else None.
 
-Definition set_at (σ: pstate) (addr: val) (v: val) : pstate :=
-  {|
-    regs := regs σ;
-    mem := PositiveMap.add (Z.to_pos addr) v (mem σ)
-  |}.
-
-(* Read register *)
-Notation "σ '[|' r '|]'" :=
-  (get_val σ r) (at level 9, no associativity).
-
-(* Read multiples registers *)
-Notation "σ '[[|' l '|]]'" :=
-  (get_vals σ l) (at level 9, no associativity).
-
-(* Set register *)
-Notation "σ '[|' r '<-' v '|]'" :=
-  (set_val σ r v) (at level 9, no associativity).
-
-(* Read at address *)
-Notation "σ '[|' '@' k '|]'" :=
-  (get_at σ k) (at level 9, no associativity).
-
-(* Set at address register *)
-Notation "σ '[|' '@' r '<-' v '|]'" :=
-  (set_at σ r v) (at level 9, no associativity).
+Definition set_at (m: memory) (addr: val) (v: val) : option memory :=
+  if (addr >=? 0)%Z
+  then
+    let addr := Z.to_nat addr in
+    if NatMap.mem addr m
+    then Some (NatMap.add addr v m)
+    else None
+  else None.
 
 (* Assert that instruction at [pc] in function [f] is [i] *)
-Notation "pc '|->' i 'in' m" :=
-  (PositiveMap.find pc (fn_code m) = Some i) (at level 60, no associativity).
-
-Ltac pc_inj :=
-  match goal with
-  | [ H1: ?pc |-> ?x in ?f, H2: ?pc |-> ?y in ?f |- _ ] =>
-      let H := fresh in
-      assert (H: x = y) by congruence; inversion H; subst; clear H2 H
-  end.
+Notation "f '@' pc 'is' i" :=
+  (NatMap.find pc (fn_code f) = Some i) (at level 60, no associativity).
 
 Definition eval_op (op: op) (args: list val) : option val :=
   match op, args with
@@ -88,47 +54,39 @@ Definition eval_op (op: op) (args: list val) : option val :=
   | Sub, [v1; v2] => Some (v1 - v2)%Z
   | Mul, [v1; v2] => Some (v1 * v2)%Z
   | Move, [v] => Some v
+  | LoadI v, [] => Some v
   | _, _ => None
   end.
 
-Fixpoint init_regs (vl: list val) (rl: list reg) : regval :=
+Fixpoint init_regs (vl: list val) (rl: list reg) : regmap :=
   match rl, vl with
-  | r :: rs, v :: vs => PositiveMap.add r v (init_regs vs rs)
-  | _, _ => PositiveMap.empty _
+  | r :: rs, v :: vs => NatMap.add r v (init_regs vs rs)
+  | _, _ => NatMap.empty _
   end.
-
-Definition init_state (m: memory) (vl: list val) (rl: list reg) : pstate :=
-  {|
-    regs := init_regs vl rl;
-    mem := m
-  |}.
 
 Inductive stackframe : Type :=
 | Stackframe
     (res: reg) (* where to store the result *)
     (f: function) (* calling function *)
     (pc: node) (* program point in caller function *)
-    (rgs: regval) (* state in caller function *)
+    (ρ: regmap) (* state in caller function *)
 .
 
-Inductive state : Type :=
+Inductive pcstate : Type :=
 | State
-    (ρ: list stackframe) (* call stack *)
     (f: function) (* current function *)
     (pc: node) (* current program point in c *)
-    (σ: pstate) (* register state *)
+    (ρ: regmap) (* register state *)
 
 | CallState
-    (ρ: list stackframe) (* call stack *)
     (f: function) (* function to call *)
     (args: list val) (* arguments to the call *)
-    (mem: memory) (* memory state *)
 
 | ReturnState
-    (ρ: list stackframe) (* call stack *)
     (v: val) (* return value for the call *)
-    (mem: memory) (* memory state *)
 .
+
+Definition state : Type := list stackframe * pcstate * memory.
 
 Definition find_fun (P: program) (s: sig) : option function :=
   List.find
@@ -142,274 +100,155 @@ Definition find_fun (P: program) (s: sig) : option function :=
 Reserved Notation "P '⊢' s '->>' t" (at level 60, right associativity).
 
 Inductive step (P: program) : state -> state -> Prop :=
-| exec_Inop: forall ρ f pc σ pc',
-  pc |-> <{ nop -> pc' }> in f ->
-  P ⊢ State ρ f pc σ ->> State ρ f pc' σ
+| exec_Inop: forall σ m ρ f pc pc',
+  f@pc is <{ nop -> pc' }> ->
+  P ⊢ (σ, State f pc ρ, m) ->> (σ, State f pc' ρ, m)
 
-| exec_Iret: forall ρ f pc σ r,
-  pc |-> <{ ret r }> in f ->
-  P ⊢ State ρ f pc σ ->> ReturnState ρ σ[|r|] (mem σ)
+| exec_Iret: forall σ m ρ f pc r v,
+  f@pc is <{ ret r }> ->
+  get_reg ρ r = v ->
+  P ⊢ (σ, State f pc ρ, m) ->> (σ, ReturnState v, m)
 
-| exec_Iop: forall ρ f pc σ op args dst pc' v,
-  pc |-> <{ dst := @op args -> pc' }> in f ->
-  eval_op op σ[[| args |]] = Some v ->
-  P ⊢ State ρ f pc σ ->> State ρ f pc' σ[|dst <- v|]
+| exec_Iop: forall σ m ρ f pc op args dst pc' ρ' v,
+  f@pc is <{ dst := @op args -> pc' }> ->
+  eval_op op (get_regs ρ args) = Some v ->
+  set_reg ρ dst v = ρ' ->
+  P ⊢ (σ, State f pc ρ, m) ->> (σ, State f pc' ρ', m)
 
-| exec_Iloadi: forall ρ f pc σ dst pc' v,
-  pc |-> <{ dst := #v -> pc' }> in f ->
-  P ⊢ State ρ f pc σ ->> State ρ f pc' σ[|dst <- v|]
+| exec_Iload: forall σ m ρ f pc dst src pc' ρ' addr v,
+  f@pc is <{ dst := !src -> pc' }> ->
+  get_reg ρ src = addr ->
+  get_at m addr = Some v ->
+  set_reg ρ dst v = ρ' ->
+  P ⊢ (σ, State f pc ρ, m) ->> (σ, State f pc' ρ', m)
 
-| exec_Iload: forall ρ f pc σ dst src pc' a v,
-  pc |-> <{ dst := !src -> pc' }> in f ->
-  σ[|src|] = a ->
-  σ[|@a|] = Some v ->
-  P ⊢ State ρ f pc σ ->> State ρ f pc' σ[|dst <- v|]
+| exec_Istore: forall σ m ρ f pc dst src pc' m' addr v,
+  f@pc is <{ !dst := src -> pc' }> ->
+  get_reg ρ dst = addr ->
+  get_reg ρ src = v ->
+  set_at m addr v = Some m' ->
+  P ⊢ (σ, State f pc ρ, m) ->> (σ, State f pc' ρ, m')
 
-| exec_Istore: forall ρ f pc σ addr src pc' a v,
-  pc |-> <{ !addr := src -> pc' }> in f ->
-  σ[|addr|] = a ->
-  σ[|src|] = v ->
-  P ⊢ State ρ f pc σ ->> State ρ f pc' σ[| @a <- v|]
-
-| exec_Icall: forall ρ f pc σ dst sig args pc' fd,
-  pc |-> <{ dst := @call sig args -> pc' }> in f ->
-  find_fun P sig = Some fd ->
-  P ⊢ State ρ f pc σ ->>
-    CallState (Stackframe dst f pc' (regs σ) :: ρ) fd σ[[|args|]] (mem σ)
-
-| exec_Icond: forall ρ f pc σ cond ifso ifnot v pc',
-  pc |-> <{ if cond then goto ifso else goto ifnot }> in f ->
-  σ[|cond|] = v ->
+| exec_Icond: forall  σ m ρ f pc cond ifso ifnot v pc',
+  f@pc is <{ if cond then goto ifso else goto ifnot }> ->
+  get_reg ρ cond = v ->
   pc' = (if Z.eqb v 0 then ifso else ifnot) ->
-  P ⊢ State ρ f pc σ ->> State ρ f pc' σ
+  P ⊢ (σ, State f pc ρ, m) ->> (σ, State f pc' ρ, m)
 
-| exec_function: forall ρ f args mem,
-  P ⊢ CallState ρ f args mem ->>
-        State ρ f (fn_entrypoint f) (init_state mem args (in_regs f.(fn_sig)))
+| exec_Icall: forall σ m ρ f pc dst sig args pc' σ' fn,
+  f@pc is <{ dst := @call sig args -> pc' }> ->
+  find_fun P sig = Some fn ->
+  Stackframe dst f pc' ρ :: σ = σ' ->
+  P ⊢ (σ, State f pc ρ, m) ->> (σ', CallState fn (get_regs ρ args), m)
 
-| exec_return: forall dst f pc rgs ρ v mem,
-  P ⊢ ReturnState (Stackframe dst f pc rgs :: ρ) v mem ->>
-    State ρ f pc (Build_pstate rgs mem)[|dst <- v|]
+| exec_function: forall σ m ρ f args,
+  init_regs args (in_regs f.(fn_sig)) = ρ ->
+  P ⊢ (σ, CallState f args, m) ->> (σ, State f (fn_entrypoint f) ρ, m)
+
+| exec_return: forall σ m ρ f pc dst v ρ',
+  set_reg ρ dst v = ρ' ->
+  P ⊢ (Stackframe dst f pc ρ :: σ, ReturnState v, m) ->> (σ, State f pc ρ', m)
 
 where "P '⊢' s '->>' t" := (step P s t).
 
-
-Lemma exec_Inop' P : forall ρ f pc σ pc' s1 s2,
-  pc |-> <{ nop -> pc' }> in f ->
-  s1 = State ρ f pc σ ->
-  s2 = State ρ f pc' σ ->
-  P ⊢ s1 ->> s2.
-Proof.
-  intros; subst; now apply exec_Inop.
-Qed.
-
-Lemma exec_Iret' P : forall ρ f pc σ r v m,
-  pc |-> <{ ret r }> in f ->
-  σ [|r|] = v ->
-  m = mem σ ->
-  P ⊢ State ρ f pc σ ->> ReturnState ρ v m.
-Proof.
-  intros; subst; now apply exec_Iret.
-Qed.
-
-Section RTC.
-  Context {A: Type} (R: A -> A -> Prop).
-
-  Inductive rtc : A -> A -> Prop :=
-  | rtc_refl : forall x, rtc x x
-  | rtc_incl : forall x y, R x y -> rtc x y
-  | rtc_trans : forall x y z, rtc x y -> rtc y z -> rtc x z.
-
-  #[export] Instance rtx_Reflexive: Reflexive rtc := rtc_refl.
-  #[export] Instance rtx_Transitive: Transitive rtc := rtc_trans.
-
-  Lemma rtc_inv_step : forall x y,
-    rtc x y ->
-    x = y ∨ ∃ x', R x x' ∧ rtc x' y.
-  Proof.
-    intros x y H. induction H as [x | x y H | x y z H1 IH1 H2 IH2].
-    - left; reflexivity.
-    - right; eexists; split; eassumption || constructor.
-    - destruct IH1 as [ -> | (x' & HR & Hrtc)].
-      + assumption.
-      + right; eexists; split.
-        * eassumption.
-        * eapply rtc_trans; eassumption.
-  Qed.
-End RTC.
+Definition steps (P: program) : state -> state -> Prop
+  := clos_refl_trans state (step P).
 
 Notation "P '⊢' s '->>*' t" :=
-  (rtc (step P) s t) (at level 60, right associativity).
+  (steps P s t) (at level 60, right associativity).
 
-Definition f : function :=
-  {|
-    fn_sig :=
-      {|
-        name := "main"%string;
-        in_regs := [3%positive]
-      |};
-    fn_entrypoint := 1%positive;
-    fn_code :=
-      <{{
-          1: $1 := #1 -> 2;
-          2: $2 := #(-5) -> 3;
-          3: if $2 then goto 6 else goto 4;
-          4: $3 := $1 + $3 -> 5;
-          5: $2 := $1 + $2 -> 3;
-          6: ret $3;
-      }}>
-  |}.
+#[global]
+Add Parametric Relation (P: program) : state (steps P)
+  reflexivity proved by (rt_refl state (step P))
+  transitivity proved by (rt_trans state (step P))
+  as steps_rel.
 
-Ltac mysimp := unfold set_val, get_val; cbn -[Z.add Z.mul Z.sub].
-
-Goal forall P ρ m v,
-  P ⊢ CallState ρ f [v] m ->>* ReturnState ρ (v + 5)%Z m.
+Lemma inv_step : forall P s t,
+  P ⊢ s ->>* t -> s = t ∨ ∃ s', P ⊢ s ->> s' ∧ P ⊢ s' ->>* t.
 Proof.
-  intros.
-
-  eapply rtc_trans. apply rtc_incl; eapply exec_function; reflexivity. mysimp.
-  unfold init_state, init_regs.
-
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iloadi; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iloadi; reflexivity. mysimp.
-
-  eapply rtc_trans. apply rtc_incl; eapply exec_Icond; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-
-  eapply rtc_trans. apply rtc_incl; eapply exec_Icond; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-
-  eapply rtc_trans. apply rtc_incl; eapply exec_Icond; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-
-  eapply rtc_trans. apply rtc_incl; eapply exec_Icond; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-
-  eapply rtc_trans. apply rtc_incl; eapply exec_Icond; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-  eapply rtc_trans. apply rtc_incl; eapply exec_Iop; reflexivity. mysimp.
-
-  eapply rtc_trans. apply rtc_incl; eapply exec_Icond; reflexivity. mysimp.
-
-  apply rtc_incl. eapply exec_Iret'; try reflexivity.
-  mysimp. lia.
+  intros P s t Hred.
+  apply clos_rt_rt1n_iff in Hred.
+  destruct Hred as [ | s' t H Hred ].
+  - auto.
+  - apply clos_rt_rt1n_iff in Hred. right. now exists s'.
 Qed.
 
-Section WP.
-  Variable P : program.
+Lemma lift_step P : ∀ σ s m σ' t m' Σ,
+  P ⊢ (σ, s, m) ->> (σ', t, m') ->
+  P ⊢ (σ ++ Σ, s, m) ->> (σ' ++ Σ, t, m').
+Proof.
+  intros ? ? ? ? ? ? ? H; inv H; econstructor; now eauto.
+Qed.
 
-  Definition postcondition : Type := val -> memory -> Prop.
+Lemma unlift_step P : ∀ σ s m σ' t m' Σ,
+  P ⊢ (σ ++ Σ, s, m) ->> (σ' ++ Σ, t, m') ->
+  P ⊢ (σ, s, m) ->> (σ', t, m').
+Proof.
+  intros ? ? ? ? ? ? ? H; inv H;
+    rewrite ? app_comm_cons in *;
+    eassert _ by (eapply app_inv_tail; eassumption);
+    subst; econstructor; now eauto.
+Qed.
 
-  Definition final (Q: postcondition) (s: state) : Prop :=
-    match s with
-    | ReturnState ρ v m => Q v m
-    | _ => False
-    end.
+Theorem step_callstack P : ∀ σ s m σ' t m' Σ,
+  P ⊢ (σ, s, m) ->> (σ', t, m') <->
+  P ⊢ (σ ++ Σ, s, m) ->> (σ' ++ Σ, t, m').
+Proof. split. 1: apply lift_step. apply unlift_step. Qed.
 
-  Definition safe (Q: postcondition) (s: state) : Prop :=
-    ∀ s', P ⊢ s ->>* s' -> final Q s' ∨ ∃ s'', P ⊢ s' ->> s''.
+Theorem lift_steps P : ∀ σ s m σ' t m' Σ,
+  P ⊢ (σ, s, m) ->>* (σ', t, m') ->
+  P ⊢ (σ ++ Σ, s, m) ->>* (σ' ++ Σ, t, m').
+Proof.
+  intros σ s m σ' t m' Σ Hred.
+  remember (σ, s, m) as x eqn:Hx.
+  remember (σ', t, m') as y eqn:Hy.
+  revert σ s m Hx σ' t m' Hy.
+  apply clos_rt_rt1n_iff in Hred.
+  induction Hred as [ y | x y z Hstep Hred IH ].
+  - intros ? ? ? -> ? ? ? H. inv H. reflexivity.
+  - intros ? ? ? -> ? ? ? H. destruct y as [[] ?].
+    etransitivity.
+    + apply rt_step; apply lift_step; eassumption.
+    + eauto.
+Qed.
 
-  Definition wp (f: function) (pc: node) (Q: postcondition) :=
-    fun σ => safe Q (State [] f pc σ).
-
-  Lemma wp_ret f pc Q : forall v,
-    pc |-> <{ ret v }> in f ->
-    ∀ σ, Q σ[|v|] (mem σ) -> wp f pc Q σ.
-  Proof.
-    intros v H σ.
-    unfold wp, safe.
-    intros Hwp s' Hred.
-    destruct (rtc_inv_step _ _ _ Hred) as [ <- | (ss & Hreds & Hrtc )].
-    - right. eexists. eapply exec_Iret'; eassumption || reflexivity.
-    - inversion Hreds; subst; try congruence.
-      destruct (rtc_inv_step _ _ _ Hrtc) as [ <- | (? & Hwhat & ? )].
-      + pc_inj. auto.
-      + inversion Hwhat.
-  Qed.
-
-  Lemma wp_nop f pc Q : forall pc',
-    pc |-> <{ nop -> pc' }> in f ->
-    ∀ σ, wp f pc' Q σ -> wp f pc Q σ.
-  Proof.
-    intros pc' H σ.
-    unfold wp, safe.
-    intros Hwp s' Hred.
-    destruct (rtc_inv_step _ _ _ Hred) as [ <- | (ss & Hreds & Hrtc )].
-    - right. eexists. eapply exec_Inop'; eassumption || reflexivity.
-    - apply Hwp; inversion Hreds; subst; pc_inj; congruence.
-  Qed.
-
-  Lemma wp_loadi f pc Q : forall dst v pc',
-    pc |-> <{ dst := #v -> pc' }> in f ->
-    ∀ σ, wp f pc' Q σ[|dst <- v|] ->
-         wp f pc Q σ.
-  Proof.
-    intros dst v pc' H σ.
-    unfold wp, safe.
-    intros Hwp s' Hred.
-    destruct (rtc_inv_step _ _ _ Hred) as [ <- | (ss & Hreds & Hrtc)].
-    - right. eexists. eapply exec_Iloadi; eassumption || reflexivity.
-    - apply Hwp; inversion Hreds; subst; pc_inj; congruence.
-  Qed.
-
-  Lemma wp_op f pc Q : forall dst op args pc',
-    pc |-> <{ dst := @op args -> pc' }> in f ->
-    ∀ σ v,
-      eval_op op σ[[|args|]] = Some v ->
-      wp f pc' Q σ[|dst <- v|] ->
-      wp f pc Q σ.
-  Proof.
-    intros dst op args pc' H σ v Heval.
-    unfold wp, safe.
-    intros Hwp s' Hred.
-    destruct (rtc_inv_step _ _ _ Hred) as [ <- | (ss & Hreds & Hrtc)].
-    - right. eexists. eapply exec_Iop; eassumption || reflexivity.
-    - apply Hwp; inversion Hreds; subst; pc_inj; congruence.
-  Qed.
-
-  Lemma wp_load f pc Q : forall dst src pc',
-    pc |-> <{ dst := !src -> pc' }> in f ->
-    ∀ σ v,
-      σ[|@(σ[|src|])|] = Some v ->
-      wp f pc' Q σ[|dst <- v|] ->
-      wp f pc Q σ.
-  Proof.
-    intros dst src pc' H σ v Hmem.
-    unfold wp, safe.
-    intros Hwp s' Hred.
-    destruct (rtc_inv_step _ _ _ Hred) as [ <- | (ss & Hreds & Hrtc)].
-    - right. eexists. eapply exec_Iload; eassumption || reflexivity.
-    - apply Hwp; inversion Hreds; subst; pc_inj; congruence.
-  Qed.
-
-  Lemma wp_store f pc Q : forall addr src pc',
-    pc |-> <{ !addr := src -> pc' }> in f ->
-    ∀ σ, wp f pc' Q σ[|@(σ[|addr|]) <- σ[|src|]|] ->
-         wp f pc Q σ.
-  Proof.
-    intros addr src pc' H σ.
-    unfold wp, safe.
-    intros Hwp s' Hred.
-    destruct (rtc_inv_step _ _ _ Hred) as [ <- | (ss & Hreds & Hrtc)].
-    - right. eexists. eapply exec_Istore; eassumption || reflexivity.
-    - apply Hwp; inversion Hreds; subst; pc_inj; congruence.
-  Qed.
-
-  Lemma wp_cond f pc Q : forall cond ifso ifnot,
-    pc |-> <{ if cond then goto ifso else goto ifnot }> in f ->
-    ∀ σ, wp f (if Z.eqb σ[|cond|] 0 then ifso else ifnot) Q σ ->
-         wp f pc Q σ.
-  Proof.
-    intros cond ifso ifnot H σ.
-    unfold wp, safe.
-    intros Hwp s' Hred.
-    destruct (rtc_inv_step _ _ _ Hred) as [ <- | (ss & Hreds & Hrtc)].
-    - right. eexists. eapply exec_Icond; eassumption || reflexivity.
-    - apply Hwp; inversion Hreds; subst; pc_inj; congruence.
-  Qed.
-
-End WP.
+Lemma unfold_call P fn : ∀ res f pc ρ args m σ t m',
+  P ⊢ ([Stackframe res f pc ρ], CallState fn args, m) ->>* (σ, t, m') ->
+  (∃ σ',
+      σ = σ' ++ [Stackframe res f pc ρ]
+      ∧ P ⊢ ([], CallState fn args, m) ->>* (σ', t, m'))
+  ∨
+    (∃ v m'',
+        P ⊢ ([], CallState fn args, m) ->>* ([], ReturnState v, m'')
+        ∧ P ⊢ ([], State f pc (set_reg ρ res v), m'') ->>* (σ, t, m')
+    ).
+Proof.
+  intros res f pc ρ args m σ t m' H.
+  remember [Stackframe res f pc ρ] as l.
+  remember (l, CallState fn args, m) as s1 eqn:Hs1.
+  remember (σ, t, m') as s2 eqn:Hs2.
+  revert s2 H σ t m' Hs2.
+  induction 1 as [ | [[σ1 t1] m1] z Hred IH Hstep]
+                   using clos_refl_trans_ind_left;
+    intros σ t m' ->.
+  - inv Hs1. left. now exists [].
+  - destruct (IH _ _ _ (eq_refl _ )) as
+      [(σ' & -> & Hlift) | (v & m'' & Hcall & Hrest)]; clear IH.
+    + inv Hstep;
+        try (left; eexists; split;
+             [ rewrite ? app_comm_cons; reflexivity
+             | eapply rt_trans; [ apply Hlift | apply rt_step];
+               econstructor; now eauto
+             ]
+          ).
+      destruct σ'; inv H.
+      * right. repeat eexists; now eauto.
+      * left. eexists. split.
+        -- reflexivity.
+        -- eapply rt_trans; [apply Hlift | apply rt_step];
+             econstructor; now eauto.
+    + inversion Hstep; subst; right; repeat eexists;
+        now eauto ||
+          (eapply rt_trans; [apply Hrest | apply rt_step];
+           econstructor; now eauto).
+Qed.

@@ -1,13 +1,19 @@
 From Stdlib Require Import Strings.String.
-From Stdlib Require Import FSets.FMapPositive.
-From Stdlib Require Import PArith.PArith.
+From Stdlib Require Import ZArith.ZArith.
+
+From RSL Require Import NatMap.
 
 Definition ident := string.
-Definition node := positive.
-Definition reg := positive.
+Definition node := nat.
+Definition reg := nat.
 Definition val := Z.
 
-Inductive op : Type := Add | Sub | Mul | Move.
+Inductive op : Type :=
+| Add
+| Sub
+| Mul
+| Move
+| LoadI (v: val).
 
 Structure sig := {
     name: ident;
@@ -18,12 +24,9 @@ Inductive instr : Type :=
 | Inop: node -> instr
     (** No operation -- just branch to the successor. *)
 | Iop: op -> list reg -> reg -> node -> instr
-    (** [Iop op args dest succ] performs the arithmetic operation [op]
-        over the values of registers [args], stores the result in [dest],
-        and branches to [succ]. *)
-| IloadI : val -> reg -> node -> instr
-    (** [IloadI val dest succ] set the register [dest] to the immediate value
-        [val]. It then branch to [succ]. *)
+    (** [Iop op args dest succ] performs the pure (not memory related)
+        operation [op] over the values of registers [args],
+        stores the result in [dest], and branches to [succ]. *)
 | Iload: reg -> reg -> node -> instr
     (** [Iload addr dest succ] loads the value at [addr] into [dest],
         and branches to [succ]. *)
@@ -44,7 +47,7 @@ Inductive instr : Type :=
 .
 
 (** [code] is a finite map from nodes to instructions *)
-Definition code := PositiveMap.t instr.
+Definition code := NatMap.t instr.
 
 (** A [function] includes its signature, an entry node, and its code. *)
 Record function := {

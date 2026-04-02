@@ -1,9 +1,8 @@
 From Stdlib Require Import Lists.List.
 From Stdlib Require Import Strings.String.
-From Stdlib Require Import PArith.PArith.
 From Stdlib Require Import ZArith.ZArith.
-From Stdlib Require Import FSets.FMapPositive.
 
+From RSL Require Import NatMap.
 From RSL Require Import RTL.
 
 Import ListNotations.
@@ -24,51 +23,50 @@ Module RTLNotations.
 
   (* Code Block Notations *)
   Notation "n ':' i ';'" :=
-    (PositiveMap.add n%positive i (PositiveMap.empty instr))
+    (NatMap.add n i (NatMap.empty instr))
       (in custom rtl_code at level 0,
           n constr at level 0,
           i custom rtl_instr at level 0,
           format "'[ ' n ':'  i ';' ']'").
 
   Notation "n ':' i ';' rest" :=
-    (PositiveMap.add n%positive i rest)
+    (NatMap.add n i rest)
       (in custom rtl_code at level 0,
           n constr at level 0,
           i custom rtl_instr at level 0,
           rest custom rtl_code at level 0,
           format "'[ ' n ':'  i ';' ']' '//' rest").
 
-  Notation "'$' v" :=
-    (v%positive) (in custom rtl_reg at level 0, v constr at level 0).
+  Notation "'$' v" := (v) (in custom rtl_reg at level 0, v constr at level 0).
   Notation "x" := x (in custom rtl_reg at level 0, x ident).
 
   (* Instruction Notations *)
 
   (* Nop *)
   Notation "'nop' '->' next" :=
-    (Inop next%positive)
+    (Inop next)
       (in custom rtl_instr at level 0, next constr at level 0).
-
-  (* LoadI *)
-  Notation "dst ':=' '#' val '->' next" :=
-    (IloadI val%Z dst next%positive)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
-          val constr at level 0,
-          next constr at level 0).
 
   (* Operations *)
   Notation "dst ':=' '@' op src '->' next" :=
-    (Iop op src dst next%positive)
+    (Iop op src dst next)
       (in custom rtl_instr at level 0,
           dst custom rtl_reg at level 0,
           op ident,
           src constr at level 0,
           next constr at level 0).
 
+  (* LoadI *)
+  Notation "dst ':=' '#' val '->' next" :=
+    (Iop (LoadI val%Z) [] dst next)
+      (in custom rtl_instr at level 0,
+          dst custom rtl_reg at level 0,
+          val constr at level 0,
+          next constr at level 0).
+
   (* Move *)
   Notation "dst ':=' src '->' next" :=
-    (Iop Move [src] dst next%positive)
+    (Iop Move [src] dst next)
       (in custom rtl_instr at level 0,
           dst custom rtl_reg at level 0,
           src custom rtl_reg at level 0,
@@ -76,7 +74,7 @@ Module RTLNotations.
 
   (* Add *)
   Notation "dst ':=' src1 '+' src2 '->' next" :=
-    (Iop Add [src1; src2] dst next%positive)
+    (Iop Add [src1; src2] dst next)
       (in custom rtl_instr at level 0,
           dst custom rtl_reg at level 0,
           src1 custom rtl_reg at level 0,
@@ -85,7 +83,7 @@ Module RTLNotations.
 
   (* Mult *)
   Notation "dst ':=' src1 '*' src2 '->' next" :=
-    (Iop Mul [src1; src2] dst next%positive)
+    (Iop Mul [src1; src2] dst next)
       (in custom rtl_instr at level 0,
           dst custom rtl_reg at level 0,
           src1 custom rtl_reg at level 0,
@@ -94,7 +92,7 @@ Module RTLNotations.
 
   (* Load *)
   Notation "dst ':=' '!' addr '->' next" :=
-    (Iload addr%positive dst next%positive)
+    (Iload addr dst next)
       (in custom rtl_instr at level 0,
           dst custom rtl_reg at level 0,
           addr constr at level 0,
@@ -102,7 +100,7 @@ Module RTLNotations.
 
   (* Store *)
   Notation "'!' addr ':=' src '->' next" :=
-    (Istore addr%positive src next%positive)
+    (Istore addr src next)
       (in custom rtl_instr at level 0,
           addr constr at level 0,
           src custom rtl_reg at level 0,
@@ -110,7 +108,7 @@ Module RTLNotations.
 
   (* Call *)
   Notation "dst ':=' 'call' sig args '->' next" :=
-    (Icall sig args dst next%positive)
+    (Icall sig args dst next)
       (in custom rtl_instr at level 0,
           dst custom rtl_reg at level 0,
           sig constr at level 0,
@@ -119,7 +117,7 @@ Module RTLNotations.
 
   (* Call *)
   Notation "dst ':=' '@call' sig args '->' next" :=
-    (Icall sig args dst next%positive)
+    (Icall sig args dst next)
       (in custom rtl_instr at level 0,
           dst custom rtl_reg at level 0,
           sig constr at level 0,
@@ -128,7 +126,7 @@ Module RTLNotations.
 
   (* Cond *)
   Notation "'if' cond 'then' 'goto' ifso 'else' 'goto' ifnot" :=
-    (Icond cond ifso%positive ifnot%positive)
+    (Icond cond ifso ifnot)
       (in custom rtl_instr at level 0,
           cond custom rtl_reg at level 0,
           ifso constr at level 0,
@@ -149,9 +147,9 @@ Module RTLNotations.
     args (in custom rtl_args at level 0, args custom rtl_reg_list at level 0).
 
   Notation "'$' v" :=
-    [v%positive] (in custom rtl_reg_list at level 0, v constr at level 0).
+    [v] (in custom rtl_reg_list at level 0, v constr at level 0).
   Notation "'$' v ',' rest" :=
-    (v%positive :: rest)
+    (v :: rest)
       (in custom rtl_reg_list at level 0,
           v constr at level 0,
           rest custom rtl_reg_list at level 0).
@@ -163,7 +161,7 @@ Module Test.
   Import RTLNotations.
 
   Definition test_sig : sig :=
-    {| name := "test"%string; in_regs := [1%positive] |}.
+    {| name := "test"%string; in_regs := [1] |}.
 
   Definition my_code : code := <{{
           1: nop -> 2;
