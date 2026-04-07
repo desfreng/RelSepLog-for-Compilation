@@ -2,7 +2,8 @@ From Stdlib Require Import Lists.List.
 From Stdlib Require Import Strings.String.
 From Stdlib Require Import ZArith.ZArith.
 
-From RSL Require Import NatMap.
+From stdpp Require Import gmap.
+
 From RSL Require Import RTL.
 
 Import ListNotations.
@@ -23,14 +24,14 @@ Module RTLNotations.
 
   (* Code Block Notations *)
   Notation "n ':' i ';'" :=
-    (NatMap.add n i (NatMap.empty instr))
+    (singletonM n i)
       (in custom rtl_code at level 0,
           n constr at level 0,
           i custom rtl_instr at level 0,
           format "'[ ' n ':'  i ';' ']'").
 
   Notation "n ':' i ';' rest" :=
-    (NatMap.add n i rest)
+    (insert n i rest)
       (in custom rtl_code at level 0,
           n constr at level 0,
           i custom rtl_instr at level 0,

@@ -1,12 +1,14 @@
 From Stdlib Require Import Strings.String.
 From Stdlib Require Import ZArith.ZArith.
 
-From RSL Require Import NatMap.
+From stdpp Require Import gmap.
 
-Definition ident := string.
+Definition ident : Type := string.
+Definition val : Type := Z.
+
 Definition node := nat.
+Definition loc := positive.
 Definition reg := nat.
-Definition val := Z.
 
 Inductive op : Type :=
 | Add
@@ -47,7 +49,7 @@ Inductive instr : Type :=
 .
 
 (** [code] is a finite map from nodes to instructions *)
-Definition code := NatMap.t instr.
+Definition code := gmap node instr.
 
 (** A [function] includes its signature, an entry node, and its code. *)
 Record function := {
@@ -56,5 +58,7 @@ Record function := {
     fn_code : code;
 }.
 
-(** A [program] is a list of functions. *)
 Definition program := list function.
+
+Definition find_fun (P: program) (s: sig) : option function :=
+  List.find (fun f => (name (fn_sig f) =? name s)%string) P.
