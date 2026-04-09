@@ -3,147 +3,203 @@ From Stdlib Require Import Utf8.
 From RSL Require Import RTL.
 From RSL Require Import Semantics.
 
+(* Set Mangle Names. *)
+
+Definition oProp : Type := memory -> nat -> Prop.
+Definition sProp : Type := regmap -> oProp.
+
 Definition postcondition : Type := val -> memory -> Prop.
-Definition sProp : Type := nat -> regmap * memory -> Prop.
+Definition precondition : Type := list val -> memory -> Prop.
 
-Declare Scope sProp_scope.
-Delimit Scope sProp_scope with sProp.
-Bind Scope sProp_scope with sProp.
+Definition lift_oProp (P : oProp) : sProp :=  fun _ => P.
+Coercion lift_oProp : oProp >-> sProp.
 
-Definition sProp_and (P Q : sProp) : sProp :=
-  fun n p => P n p ∧ Q n p.
+Class Logic (L: Type) :=
+  {
+    logic_and : L -> L -> L;
+    logic_or  : L -> L -> L;
+    logic_impl : L -> L -> L;
+    logic_not : L -> L;
+    logic_exists {X: Type}: (X -> L) -> L;
+    logic_forall {X: Type}: (X -> L) -> L;
+
+    logic_empty_entails : L -> Prop;
+    logic_pure : Prop -> L;
+    logic_memory_pure : (memory -> Prop) -> L;
+    logic_later : L -> L;
+    logic_always : L -> L;
+  }.
+
+Declare Scope logic_scope.
+Delimit Scope logic_scope with logic.
+Bind Scope logic_scope with oProp.
+Bind Scope logic_scope with sProp.
 
 Notation "P ∧ Q" :=
-  (sProp_and P Q) : sProp_scope.
-
-Definition sProp_or (P Q : sProp) : sProp :=
-  fun n p => P n p ∨ Q n p.
-
+  (logic_and P Q) : logic_scope.
 Notation "P ∨ Q" :=
-  (sProp_or P Q) : sProp_scope.
-
-Definition sProp_impl (P Q : sProp) : sProp :=
-  fun n p => P n p -> Q n p.
-
+  (logic_or P Q)  : logic_scope.
 Notation "P -> Q" :=
-  (sProp_impl P Q) : sProp_scope.
-
-Definition sProp_not (P : sProp) : sProp :=
-  fun n p => ~ P n p.
-
+  (logic_impl P Q) : logic_scope.
 Notation "~ P" :=
-  (sProp_not P) : sProp_scope.
-
-Definition sProp_exists {A : Type} (f : A -> sProp) : sProp :=
-  fun n p => ∃ x : A, f x n p.
-
+  (logic_not P) : logic_scope.
 Notation "'∃' x .. y , p" :=
-  (sProp_exists (fun x => .. (sProp_exists (fun y => p)) ..)) : sProp_scope.
-
-Definition sProp_forall {A : Type} (f : A -> sProp) : sProp :=
-  fun n p => ∀ x : A, f x n p.
-
+  (logic_exists (fun x => .. (logic_exists (fun y => p)) ..)) : logic_scope.
 Notation "'∀' x .. y , p" :=
-  (sProp_forall (fun x => .. (sProp_forall (fun y => p)) ..)) : sProp_scope.
+  (logic_forall (fun x => .. (logic_forall (fun y => p)) ..)) : logic_scope.
 
-Definition sProp_pure (P : Prop) : sProp :=
-  fun _ _ => P.
-
+Notation "⊢ P" :=
+  (logic_empty_entails P%logic)
+    (at level 99, right associativity).
 Notation "⌜ P ⌝" :=
-  (sProp_pure P)
-    (at level 0, format "⌜ P ⌝") : sProp_scope.
-
-Definition sProp_later (P : sProp) : sProp :=
-  fun n =>
-    match n with
-    | O => fun _ => True
-    | S n => fun p => P n p
-    end.
-
+  (logic_pure P)
+    (at level 0, format "⌜ P ⌝") : logic_scope.
+Notation "⌜ P ⌝ₘ" :=
+  (logic_memory_pure P)
+    (at level 0, format "⌜ P ⌝ₘ") : logic_scope.
 Notation "▷ P" :=
-  (sProp_later P)
-    (at level 20, right associativity, format "▷ P") : sProp_scope.
-
-Definition sProp_always (P : sProp) : sProp :=
-  fun _ p => ∀ n, P n p.
-
+  (logic_later P)
+    (at level 20, right associativity, format "▷ P") : logic_scope.
 Notation "□ P" :=
-  (sProp_always P)
-    (at level 20, right associativity, format "□ P") : sProp_scope.
+  (logic_always P)
+    (at level 20, right associativity, format "□ P") : logic_scope.
 
-Definition sProp_entails (P Q : sProp) : Prop :=
-  ∀ n p, P n p -> Q n p.
+Notation "'⟨' P '⟩'" := P%logic.
 
+Definition logic_entails `{Logic L} (P Q : L) : Prop :=
+  logic_empty_entails (logic_impl P Q).
 Notation "P ⊢ Q" :=
-  (sProp_entails P%sProp Q%sProp)
+  (logic_entails P%logic Q%logic)
     (at level 99, right associativity).
 
-Definition sProp_ask (F : regmap -> memory -> sProp) : sProp :=
-  fun n '(ρ, m) => F ρ m n (ρ, m).
+Instance oProp_logic : Logic oProp :=
+  {|
+    logic_and P Q := fun m n => P m n ∧ Q m n;
+    logic_or P Q := fun m n => P m n ∨ Q m n;
+    logic_impl P Q := fun m n => P m n -> Q m n;
+    logic_not P := fun m n => ~ P m n;
+    logic_exists X f := fun m n => ∃ x, f x m n;
+    logic_forall X f := fun m n => ∀ x, f x m n;
 
-Notation "'λₛ' ρ m , P" :=
-  (sProp_ask (fun ρ m => P))
-    (at level 200,
-        ρ name,
-        m name,
-        right associativity,
-        format "'λₛ' ρ  m  ,  P") : sProp_scope.
+    logic_empty_entails P := ∀ m n, P m n;
+    logic_pure P := fun _ _ => P;
+    logic_memory_pure P := fun m _ => P m;
+    logic_later P :=
+      fun m n =>
+        match n with
+        | O => True
+        | S n => P m n
+        end;
 
-Definition sProp_put (ρ : regmap) (m : memory) (P : sProp) : sProp :=
-  fun n _ => P n (ρ, m).
+    logic_always P := fun m _ => ∀ n, P m n;
+  |}.
 
-Notation "P '⟨' ρ ',' m '⟩'" :=
-  (sProp_put ρ m P)
-    (at level 11,
-        left associativity,
-        format "P  '⟨' ρ ','  m '⟩'") : sProp_scope.
+Definition oProp_update (f: memory -> option memory) (P: oProp) : oProp :=
+  fun m n => ∃ m', f m = Some m' ∧ P m' n.
 
-Create HintDb custom_sProp discriminated.
+Class oPropSetMem (L : Type) := logic_set_mem : val -> val -> L -> L.
+Notation "'⟦' addr '<-' v '⟧' P" :=
+  (logic_set_mem addr v P)
+    (at level 20, P at level 20, right associativity,
+       format "⟦ addr <- v ⟧  P").
+
+Definition oProp_set (addr: val) (v: val) (P: oProp) : oProp :=
+  oProp_update (set_at addr v) P.
+Instance set_mem_oProp : oPropSetMem oProp := oProp_set.
+
+Instance set_mem_sProp : oPropSetMem sProp :=
+  fun addr v P ρ => oProp_set addr v (P ρ).
+
+Definition oProp_assert (addr: val) (v: val) : oProp :=
+  fun m n => get_at addr m = Some v.
+Notation "l '↦' v" :=
+  (oProp_assert l v)
+    (at level 70, no associativity, format "l ↦ v") : logic_scope.
+
+Instance sProp_logic : Logic sProp :=
+  {|
+    logic_and P Q := fun ρ => logic_and (P ρ) (Q ρ);
+    logic_or P Q := fun ρ => logic_or (P ρ) (Q ρ);
+    logic_impl P Q := fun ρ => logic_impl (P ρ) (Q ρ);
+    logic_not P := fun ρ => logic_not (P ρ);
+    logic_exists X f := fun ρ => logic_exists (fun x => f x ρ);
+    logic_forall X f := fun ρ => logic_forall (fun x => f x ρ);
+
+    logic_empty_entails P := ∀ ρ, logic_empty_entails (P ρ);
+    logic_pure P := fun _ => logic_pure P;
+    logic_memory_pure P := fun _ => logic_memory_pure P;
+    logic_later P := fun ρ => logic_later (P ρ);
+    logic_always P := fun ρ => logic_always (P ρ);
+  |}.
+
+Definition sProp_set_reg (r : reg) (v : val) (P : sProp) : sProp :=
+  fun ρ => P (set_reg r v ρ).
+Notation "'⟦' dst '<-ᵣ' v '⟧' P" :=
+  (sProp_set_reg dst v P)
+    (at level 20, P at level 20, right associativity,
+       format "⟦ dst <-ᵣ v ⟧  P") : logic_scope.
+
+Class LogicAssertReg (R V : Type) := logic_assert_reg : R -> V -> sProp.
+Notation "r '↦ᵣ' v" :=
+  (logic_assert_reg r v)
+    (at level 70, no associativity, format "r ↦ᵣ v").
+
+Definition sProp_assert_reg (r : reg) (v : val) : sProp :=
+  fun ρ _ _ => get_reg r ρ = v.
+Instance assert_reg_single : LogicAssertReg reg val :=
+  sProp_assert_reg.
+
+Definition sProp_assert_regs (rs : list reg) (vs : list val) : sProp :=
+  fun ρ _ _ => get_regs rs ρ = vs.
+Instance assert_reg_list : LogicAssertReg (list reg) (list val) :=
+  sProp_assert_regs.
+
+Definition sProp_memory_entailment (P : sProp) : sProp :=
+  fun ρ _ n => ∀ m, P ρ m n.
+Notation "'⊢ₘ' P" :=
+  (sProp_memory_entailment P)
+    (at level 99, right associativity) : logic_scope.
+
+Create HintDb custom_anyProp discriminated.
 
 Hint Unfold
-  sProp_and
-  sProp_or
-  sProp_impl
-  sProp_not
-  sProp_exists
-  sProp_forall
-  sProp_pure
-  sProp_later
-  sProp_always
-  sProp_entails
-  sProp_ask
-  sProp_put
-: custom_sProp.
+  lift_oProp
+  logic_and
+  logic_or
+  logic_impl
+  logic_not
+  logic_exists
+  logic_forall
+  (* logic_entails *)
+  logic_empty_entails
+  logic_pure
+  logic_later
+  logic_always
 
-Ltac unfold_sProp :=
-  autounfold with custom_sProp in *;
+  oProp_update
+  oProp_set
+  oProp_assert
+
+  sProp_set_reg
+  sProp_assert_reg
+  sProp_assert_regs
+
+  logic_assert_reg
+  assert_reg_single
+  assert_reg_list
+
+  sProp_memory_entailment
+: custom_anyProp.
+
+Ltac unfold_Prop :=
+  autounfold with custom_anyProp in *;
   cbv beta in *;
   simpl in *.
 
-Definition mono (P : sProp) : Prop :=
-  ∀ n p, P (S n) p -> P n p.
 
-Lemma later_intro S :
-  mono S -> S ⊢ ▷ S.
+Lemma löb P :
+  (▷ P ⊢ P) -> ⊢ P.
 Proof.
-  intros Hmono.
-  unfold_sProp.
-  intros [|n] p Hs.
-  - exact I.
-  - apply Hmono. exact Hs.
-Qed.
-
-Lemma löb S P :
-  mono S ->
-  (S ∧ ▷ P ⊢ P) -> S ⊢ P.
-Proof.
-  intros Hmono H n [ρ m] Hs.
-  induction n as [|n IHn].
-  - apply H. split.
-    + assumption.
-    + easy.
-  - apply H. split.
-    + assumption.
-    + apply IHn.
-      apply Hmono. assumption.
+  intros H ρ m n.
+  induction n as [|n IH]; now apply H.
 Qed.

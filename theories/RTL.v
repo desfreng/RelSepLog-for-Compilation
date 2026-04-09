@@ -17,11 +17,6 @@ Inductive op : Type :=
 | Move
 | LoadI (v: val).
 
-Structure sig := {
-    name: ident;
-    in_regs: list reg;
-  }.
-
 Inductive instr : Type :=
 | Inop: node -> instr
     (** No operation -- just branch to the successor. *)
@@ -35,7 +30,7 @@ Inductive instr : Type :=
 | Istore: reg -> reg -> node -> instr
     (** [Istore addr src succ] stores the value of register
         [src] at memory address [src], then branches to [succ]. *)
-| Icall: sig -> list reg -> reg -> node -> instr
+| Icall: ident -> list reg -> reg -> node -> instr
     (** [Icall sig args dest succ] invokes the function determined by
         [fn], giving it the values of registers [args] as arguments.
         It stores the return value in [dest] and branches to [succ]. *)
@@ -53,12 +48,15 @@ Definition code := gmap node instr.
 
 (** A [function] includes its signature, an entry node, and its code. *)
 Record function := {
-    fn_sig : sig;
+    fn_name: ident;
+    fn_regs: list reg;
     fn_entrypoint : node;
     fn_code : code;
+
+    fn_regs_no_dup : NoDup fn_regs;
 }.
 
 Definition program := list function.
 
-Definition find_fun (P: program) (s: sig) : option function :=
-  List.find (fun f => (name (fn_sig f) =? name s)%string) P.
+Definition find_fun (P: program) (s: ident) : option function :=
+  List.find (fun f => (fn_name f =? s)%string) P.

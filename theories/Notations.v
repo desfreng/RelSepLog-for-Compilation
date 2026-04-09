@@ -82,6 +82,15 @@ Module RTLNotations.
           src2 custom rtl_reg at level 0,
           next constr at level 0).
 
+  (* Sub *)
+  Notation "dst ':=' src1 '-' src2 '->' next" :=
+    (Iop Sub [src1; src2] dst next)
+      (in custom rtl_instr at level 0,
+          dst custom rtl_reg at level 0,
+          src1 custom rtl_reg at level 0,
+          src2 custom rtl_reg at level 0,
+          next constr at level 0).
+
   (* Mult *)
   Notation "dst ':=' src1 '*' src2 '->' next" :=
     (Iop Mul [src1; src2] dst next)
@@ -160,9 +169,6 @@ End RTLNotations.
 Module Test.
   Import ListNotations.
   Import RTLNotations.
-
-  Definition test_sig : sig :=
-    {| name := "test"%string; in_regs := [1] |}.
 
   Definition my_code : code := <{{
           1: nop -> 2;
