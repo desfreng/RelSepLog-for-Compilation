@@ -24,7 +24,7 @@ Section WP.
   Inductive final (Q: postcondition) : state -> Prop :=
   | Final : ∀ v m, Q v m -> final Q ([], ReturnState v, m).
 
-  Definition not_stuck t := ∃ u, P |- t ->> u.
+  Definition not_stuck t := ∃ u, P ⊨ t ->> u.
 
   Lemma ret_not_stuck : ∀ frame σ v m,
     not_stuck (frame :: σ, ReturnState v, m).
@@ -39,31 +39,28 @@ Section WP.
     not_stuck (σ ++ Σ, s, m).
   Proof. intros σ Σ s m [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
 
-  (** [safeₙ Q n s] : s is a state that is safe for at most n steps:
+  (** [safe Q n s] : s is a state that is safe for at most n steps:
       - s is a final step or
       - s is not stuck and can do at most n steps. *)
-  Inductive safeₙ Q : state -> nat -> Prop :=
-  | safe_init : ∀ s, safeₙ Q s 0
-  | final_is_safe : ∀ s n, final Q s -> safeₙ Q s n
+  Inductive safe Q : state -> nat -> Prop :=
+  | safe_init : ∀ s, safe Q s 0
+  | final_is_safe : ∀ s n, final Q s -> safe Q s n
   | safe_to_step : ∀ s n,
     (* I am not stuck *)
     not_stuck s ->
     (* All possible next states are safe for at most n least *)
-    (∀ t, P |- s ->> t -> safeₙ Q t n) ->
+    (∀ t, P ⊨ s ->> t -> safe Q t n) ->
     (* I am safe for at most n+1 least *)
-    safeₙ Q s (S n).
+    safe Q s (S n).
 
   Lemma safe_from_progress Q s n :
-    (∀ t m,
-       m <= n ->
-       P |- s -{m}> t ->
-       final Q t ∨ not_stuck t)
-    -> safeₙ Q s n.
+    (∀ t m, m < n -> P ⊨ s -{m}> t -> final Q t ∨ not_stuck t) ->
+    safe Q s n.
   Proof.
     induction n as [ | n IH] in s |- *; intros H.
     - constructor.
-    - assert (Hstep: P |- s -{0}> s) by constructor.
-      assert (Hle: 0 <= S n) by lia.
+    - assert (Hstep: P ⊨ s -{0}> s) by constructor.
+      assert (Hle: 0 < S n) by lia.
       destruct (H _ _ Hle Hstep) as [Hfin | Hns]; clear Hstep Hle.
       + now constructor.
       + apply safe_to_step; auto. intros t Hstep.
@@ -74,8 +71,8 @@ Section WP.
   Qed.
 
   Lemma safe_implies_progress Q s n :
-    safeₙ Q s n ->
-    ∀ t m, m < n -> P |- s -{m}> t -> final Q t ∨ not_stuck t.
+    safe Q s n ->
+    ∀ t m, m < n -> P ⊨ s -{m}> t -> final Q t ∨ not_stuck t.
   Proof.
     intros Hsafe.
     induction Hsafe as [s' | s' n' Hfin | s' n' Hns Hsafe IH]
@@ -94,9 +91,7 @@ Section WP.
   Qed.
 
   Definition safe_mono Q s :
-    ∀ n m,
-    m <= n ->
-    safeₙ Q s n -> safeₙ Q s m.
+    ∀ n m, m <= n -> safe Q s n -> safe Q s m.
   Proof.
     intros n m Hle Hsafe.
     induction Hsafe as [ | | ? ? Hns Hsafe IH ] in m, Hle |- *.
@@ -109,14 +104,12 @@ Section WP.
         * intros ? Ht. apply IH; auto. lia.
   Qed.
 
-  Definition safe Q s := ∀ n, safeₙ Q s n.
-
-  Definition wpₙ Q f pc : sProp :=
-    fun ρ m n => safeₙ Q ([], State f pc ρ, m) n.
+  Definition wp Q f pc : logic :=
+    fun ρ m n => safe Q ([], State f pc ρ, m) n.
 
   Lemma wp_ret (Q: postcondition) f pc : ∀ r v,
     f@pc is <{ ret r }> ->
-    ⊢ ▷ (r ↦ᵣ v ∧ ⌜Q v⌝ₘ) -> wpₙ Q f pc.
+    ⊢ ▷ (r ↦ᵣ v ∧ ⌜Q v⌝ₘ) -> wp Q f pc.
   Proof.
     intros r v Hpc ρ m [] H; [apply safe_init | ].
     unfold_Prop. destruct H as [Hv HQ]. subst.
@@ -127,7 +120,7 @@ Section WP.
 
   Lemma wp_nop Q f pc : ∀ pc',
     f@pc is <{ nop -> pc' }> ->
-    ⊢ (▷ wpₙ Q f pc') -> wpₙ Q f pc.
+    ⊢ (▷ wp Q f pc') -> wp Q f pc.
   Proof.
     intros v Hpc ρ m [] Hwp; [apply safe_init | ].
     apply safe_to_step.
@@ -135,75 +128,70 @@ Section WP.
     - intros ? Hs. now inv Hs.
   Qed.
 
-  Lemma wp_op Q f pc : ∀ dst op args pc',
+  Lemma wp_op Q f pc : ∀ dst op args pc' vals v,
     f@pc is <{ dst := @op args -> pc' }> ->
-    ⊢ ▷ (∀ vals,
-           args ↦ᵣ vals ->
-           ∃ v,
-             ⌜eval_op op vals = Some v⌝ ∧ ⟦dst <-ᵣ v⟧wpₙ Q f pc'
-        ) -> wpₙ Q f pc.
+    ⊢ (args ↦ᵣ vals ∧
+       ⌜eval_op op vals = Some v⌝ ∧
+       ▷ ⟦dst <-ᵣ v⟧wp Q f pc') ->
+    wp Q f pc.
   Proof.
-    intros dst op args pc' Hpc ρ m [] Hwp; [apply safe_init | ].
-    destruct (Hwp _ eq_refl) as (v & Hv & Hwp'). unfold_Prop.
+    intros dst op args pc' vals v Hpc ρ m [] (Hargs & Hv & Hwp);
+      [apply safe_init | ]. unfold_Prop. subst.
     apply safe_to_step.
     - repeat econstructor; now eauto.
     - intros ? Hs. now inv Hs.
   Qed.
 
-  Lemma wp_load Q f pc : ∀ dst src pc',
+  Lemma wp_load Q f pc : ∀ dst src pc' addr v,
     f@pc is <{ dst := !src -> pc' }> ->
-    ⊢ ▷ (∀ addr,
-           src ↦ᵣ addr ->
-           ∃ v, ⟦dst <-ᵣ v⟧ wpₙ Q f pc' ∧ addr ↦ v
-        ) -> wpₙ Q f pc.
+    ⊢ (src ↦ᵣ addr ∧ addr ↦ v ∧ ▷ ⟦dst <-ᵣ v⟧ wp Q f pc') ->
+    wp Q f pc.
   Proof.
-    intros dst src pc' Hpc ρ m [] Hwp; [apply safe_init | ].
-    destruct (Hwp _ eq_refl) as (v & Hv & Hwp'). unfold_Prop.
+    intros dst src pc' addr v Hpc ρ m [] (Haddr & Hmem & Hwp)
+    ; [apply safe_init | ]. unfold_Prop. subst.
     apply safe_to_step.
     - repeat econstructor; now eauto.
     - intros ? Hs. now inv Hs.
   Qed.
 
-  Lemma wp_store Q f pc : ∀ dst src pc',
+  Lemma wp_store Q f pc : ∀ dst src pc' addr v,
     f@pc is <{ !dst := src -> pc' }> ->
-    ⊢ ▷ (∀ addr v,
-         dst ↦ᵣ addr ->
-         src ↦ᵣ v ->
-         ⟦addr <- v⟧ wpₙ Q f pc'
-        ) -> wpₙ Q f pc.
+    ⊢ (dst ↦ᵣ addr ∧
+       src ↦ᵣ v ∧
+       ▷ ⟦addr <- v⟧ wp Q f pc') ->
+    wp Q f pc.
   Proof.
-    intros dst src pc' H ρ m [] Hwp; [apply safe_init | ].
-    destruct (Hwp _ _ eq_refl eq_refl) as (v & Hv & Hwp'). unfold_Prop.
-    apply safe_to_step.
+    intros dst src pc' addr v H ρ m [] (Haddr & Hmem & Hwp);
+      [apply safe_init | ]. unfold_Prop. subst.
+    destruct Hwp as (m' & Hm' & Hwp). apply safe_to_step.
     - repeat econstructor; now eauto.
     - intros ? Hs. now inv Hs.
   Qed.
 
-  Lemma wp_cond Q f pc : ∀ cond ifso ifnot,
+  Lemma wp_cond Q f pc : ∀ cond ifso ifnot v,
     f@pc is <{ if cond then goto ifso else goto ifnot }> ->
-    ⊢ ▷ (∀ v,
-           cond ↦ᵣ v ->
-           if (v =? 0)%Z
-           then wpₙ Q f ifso
-           else wpₙ Q f ifnot
-        ) -> wpₙ Q f pc.
+    ⊢ (cond ↦ᵣ v ∧
+       if (v =? 0)%Z
+       then ▷ wp Q f ifso
+       else ▷ wp Q f ifnot) ->
+    wp Q f pc.
   Proof.
-    intros cond ifso ifnot H ρ m [] Hwp; [apply safe_init | ].
-    specialize (Hwp _ eq_refl). unfold_Prop. apply safe_to_step.
+    intros cond ifso ifnot v H ρ m [] (Hv & Hwp); [apply safe_init | ].
+    unfold_Prop. apply safe_to_step.
     - repeat econstructor; now eauto.
     - intros ? Hs. inv Hs. now destruct (get_reg cond ρ =? 0)%Z.
   Qed.
 
   Definition hoare (Pre: precondition) f Post : Prop :=
-    ∀ n args m, length args = length (fn_regs f) ->
+    ∀ args m n, length args = length (fn_regs f) ->
                 Pre args m ->
-                safeₙ Post ([], CallState f args, m) n.
+                safe Post ([], CallState f args, m) n.
 
   Lemma hoare_post_from_steps (Pre: precondition) f (Post: postcondition) :
     hoare Pre f Post ->
     ∀ n args m v m',
     Pre args m ->
-    P |- ([], CallState f args, m) -{ n }> ([], ReturnState v, m') ->
+    P ⊨ ([], CallState f args, m) -{ n }> ([], ReturnState v, m') ->
     Post v m'.
   Proof.
     intros Hspec n args m v m' Hpre Hsteps.
@@ -211,29 +199,27 @@ Section WP.
     - destruct Hsteps as [Hfin | Hstuck].
       + now inv Hfin.
       + apply ret_stuck_in_empty in Hstuck. tauto.
-    - apply (Hspec (n + 1)); eauto. destruct n as [ | n].
+    - apply (Hspec _ _ (n + 1)); eauto. destruct n as [ | n].
       + inv Hsteps.
       + apply nsteps_inv_l in Hsteps. destruct Hsteps as (u & Hstep & Hsteps).
         now inv Hstep.
     - lia.
   Qed.
 
-  Lemma wp_call f pc Q : ∀ dst name args pc',
+  Lemma wp_call f pc Q : ∀ dst name args pc' vals fn Pre Post,
     f@pc is <{ dst := @call name args -> pc' }> ->
-    ⊢ ▷ (∀ vals,
-           args ↦ᵣ vals ->
-           ∃ fn Pre Post,
-             ⌜find_fun P name = Some fn⌝ ∧
-             ⌜length args = length (fn_regs fn)⌝ ∧
-             ⌜hoare Pre fn Post⌝ ∧
-             ⌜Pre vals⌝ₘ ∧
-             (∀ v, ⊢ₘ ⌜Post v⌝ₘ -> ⟦dst <-ᵣ v⟧ wpₙ Q f pc')
-        ) -> wpₙ Q f pc.
+    ⊢ (args ↦ᵣ vals ∧
+       ⌜find_fun P name = Some fn⌝ ∧
+       ⌜length args = length (fn_regs fn)⌝ ∧
+       ⌜hoare Pre fn Post⌝ ∧
+       ⌜Pre vals⌝ₘ ∧
+       ▷ (∀ v, ⊢ₘ ⌜Post v⌝ₘ -> ⟦dst <-ᵣ v⟧ wp Q f pc')) ->
+    wp Q f pc.
   Proof.
-    intros dst sig args pc' H ρ m [ | n] Hwp; [apply safe_init | ].
-    destruct (Hwp _ eq_refl)
-      as (fn & Pre & Post & Hfun & Hlen & Hspec & Hpre & Hwp').
-    clear Hwp. unfold_Prop. apply safe_to_step.
+    intros dst sig args pc' vals fn Pre Post H ρ m [ | n]
+      (Hargs & Hfun & Hlen & Hspec & Hpre & Hwp); [apply safe_init | ].
+    unfold_Prop. subst.
+    apply safe_to_step.
     - repeat econstructor; now eauto.
     - intros t Hs. inv Hs.
       apply safe_from_progress.
@@ -249,29 +235,28 @@ Section WP.
         * lia.
       + eapply safe_implies_progress in Hrest.
         * eassumption.
-        * apply Hwp'.
+        * apply Hwp.
           apply (hoare_post_from_steps _ _ _ Hspec) in Hrtc; auto.
         * lia.
   Qed.
 
   Lemma hoare_from_wp Pre f Post:
-    (⊢
-     (∃ args, ⌜Pre args⌝ₘ ∧ fn_regs f ↦ᵣ args) ->
-     wpₙ Post f (fn_entrypoint f)
-    ) -> hoare Pre f Post.
+    (∀ args,
+       ⊢ (⌜Pre args⌝ₘ ∧ fn_regs f ↦ᵣ args) -> wp Post f (fn_entrypoint f))
+    -> hoare Pre f Post.
   Proof.
-    intros H [ |n ] args m Hlen Hpre; [apply safe_init | ].
+    intros H args m [ ] Hlen Hpre; [apply safe_init | ].
     unfold_Prop.
     apply safe_to_step.
     - repeat econstructor; eauto.
-    - intros ? Hs. inv Hs. apply H. eexists. split.
+    - intros ? Hs. inv Hs. apply H with args. split.
       + eassumption.
       + apply get_regs_init_regs.
         * apply fn_regs_no_dup.
         * assumption.
   Qed.
 
-  Definition NodeInv Q f pc (NI : sProp) : Prop := ⊢ NI -> wpₙ Q f pc.
+  Definition NodeInv Q f pc (NI : logic) : Prop := ⊢ NI -> wp Q f pc.
 
   Definition body : code :=
     let x := 0 in
@@ -297,46 +282,46 @@ Section WP.
       fn_regs_no_dup := NoDup_nil_2;
     |}.
 
+  Ltac step lemma :=
+    match goal with
+    | |- wp _ ?f ?pc _ _ ?n =>
+        let H := fresh "Hpc" in
+        eassert (H: f@pc is _) by reflexivity;
+        eapply lemma;
+        [now apply H|];
+        clear H; repeat split; simpl_reg; simpl;
+        try (destruct n as [|n]; [easy|])
+    | |- match ?n with
+         | O => True
+         | S n' => wp _ _ _ _ _ n'
+         end => destruct n as [|n]; [easy|step lemma]
+    end.
+
   Lemma test_inv :
     NodeInv (fun v m => v = 10%Z) test 3
       ⟨1 ↦ᵣ 1%Z ∧ 2 ↦ᵣ 10%Z ∧ ∃ v, 0 ↦ᵣ v ∧ ⌜(v <= 10)%Z⌝⟩.
   Proof.
     apply löb.
-    intros ρ m n IH (Hone & Hten & v & Hres & Hv). unfold_Prop.
-    eapply wp_op; auto. destruct n as [ | n]; try easy; unfold_Prop.
-    intros ? <-. exists (10 - v)%Z; split; [now simpl_reg | ].
-    eapply wp_cond; auto; destruct n as [ | n]; try easy; unfold_Prop.
-    intros ? <-. simpl_reg.
+    intros ρ m n IH (Hone & Hten & v & Hres & Hv).
+    step wp_op.
+    step wp_cond.
     destruct (10 - v =? 0)%Z eqn:He.
-    - apply Z.eqb_eq in He. assert (v = 10%Z) by lia. subst.
-      eapply wp_ret with (v := 10%Z);
-        auto; destruct n as [ | n]; try easy; unfold_Prop.
-      split; simpl_reg.
-    - apply Z.eqb_neq in He. assert ((v < 10)%Z) by lia.
-      eapply wp_op; auto; destruct n as [ | n]; try easy; unfold_Prop.
-      intros ? <-. exists (v + 1)%Z; split; [now simpl_reg | ].
-      eapply safe_mono in IH.
-      + eassumption.
+    - step wp_ret. repeat split. lia.
+    - step wp_op. eapply safe_mono; [|apply IH].
       + lia.
-      + repeat split; simpl_reg.  eexists. split.
-        * reflexivity.
-        * lia.
+      + simpl_reg. eexists. repeat split.
+        lia.
   Qed.
 
   Lemma test_correct :
     hoare (fun args m => True) test (fun v m => v = 10%Z).
   Proof.
     apply hoare_from_wp.
-    intros ρ m n _. unfold_Prop.
-    eapply wp_op; auto; destruct n as [ | n]; try easy; unfold_Prop.
-    intros ? <-. exists 0%Z; split; [now simpl_reg |].
-    eapply wp_op; auto; destruct n as [ | n]; try easy; unfold_Prop.
-    intros ? <-. exists 1%Z; split; [now simpl_reg |].
-    eapply wp_op; auto; destruct n as [ | n]; try easy; unfold_Prop.
-    intros ? <-. exists 10%Z; split; [now simpl_reg |].
-    apply test_inv; unfold_Prop. repeat split; simpl_reg.
-    eexists. split.
-    - reflexivity.
-    - lia.
+    intros args ρ m n _.
+    step wp_op.
+    step wp_op.
+    step wp_op.
+    apply test_inv. simpl_reg.
+    eexists. repeat split. lia.
   Qed.
 End WP.
