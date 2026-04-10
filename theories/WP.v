@@ -255,8 +255,9 @@ Section WP.
   Qed.
 
   Lemma hoare_from_wp Pre f Post:
-    (
-      (∃ args, ⌜Pre args⌝ₘ ∧ fn_regs f ↦ᵣ args) ⊢ wpₙ Post f (fn_entrypoint f)
+    (⊢
+     (∃ args, ⌜Pre args⌝ₘ ∧ fn_regs f ↦ᵣ args) ->
+     wpₙ Post f (fn_entrypoint f)
     ) -> hoare Pre f Post.
   Proof.
     intros H [ |n ] args m Hlen Hpre; [apply safe_init | ].
@@ -297,15 +298,11 @@ Section WP.
     |}.
 
   Lemma test_inv :
-    NodeInv (fun v m => (v = 10)%Z) test 3
+    NodeInv (fun v m => v = 10%Z) test 3
       ⟨1 ↦ᵣ 1%Z ∧ 2 ↦ᵣ 10%Z ∧ ∃ v, 0 ↦ᵣ v ∧ ⌜(v <= 10)%Z⌝⟩.
   Proof.
-    unfold NodeInv.
-    intros ρ m n.
-    revert ρ m.
-    induction n as [ n IH ] using lt_wf_ind.
-    (* apply löb. *)
-    intros ρ m (Hone & Hten & v & Hres & Hv). unfold_Prop.
+    apply löb.
+    intros ρ m n IH (Hone & Hten & v & Hres & Hv). unfold_Prop.
     eapply wp_op; auto. destruct n as [ | n]; try easy; unfold_Prop.
     intros ? <-. exists (10 - v)%Z; split; [now simpl_reg | ].
     eapply wp_cond; auto; destruct n as [ | n]; try easy; unfold_Prop.
@@ -318,14 +315,16 @@ Section WP.
     - apply Z.eqb_neq in He. assert ((v < 10)%Z) by lia.
       eapply wp_op; auto; destruct n as [ | n]; try easy; unfold_Prop.
       intros ? <-. exists (v + 1)%Z; split; [now simpl_reg | ].
-      apply IH; repeat split; simpl_reg.
-      eexists. split.
-      + reflexivity.
+      eapply safe_mono in IH.
+      + eassumption.
       + lia.
+      + repeat split; simpl_reg.  eexists. split.
+        * reflexivity.
+        * lia.
   Qed.
 
   Lemma test_correct :
-    hoare (fun args m => True) test (fun v m => (v = 10)%Z).
+    hoare (fun args m => True) test (fun v m => v = 10%Z).
   Proof.
     apply hoare_from_wp.
     intros ρ m n _. unfold_Prop.

@@ -28,6 +28,7 @@ Class Logic (L: Type) :=
     logic_memory_pure : (memory -> Prop) -> L;
     logic_later : L -> L;
     logic_always : L -> L;
+    logic_memory_entails : L -> L;
   }.
 
 Declare Scope logic_scope.
@@ -63,14 +64,17 @@ Notation "▷ P" :=
 Notation "□ P" :=
   (logic_always P)
     (at level 20, right associativity, format "□ P") : logic_scope.
+Notation "'⊢ₘ' P" :=
+  (logic_memory_entails P)
+    (at level 99, right associativity) : logic_scope.
 
 Notation "'⟨' P '⟩'" := P%logic.
 
-Definition logic_entails `{Logic L} (P Q : L) : Prop :=
-  logic_empty_entails (logic_impl P Q).
-Notation "P ⊢ Q" :=
-  (logic_entails P%logic Q%logic)
-    (at level 99, right associativity).
+(* Definition logic_entails `{Logic L} (P Q : L) : Prop := *)
+(*   logic_empty_entails (logic_impl P Q). *)
+(* Notation "P ⊢ Q" := *)
+(*   (logic_entails P%logic Q%logic) *)
+(*     (at level 99, right associativity). *)
 
 Instance oProp_logic : Logic oProp :=
   {|
@@ -92,6 +96,7 @@ Instance oProp_logic : Logic oProp :=
         end;
 
     logic_always P := fun m _ => ∀ n, P m n;
+    logic_memory_entails P := fun _ n => ∀ m, P m n;
   |}.
 
 Definition oProp_update (f: memory -> option memory) (P: oProp) : oProp :=
@@ -130,6 +135,7 @@ Instance sProp_logic : Logic sProp :=
     logic_memory_pure P := fun _ => logic_memory_pure P;
     logic_later P := fun ρ => logic_later (P ρ);
     logic_always P := fun ρ => logic_always (P ρ);
+    logic_memory_entails P := fun ρ => logic_memory_entails (P ρ);
   |}.
 
 Definition sProp_set_reg (r : reg) (v : val) (P : sProp) : sProp :=
@@ -154,10 +160,11 @@ Definition sProp_assert_regs (rs : list reg) (vs : list val) : sProp :=
 Instance assert_reg_list : LogicAssertReg (list reg) (list val) :=
   sProp_assert_regs.
 
-Definition sProp_memory_entailment (P : sProp) : sProp :=
-  fun ρ _ n => ∀ m, P ρ m n.
-Notation "'⊢ₘ' P" :=
-  (sProp_memory_entailment P)
+Definition sProp_register_entails (P : sProp) : sProp :=
+  fun _ m n => ∀ ρ, P ρ m n.
+
+Notation "'⊢ᵨ' P" :=
+  (sProp_register_entails P)
     (at level 99, right associativity) : logic_scope.
 
 Create HintDb custom_anyProp discriminated.
@@ -175,6 +182,7 @@ Hint Unfold
   logic_pure
   logic_later
   logic_always
+  logic_memory_entails
 
   oProp_update
   oProp_set
@@ -188,7 +196,8 @@ Hint Unfold
   assert_reg_single
   assert_reg_list
 
-  sProp_memory_entailment
+  sProp_register_entails
+
 : custom_anyProp.
 
 Ltac unfold_Prop :=
@@ -196,10 +205,17 @@ Ltac unfold_Prop :=
   cbv beta in *;
   simpl in *.
 
-
-Lemma löb P :
-  (▷ P ⊢ P) -> ⊢ P.
+Lemma löb_weak P :
+  (⊢ ▷ P -> P) -> ⊢ P.
 Proof.
   intros H ρ m n.
   induction n as [|n IH]; now apply H.
+Qed.
+
+Lemma löb P :
+  (⊢ ▷ (⊢ᵨ ⊢ₘ P) -> P) -> ⊢ P.
+Proof.
+  intros H ρ m n.
+  revert ρ m.
+  induction n as [|n IH]; intros ρ m; now apply H.
 Qed.
