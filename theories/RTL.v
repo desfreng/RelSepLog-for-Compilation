@@ -2,6 +2,7 @@ From Stdlib Require Import Strings.String.
 From Stdlib Require Import ZArith.ZArith.
 
 From stdpp Require Import gmap.
+From stdpp Require Import list.
 
 Definition ident : Type := string.
 Definition val : Type := Z.
@@ -53,12 +54,16 @@ Record function := {
     fn_entrypoint : node;
     fn_code : code;
     fn_regs_no_dup : NoDup fn_regs;
+  }.
+
+Record program := {
+    prog_func: list function;
+    prog_main: ident;
+    prog_wf: ∃ f, In f prog_func ∧ fn_name f = prog_main;
 }.
 
-Definition program := list function.
-
 Definition find_fun (P: program) (s: ident) : option function :=
-  List.find (fun f => (fn_name f =? s)%string) P.
+  List.find (fun f => (fn_name f =? s)%string) (prog_func P).
 
 (* [regmap] is a mapping from registers to a value *)
 Definition regmap : Type := gmap reg val.

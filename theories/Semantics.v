@@ -107,6 +107,13 @@ Notation "P '⊨' s '->>*' t" :=
 Notation "P '⊨' s '-{' n '}>' t" :=
   (nsteps (step P) n s t)  (at level 60, right associativity).
 
+Variant final : state -> Prop :=
+| FinalState : ∀ v m, final ([], ReturnState v, m).
+
+Definition not_stuck (P: program) s := ∃ t, P ⊨ s ->> t.
+
+Definition stuck (P: program) s := ~(not_stuck P s) ∧ ~(final s).
+
 Lemma nsteps_inv_l {A : Type} {R : relation A} :
   ∀ n x z, nsteps R (S n) x z → ∃ y : A, R x y ∧ nsteps R n y z.
 Proof. intros n x z H; inv H; eexists; eauto. Qed.
@@ -148,11 +155,6 @@ Proof.
     subst; econstructor; now eauto.
 Qed.
 
-Theorem step_callstack P : ∀ σ s m σ' t m' Σ,
-  P ⊨ (σ, s, m) ->> (σ', t, m') <->
-  P ⊨ (σ ++ Σ, s, m) ->> (σ' ++ Σ, t, m').
-Proof. split. 1: apply lift_step. apply unlift_step. Qed.
-
 Theorem lift_steps P : ∀ σ s m σ' t m' Σ,
   P ⊨ (σ, s, m) ->>* (σ', t, m') ->
   P ⊨ (σ ++ Σ, s, m) ->>* (σ' ++ Σ, t, m').
@@ -168,6 +170,19 @@ Proof.
     + apply rtc_once. apply lift_step. eassumption.
     + eauto.
 Qed.
+
+Lemma ret_not_stuck : ∀ P frame σ v m,
+  not_stuck P (frame :: σ, ReturnState v, m).
+Proof. intros P []. repeat econstructor; now eauto. Qed.
+
+Lemma ret_stuck_in_empty : ∀ P v m,
+  ~ not_stuck P ([], ReturnState v, m).
+Proof. intros P v m [u H]. inv H. Qed.
+
+Lemma lift_not_stuck : ∀ P σ Σ s m,
+  not_stuck P (σ, s, m) ->
+  not_stuck P (σ ++ Σ, s, m).
+Proof. intros P σ Σ s m [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
 
 Lemma unfold_call P fn : ∀ n res f pc ρ args m σ t m',
   P ⊨ ([Stackframe res f pc ρ], CallState fn args, m) -{n}> (σ, t, m') ->

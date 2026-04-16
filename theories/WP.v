@@ -20,41 +20,26 @@ Import ListNotations.
 
 Section WP.
   Variable P : program.
- 
-  Inductive final (Q: postcondition) : state -> Prop :=
-  | Final : ∀ v m, Q v m -> final Q ([], ReturnState v, m).
 
-  Definition not_stuck t := ∃ u, P ⊨ t ->> u.
-
-  Lemma ret_not_stuck : ∀ frame σ v m,
-    not_stuck (frame :: σ, ReturnState v, m).
-  Proof. intros []. repeat econstructor; now eauto. Qed.
-
-  Lemma ret_stuck_in_empty : ∀ v m,
-    ~ not_stuck ([], ReturnState v, m).
-  Proof. intros v m [u H]. inv H. Qed.
-
-  Lemma lift_not_stuck : ∀ σ Σ s m,
-    not_stuck (σ, s, m) ->
-    not_stuck (σ ++ Σ, s, m).
-  Proof. intros σ Σ s m [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
+  Inductive final_with Q : state -> Prop :=
+  | FinalWith : ∀ v m, Q v m -> final_with Q ([], ReturnState v, m).
 
   (** [safe Q n s] : s is a state that is safe for at most n steps:
       - s is a final step or
       - s is not stuck and can do at most n steps. *)
   Inductive safe Q : state -> nat -> Prop :=
   | safe_init : ∀ s, safe Q s 0
-  | final_is_safe : ∀ s n, final Q s -> safe Q s n
+  | final_is_safe : ∀ s n, final_with Q s -> safe Q s n
   | safe_to_step : ∀ s n,
     (* I am not stuck *)
-    not_stuck s ->
+    not_stuck P s ->
     (* All possible next states are safe for at most n least *)
     (∀ t, P ⊨ s ->> t -> safe Q t n) ->
     (* I am safe for at most n+1 least *)
     safe Q s (S n).
 
   Lemma safe_from_progress Q s n :
-    (∀ t m, m < n -> P ⊨ s -{m}> t -> final Q t ∨ not_stuck t) ->
+    (∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ not_stuck P t) ->
     safe Q s n.
   Proof.
     induction n as [ | n IH] in s |- *; intros H.
@@ -72,7 +57,7 @@ Section WP.
 
   Lemma safe_implies_progress Q s n :
     safe Q s n ->
-    ∀ t m, m < n -> P ⊨ s -{m}> t -> final Q t ∨ not_stuck t.
+    ∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ not_stuck P t.
   Proof.
     intros Hsafe.
     induction Hsafe as [s' | s' n' Hfin | s' n' Hns Hsafe IH]
@@ -182,7 +167,7 @@ Section WP.
     - intros ? Hs. inv Hs. now destruct (get_reg cond ρ =? 0)%Z.
   Qed.
 
-  Definition hoare (Pre: precondition) f Post : Prop :=
+  Definition hoare (Pre: precondition) f (Post: postcondition) : Prop :=
     ∀ args m n, length args = length (fn_regs f) ->
                 Pre args m ->
                 safe Post ([], CallState f args, m) n.
@@ -240,7 +225,7 @@ Section WP.
         * lia.
   Qed.
 
-  Lemma hoare_from_wp Pre f Post:
+  Lemma hoare_from_wp (Pre: precondition) f (Post: postcondition):
     (∀ args,
        ⊢ (⌜Pre args⌝ₘ ∧ fn_regs f ↦ᵣ args) -> wp Post f (fn_entrypoint f))
     -> hoare Pre f Post.
