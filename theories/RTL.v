@@ -1,8 +1,6 @@
-From Stdlib Require Import Strings.String.
-From Stdlib Require Import ZArith.ZArith.
-
+From stdpp Require Import prelude.
+From stdpp Require Import strings.
 From stdpp Require Import gmap.
-From stdpp Require Import list.
 
 Definition ident : Type := string.
 Definition val : Type := Z.

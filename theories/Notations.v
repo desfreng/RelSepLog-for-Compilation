@@ -1,12 +1,6 @@
-From Stdlib Require Import Lists.List.
-From Stdlib Require Import Strings.String.
-From Stdlib Require Import ZArith.ZArith.
-
-From stdpp Require Import gmap.
+From stdpp Require Import prelude.
 
 From RSL Require Import RTL.
-
-Import ListNotations.
 
 Module RTLNotations.
   Declare Custom Entry rtl_code.
@@ -167,7 +161,6 @@ Module RTLNotations.
 End RTLNotations.
 
 Module Test.
-  Import ListNotations.
   Import RTLNotations.
 
   Definition my_code : code := <{{

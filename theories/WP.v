@@ -1,20 +1,13 @@
-From Stdlib Require Import Utf8.
-
-From Stdlib Require Import Lists.List.
-From Stdlib Require Import Strings.String.
-From Stdlib Require Import ZArith.ZArith.
-From Stdlib Require Import Lia.
-
-From stdpp Require Import relations.
-From stdpp Require Import tactics.
+From stdpp Require Import prelude.
+From stdpp Require Import strings.
 
 From RSL Require Import RTL.
 From RSL Require Import Notations.
 From RSL Require Import Semantics.
+From RSL Require Import SemanticsSpec.
 From RSL Require Import Logic.
 
 Import RTLNotations.
-Import ListNotations.
 
 (* Set Mangle Names. *)
 
@@ -32,14 +25,14 @@ Section WP.
   | final_is_safe : ∀ s n, final_with Q s -> safe Q s n
   | safe_to_step : ∀ s n,
     (* I am not stuck *)
-    not_stuck P s ->
+    can_progress P s ->
     (* All possible next states are safe for at most n least *)
     (∀ t, P ⊨ s ->> t -> safe Q t n) ->
     (* I am safe for at most n+1 least *)
     safe Q s (S n).
 
   Lemma safe_from_progress Q s n :
-    (∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ not_stuck P t) ->
+    (∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ can_progress P t) ->
     safe Q s n.
   Proof.
     induction n as [ | n IH] in s |- *; intros H.
@@ -57,7 +50,7 @@ Section WP.
 
   Lemma safe_implies_progress Q s n :
     safe Q s n ->
-    ∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ not_stuck P t.
+    ∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ can_progress P t.
   Proof.
     intros Hsafe.
     induction Hsafe as [s' | s' n' Hfin | s' n' Hns Hsafe IH]
