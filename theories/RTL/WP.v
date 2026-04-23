@@ -1,89 +1,25 @@
 From stdpp Require Import prelude.
 From stdpp Require Import strings.
 
-From RSL Require Import RTL.
-From RSL Require Import Notations.
-From RSL Require Import Semantics.
-From RSL Require Import SemanticsSpec.
-From RSL Require Import Logic.
+From RSL Require Import Commons.Utils.
+From RSL Require Import Commons.Language.
+From RSL Require Import Commons.WP.
+
+From RSL Require Import RTL.RTL.
+From RSL Require Import RTL.Notations.
+From RSL Require Import RTL.Semantics.
+From RSL Require Import RTL.Logic.
 
 Import RTLNotations.
 
 (* Set Mangle Names. *)
 
-Section WP.
-  Variable P : program.
+Section RTLWP.
+  Let Λ : lang := rtl_lang.
+  Context (P: prog Λ).
 
-  Inductive final_with Q : state -> Prop :=
-  | FinalWith : ∀ v m, Q v m -> final_with Q ([], ReturnState v, m).
-
-  (** [safe Q n s] : s is a state that is safe for at most n steps:
-      - s is a final step or
-      - s is not stuck and can do at most n steps. *)
-  Inductive safe Q : state -> nat -> Prop :=
-  | safe_init : ∀ s, safe Q s 0
-  | final_is_safe : ∀ s n, final_with Q s -> safe Q s n
-  | safe_to_step : ∀ s n,
-    (* I am not stuck *)
-    can_progress P s ->
-    (* All possible next states are safe for at most n least *)
-    (∀ t, P ⊨ s ->> t -> safe Q t n) ->
-    (* I am safe for at most n+1 least *)
-    safe Q s (S n).
-
-  Lemma safe_from_progress Q s n :
-    (∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ can_progress P t) ->
-    safe Q s n.
-  Proof.
-    induction n as [ | n IH] in s |- *; intros H.
-    - constructor.
-    - assert (Hstep: P ⊨ s -{0}> s) by constructor.
-      assert (Hle: 0 < S n) by lia.
-      destruct (H _ _ Hle Hstep) as [Hfin | Hns]; clear Hstep Hle.
-      + now constructor.
-      + apply safe_to_step; auto. intros t Hstep.
-        apply IH. intros u m Heq Hsteps. subst.
-        apply H with (S m).
-        * lia.
-        * econstructor; now eauto.
-  Qed.
-
-  Lemma safe_implies_progress Q s n :
-    safe Q s n ->
-    ∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ can_progress P t.
-  Proof.
-    intros Hsafe.
-    induction Hsafe as [s' | s' n' Hfin | s' n' Hns Hsafe IH]
-      in n, Hsafe |- *; intros t m Hlt Hrtc.
-    - inv Hlt.
-    - destruct m as [ | m].
-      + inv Hrtc. now left.
-      + inv Hfin. apply nsteps_inv_l in Hrtc.
-        destruct Hrtc as (? & Hstep & ?).
-        inv Hstep.
-    - destruct m as [ | m ].
-      + inv Hrtc; now auto.
-      + apply nsteps_inv_l in Hrtc.
-        destruct Hrtc as (u & Hstep & Hrtc).
-        eapply IH; try eassumption; lia.
-  Qed.
-
-  Definition safe_mono Q s :
-    ∀ n m, m <= n -> safe Q s n -> safe Q s m.
-  Proof.
-    intros n m Hle Hsafe.
-    induction Hsafe as [ | | ? ? Hns Hsafe IH ] in m, Hle |- *.
-    - inv Hle. constructor.
-    - now apply final_is_safe.
-    - destruct m as [ | m ].
-      + constructor.
-      + apply safe_to_step.
-        * assumption.
-        * intros ? Ht. apply IH; auto. lia.
-  Qed.
-
-  Definition wp Q f pc : logic :=
-    fun ρ m n => safe Q ([], State f pc ρ, m) n.
+  Definition wp (Q: postcondition) f pc : logic :=
+    fun ρ m n => safe P (uncurry Q) ([], State f pc ρ, m) n.
 
   Lemma wp_ret (Q: postcondition) f pc : ∀ r v,
     f@pc is <{ ret r }> ->
@@ -93,7 +29,10 @@ Section WP.
     unfold_Prop. destruct H as [Hv HQ]. subst.
     apply safe_to_step.
     - eexists; econstructor; now eauto.
-    - intros t Hstep. inv Hstep. apply final_is_safe. now constructor.
+    - intros t Hstep. inv Hstep. apply final_is_safe. econstructor.
+      split.
+      + reflexivity.
+      + now unfold uncurry.
   Qed.
 
   Lemma wp_nop Q f pc : ∀ pc',
@@ -163,7 +102,7 @@ Section WP.
   Definition hoare (Pre: precondition) f (Post: postcondition) : Prop :=
     ∀ args m n, length args = length (fn_regs f) ->
                 Pre args m ->
-                safe Post ([], CallState f args, m) n.
+                safe P (uncurry Post) ([], CallState f args, m) n.
 
   Lemma hoare_post_from_steps (Pre: precondition) f (Post: postcondition) :
     hoare Pre f Post ->
@@ -173,10 +112,10 @@ Section WP.
     Post v m'.
   Proof.
     intros Hspec n args m v m' Hpre Hsteps.
-    eapply (safe_implies_progress Post) in Hsteps.
+    eapply safe_implies_progress with (Q := uncurry Post) in Hsteps.
     - destruct Hsteps as [Hfin | Hstuck].
-      + now inv Hfin.
-      + apply ret_stuck_in_empty in Hstuck. tauto.
+      + destruct Hfin as (x & Hfin & HQ). inv Hfin. apply HQ.
+      + now apply ret_stuck_in_empty in Hstuck.
     - apply (Hspec _ _ (n + 1)); eauto. destruct n as [ | n].
       + inv Hsteps.
       + apply nsteps_inv_l in Hsteps. destruct Hsteps as (u & Hstep & Hsteps).
@@ -204,9 +143,11 @@ Section WP.
       intros [[σ' s] m''] n' Hn Hsteps.
       apply unfold_call in Hsteps.
       destruct Hsteps as [(? & ? & Hrtc) | (? & ? & ? & ? & ? & Hrtc & Hrest)].
-      + right. eapply safe_implies_progress in Hrtc;
+      + right. eapply safe_implies_progress with (Q := uncurry Post) in Hrtc;
           [destruct Hrtc as [Hfin | Hprogress] | | ].
-        * inv Hfin. apply ret_not_stuck.
+        * destruct Hfin as ([] & Hfin & ?).
+          apply is_final_struct in Hfin. inv Hfin.
+          apply ret_not_stuck.
         * subst. now apply lift_not_stuck.
         * apply Hspec with (n := n+1); auto.
           unfold get_regs. now rewrite length_map.
@@ -267,7 +208,7 @@ Section WP.
         eassert (H: f@pc is _) by reflexivity;
         eapply lemma;
         [now apply H|];
-        clear H; repeat split; simpl_reg; simpl;
+        clear H; repeat split; simpl_reg; unfold_Prop; simpl;
         try (destruct n as [|n]; [easy|])
     | |- match ?n with
          | O => True
@@ -284,7 +225,7 @@ Section WP.
     step wp_op.
     step wp_cond.
     destruct (10 - v =? 0)%Z eqn:He.
-    - step wp_ret. repeat split. lia.
+    - step wp_ret. repeat split. simpl_reg.
     - step wp_op. eapply safe_mono; [|apply IH].
       + lia.
       + simpl_reg. eexists. repeat split.
@@ -299,7 +240,7 @@ Section WP.
     step wp_op.
     step wp_op.
     step wp_op.
-    apply test_inv. simpl_reg.
+    apply test_inv. repeat (simpl_reg; unfold_Prop).
     eexists. repeat split. lia.
   Qed.
-End WP.
+End RTLWP.

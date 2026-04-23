@@ -1,6 +1,6 @@
 From stdpp Require Import prelude.
 
-From RSL Require Import RTL.
+From RSL Require Import RTL.RTL.
 
 Module RTLNotations.
   Declare Custom Entry rtl_code.
@@ -157,7 +157,6 @@ Module RTLNotations.
       (in custom rtl_reg_list at level 0,
           v constr at level 0,
           rest custom rtl_reg_list at level 0).
-
 End RTLNotations.
 
 Module Test.
