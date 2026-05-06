@@ -1,8 +1,6 @@
-From stdpp Require Import prelude.
-From stdpp Require Import gmap.
+From RSL Require Import Prelude.
 
-From RSL Require Import Commons.Utils.
-From RSL Require Import Commons.Language.
+From stdpp Require Import gmap.
 
 From RSL Require Import RTL.RTL.
 From RSL Require Import RTL.Notations.
@@ -351,3 +349,31 @@ Tactic Notation "simpl_reg" "by" tactic3(tac) :=
 
 Global Tactic Notation "simpl_reg" :=
   simpl_reg by repeat (f_equal || lia ||split).
+
+Section Succ.
+  Let Λ : lang := rtl_lang.
+  Context (P: prog Λ).
+
+  Definition next (f: function) (pc: node) : list node :=
+    match fn_code f !! pc with
+    | Some (Inop succ) => [succ]
+    | Some (Iop _ _ _ succ) => [succ]
+    | Some (Iload _ _ succ) => [succ]
+    | Some (Istore _ _ succ) => [succ]
+    | Some (Icall _ _ _ succ) => [succ]
+    | Some (Icond _ ifso ifnot) => [ifso; ifnot]
+    | Some (Ireturn _) => []
+    | None => []
+    end.
+
+  Lemma next_correct f pc : ∀ ρ ρ' m m' pc',
+    P ⊨ ([], State f pc ρ, m) ->> ([], State f pc' ρ', m') ->
+    pc' ∈ next f pc.
+  Proof using Type.
+    unfold next.
+    intros ρ ρ' m m' pc' H.
+    destruct (fn_code f !! pc) as [[] | ] eqn:Hi;
+      inv H; try now constructor.
+    case_match; do 2 constructor.
+  Qed.
+End Succ.

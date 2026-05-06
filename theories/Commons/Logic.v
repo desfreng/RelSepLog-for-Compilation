@@ -1,6 +1,4 @@
-From stdpp Require Import base.
-
-From RSL Require Import Commons.Definitions.
+From RSL Require Import Prelude.
 
 (* Set Mangle Names. *)
 
@@ -81,7 +79,7 @@ Notation "'⊢ᵨ' P" :=
   (logic_register_entails P)
     (at level 99, right associativity) : logic_scope.
 
-Notation "'⟨' P '⟩'" := P%logic.
+Notation "'⌞' P '⌟'" := P%logic.
 
 (* Definition logic_entails `{Logic L} (P Q : L) : Prop := *)
 (*   logic_empty_entails (logic_impl P Q). *)
@@ -98,24 +96,24 @@ Definition logic_assert_mem (addr: val) (v: val) : logic :=
 Definition logic_set_reg (r : reg) (v : val) (P : logic) : logic :=
   fun ρ m n => P (set_reg r v ρ) m n.
 
-Notation "'⟦' addr '<-' v '⟧' P" :=
-  (logic_set_mem addr v P)
+Notation "'⟦' l '<-' v '⟧' P" :=
+  (logic_set_mem l%positive v%Z P)
     (at level 20, P at level 20, right associativity,
-       format "⟦ addr <- v ⟧  P").
+       format "⟦ l <- v ⟧  P").
 
 Notation "l '↦' v" :=
-  (logic_assert_mem l v)
+  (logic_assert_mem l%positive v%Z)
     (at level 70, no associativity, format "l ↦ v") : logic_scope.
 
 Notation "'⟦' dst '<-ᵣ' v '⟧' P" :=
-  (logic_set_reg dst v P)
+  (logic_set_reg dst%nat v%Z P)
     (at level 20, P at level 20, right associativity,
        format "⟦ dst <-ᵣ v ⟧  P") : logic_scope.
 
 Class LogicAssertReg (R V : Type) := logic_assert_reg : R -> V -> logic.
 
 Notation "r '↦ᵣ' v" :=
-  (logic_assert_reg r v)
+  (logic_assert_reg r%nat v%Z)
     (at level 70, no associativity, format "r ↦ᵣ v").
 
 Instance assert_reg_single : LogicAssertReg reg val :=

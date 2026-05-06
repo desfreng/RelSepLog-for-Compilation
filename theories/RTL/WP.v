@@ -1,10 +1,6 @@
-From stdpp Require Import prelude.
-From stdpp Require Import strings.
+From RSL Require Import Prelude.
 
-From RSL Require Import Commons.Utils.
-From RSL Require Import Commons.Language.
 From RSL Require Import Commons.WP.
-From RSL Require Import Commons.NoDupDec.
 From RSL Require Import Commons.Logic.
 
 From RSL Require Import RTL.RTL.

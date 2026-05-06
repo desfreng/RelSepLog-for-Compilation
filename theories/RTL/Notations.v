@@ -1,5 +1,4 @@
-From stdpp Require Import prelude.
-
+From RSL Require Import Prelude.
 From RSL Require Import RTL.RTL.
 
 Module RTLNotations.

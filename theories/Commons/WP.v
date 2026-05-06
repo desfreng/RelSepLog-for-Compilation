@@ -1,8 +1,4 @@
-From stdpp Require Import prelude.
-From stdpp Require Import strings.
-
-From RSL Require Import Commons.Language.
-From RSL Require Import Commons.Utils.
+From RSL Require Import Prelude.
 
 (* Set Mangle Names. *)
 

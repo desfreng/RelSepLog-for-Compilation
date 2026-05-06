@@ -1,9 +1,7 @@
-From stdpp Require Import prelude.
+From RSL Require Import Prelude.
+
 From stdpp Require Import gmap.
 From stdpp Require Import strings.
-
-From RSL Require Export Commons.Definitions.
-From RSL Require Import Commons.NoDupDec.
 
 Inductive op : Type :=
 | Add

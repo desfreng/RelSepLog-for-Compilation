@@ -1,14 +1,10 @@
-From stdpp Require Import prelude.
+From RSL Require Import Prelude.
 
 From Stdlib Require Import Classical.
-
 From Coinduction Require Import all.
 
-From RSL Require Import Commons.Utils.
-From RSL Require Import Commons.Language.
-
-From RSL Require Import Refinement.Behaviors.
-From RSL Require Import Refinement.Sim.
+From RSL Require Import Simulation.Behaviors.
+From RSL Require Import Simulation.Sim.
 
 (* Set Mangle Names. *)
 
@@ -142,7 +138,7 @@ Section SimSound.
     - (* s is never stuck -> s is diverging *)
       exists Diverging. split; try constructor.
       apply has_diverging_behavior in Hdiv.
-      assert (H: sim Pₜ Pₛ Φ t s) by exact Hsim. clear Hsim.
+      assert (H: sim _ _ _ _ _) by exact Hsim. clear Hsim.
       (* We prove by coinduction that s diverges *)
       unfold diverges.
       revert t s Hdiv H Hnstuck. coinduction R cih.

@@ -1,4 +1,7 @@
-From stdpp Require Import gmap sets.
+From RSL Require Import Prelude.
+
+From stdpp Require Import gmap.
+From stdpp Require Import sets.
 
 From RSL Require Import RTL.RTL.
 
@@ -40,47 +43,36 @@ Definition remove_nops (fn: function) : function :=
     fn_regs_no_dup := fn_regs_no_dup fn;
   |}.
 
-Definition successors (i: instr) : list node :=
-  match i with
-  | Inop succ => [succ]
-  | Iop _ _ _ succ => [succ]
-  | Iload _ _ succ => [succ]
-  | Istore _ _ succ => [succ]
-  | Icall _ _ _ succ => [succ]
-  | Icond _ ifso ifnot => [ifso; ifnot]
-  | Ireturn _ => []
-  end.
+(* Fixpoint find_reachable (fuel: nat) (c: code) (worklist: list node) *)
+(*   (visited: gset node) : gset node := *)
+(*   match fuel with *)
+(*   | 0 => visited *)
+(*   | S f => *)
+(*       match worklist with *)
+(*       | [] => visited *)
+(*       | n :: rest => *)
+(*           if bool_decide (n ∈ visited) then *)
+(*             find_reachable f c rest visited *)
+(*           else *)
+(*             let visited' := {[ n ]} ∪ visited in *)
+(*             match c !! n with *)
+(*             | Some i => *)
+(*                 find_reachable f c (successors i ++ rest) visited' *)
+(*             | None => *)
+(*                 find_reachable f c rest visited' *)
+(*             end *)
+(*       end *)
+(*   end. *)
 
-Fixpoint find_reachable (fuel: nat) (c: code) (worklist: list node)
-  (visited: gset node) : gset node :=
-  match fuel with
-  | 0 => visited
-  | S f =>
-      match worklist with
-      | [] => visited
-      | n :: rest =>
-          if bool_decide (n ∈ visited) then
-            find_reachable f c rest visited
-          else
-            let visited' := {[ n ]} ∪ visited in
-            match c !! n with
-            | Some i =>
-                find_reachable f c (successors i ++ rest) visited'
-            | None =>
-                find_reachable f c rest visited'
-            end
-      end
-  end.
-
-Definition remove_dead_code (fn: function) : function :=
-  let c := fn_code fn in
-  let max_fuel := 3 * size c + 1 in
-  let reachable_set := find_reachable max_fuel c [fn_entrypoint fn] ∅ in
-  let new_c := filter (fun '(k, _) => bool_decide (k ∈ reachable_set)) c in
-  {|
-    fn_name := fn_name fn;
-    fn_regs := fn_regs fn;
-    fn_entrypoint := fn_entrypoint fn;
-    fn_code := new_c;
-    fn_regs_no_dup := fn_regs_no_dup fn;
-  |}.
+(* Definition remove_dead_code (fn: function) : function := *)
+(*   let c := fn_code fn in *)
+(*   let max_fuel := 3 * size c + 1 in *)
+(*   let reachable_set := find_reachable max_fuel c [fn_entrypoint fn] ∅ in *)
+(*   let new_c := filter (fun '(k, _) => bool_decide (k ∈ reachable_set)) c in *)
+(*   {| *)
+(*     fn_name := fn_name fn; *)
+(*     fn_regs := fn_regs fn; *)
+(*     fn_entrypoint := fn_entrypoint fn; *)
+(*     fn_code := new_c; *)
+(*     fn_regs_no_dup := fn_regs_no_dup fn; *)
+(*   |}. *)

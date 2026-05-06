@@ -1,3 +1,5 @@
+From RSL Require Import Prelude.
+
 From stdpp Require Import prelude strings fin_maps sorting.
 
 From RSL Require Import Toy.Toy.
@@ -38,17 +40,17 @@ Section Playground.
     | (x, _), (y, _) => x <= y
     end.
 
-  Definition compile_and_opt (p: tfunction) : option function :=
-    match compile p with
-    | Some c => Some $ remove_dead_code $ remove_nops c
-    | None => None
-    end.
+  (* Definition compile_and_opt (p: tfunction) : option function := *)
+  (*   match compile p with *)
+  (*   | Some c => Some $ remove_dead_code $ remove_nops c *)
+  (*   | None => None *)
+  (*   end. *)
 
-  Definition pp (p: option function) : list (node * instr) :=
-    match p with
-    | Some m => merge_sort sortp $ map_to_list $ fn_code m
-    | None => []
-    end.
+  (* Definition pp (p: option function) : list (node * instr) := *)
+  (*   match p with *)
+  (*   | Some m => merge_sort sortp $ map_to_list $ fn_code m *)
+  (*   | None => [] *)
+  (*   end. *)
 
   (* Compute pp $ compile factorial_program. *)
 

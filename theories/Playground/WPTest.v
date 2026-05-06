@@ -1,10 +1,8 @@
-From stdpp Require Import prelude.
+From RSL Require Import Prelude.
+
 From stdpp Require Import strings.
 
-From RSL Require Import Commons.Utils.
-From RSL Require Import Commons.Language.
 From RSL Require Import Commons.WP.
-From RSL Require Import Commons.NoDupDec.
 From RSL Require Import Commons.Logic.
 
 From RSL Require Import RTL.RTL.
@@ -59,7 +57,7 @@ Section Play.
 
   Lemma test_inv :
     NodeInv (fun v m => v = 10%Z) test 3
-      ⟨one ↦ᵣ 1%Z ∧ ten ↦ᵣ 10%Z ∧ ∃ v, x ↦ᵣ v ∧ ⌜(v <= 10)%Z⌝⟩.
+      ⌞ one ↦ᵣ 1 ∧ ten ↦ᵣ 10 ∧ ∃ v, x ↦ᵣ v ∧ ⌜v <= 10⌝%Z ⌟.
   Proof.
     apply löb.
     intros ρ m n IH (Hone & Hten & v & Hres & Hv).

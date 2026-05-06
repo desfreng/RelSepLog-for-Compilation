@@ -1,11 +1,8 @@
-From stdpp Require Import prelude.
-
-From Stdlib Require Import Classical.
+From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Commons.Utils.
-From RSL Require Import Commons.Language.
+From Stdlib Require Import Classical.
 
 (* Set Mangle Names. *)
 

@@ -1,7 +1,4 @@
-From stdpp Require Import prelude.
-
-From RSL Require Export Commons.Definitions.
-From RSL Require Import Commons.NoDupDec.
+From RSL Require Import Prelude.
 
 Variant texpr : Type :=
 | EReg (r: reg)
