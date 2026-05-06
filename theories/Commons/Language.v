@@ -8,17 +8,11 @@ Section lang_mixin.
   Context {prog state value : Type}.
 
   Context (step_rel : prog -> state -> state -> Prop).
-  Context (can_progress : prog -> state -> Prop).
-
   Context (is_final : state -> option value).
 
   Record LangMixin := {
-      mixin_final_no_progress:
-      ∀ p s v, is_final s = Some v -> ~can_progress p s;
       mixin_final_no_step:
       ∀ p s t v, is_final s = Some v -> ~step_rel p s t;
-      mixin_can_progress_must_step:
-      ∀ p s, can_progress p s -> ∃ t, step_rel p s t;
      }.
 End lang_mixin.
 
@@ -30,15 +24,12 @@ Structure lang :=
       value : Type;
 
       step_rel : prog -> state -> state -> Prop;
-
-      can_progress : prog -> state -> Prop;
       is_final : state -> option value;
 
-      lang_mixin : LangMixin step_rel can_progress is_final;
+      lang_mixin : LangMixin step_rel is_final;
     }.
 
 Arguments step_rel {_} _ _ _.
-Arguments can_progress {_} _ _.
 Arguments is_final {_} _.
 
 Notation "P ⊨ s '->>' t" := (step_rel P s t) (at level 60, right associativity).
@@ -46,38 +37,58 @@ Notation "P ⊨ s '-{' n '}>' t" := (nsteps (step_rel P) n s t) (at level 60, ri
 Notation "P ⊨ s '->>*' t" := (rtc (step_rel P) s t) (at level 60, right associativity).
 Notation "P ⊨ s '->>+' t" := (psteps (step_rel P) s t) (at level 60, right associativity).
 
-Section Stuck.
+Section LangProp.
   Context {Λ: lang} (P: prog Λ).
 
+  Definition can_progress (s: state Λ) : Prop :=
+    ∃ t, P ⊨ s ->> t.
+
   Definition stuck (s: state Λ) : Prop :=
-    is_final s = None ∧ ~ can_progress P s.
+    is_final s = None ∧ ~ can_progress s.
+
+  Lemma final_no_step:
+    ∀ s v, is_final s = Some v -> ∀ t, ~(P ⊨ s ->> t).
+  Proof.
+    intros s v Hf t. eapply mixin_final_no_step.
+    - apply lang_mixin.
+    - exact Hf.
+  Qed.
+
+  Lemma can_progress_must_step:
+    ∀ s, can_progress s -> ∃ t, P ⊨ s ->> t.
+  Proof. easy. Qed.
+
+  Lemma final_no_progress:
+    ∀ s v, is_final s = Some v -> ~can_progress s.
+  Proof.
+    intros s v Hfin Hp. destruct (can_progress_must_step _ Hp) as [? H].
+    eapply mixin_final_no_step.
+    - apply lang_mixin.
+    - eassumption.
+    - exact H.
+  Qed.
 
   Lemma final_not_stuck : ∀ s v,
     is_final s = Some v -> ~ stuck s.
   Proof. intros ? ? H [? ?]. inv H. Qed.
 
   Lemma progress_not_stuck : ∀ s,
-    can_progress P s -> ~ stuck s.
+    can_progress s -> ~ stuck s.
   Proof. intros ? ? []. tauto. Qed.
-End Stuck.
+End LangProp.
 
 Tactic Notation "mixin" :=
   match goal with
   | [ Hf: is_final ?s = Some _, Hp: can_progress _ ?s |- _ ] =>
-      exfalso;
-      eapply mixin_final_no_progress;
-      [apply lang_mixin | apply Hf | apply Hp]
+      exfalso; now apply (final_no_progress _ _ _ Hf Hp)
   | [ Hf: is_final ?s = Some _, Hs: _ ⊨ ?s ->> _ |- _ ] =>
-      exfalso;
-      eapply mixin_final_no_step;
-      [apply lang_mixin | apply Hf | apply Hs]
+      exfalso; now apply (final_no_step _ _ _ Hf _ Hs)
   | [ Hf: is_final ?s = Some _, Hs: stuck _ ?s |- _ ] =>
-      let Hnfin := fresh "Hnfin" in
-      destruct Hs as [Hnfin _];
-      rewrite Hnfin in Hf;
-      discriminate Hf
+      exfalso; now apply (final_not_stuck _ _ _ Hf Hs)
   | [ Hs: stuck ?P ?s, Hp: can_progress ?P ?s |- _ ] =>
-      let Hnp := fresh "Hnp" in
-      destruct Hs as [_ Hnp];
-      exfalso; apply (Hnp Hp)
+      exfalso; now apply (progress_not_stuck _ _ Hp Hs)
   end.
+
+(* Lemma LPO {T: Type} : ∀ (P: T -> Prop), *)
+(*   (∀ x, Decision (P x)) -> *)
+(*   (∃ x, P x) ∨ (∀ x, ~ P x). *)

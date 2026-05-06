@@ -98,21 +98,84 @@ Definition is_final (s: rtl_state) : option (val * memory) :=
   | _ => None
   end.
 
-Definition can_progress (P: program) s := ∃ t, rtl_step P s t.
-
-
-Lemma rtl_mixin_lang : LangMixin rtl_step can_progress is_final.
+Lemma rtl_mixin_lang : LangMixin rtl_step is_final.
 Proof.
-  split.
-  - intros ? [[[] []] ?] ? H [t Hstep]; inv H. inv Hstep.
-  - intros ? [[[] []] ?] ? ? H Hstep; inv H. inv Hstep.
-  - now intros s.
+  constructor. intros ? [[[] []] ?] ? ? H Hstep; inv H. inv Hstep.
 Qed.
 
-Definition rtl_lang : lang := Lang _ _ _ _ _ _ rtl_mixin_lang.
+Definition rtl_lang : lang := Lang _ _ _ _ _ rtl_mixin_lang.
+
+Instance stackframe_eq_dec : EqDecision stackframe.
+Proof.
+  unfold EqDecision, Decision.
+  decide equality; apply (decide _).
+Qed.
+
+Instance pcstate_eq_dec : EqDecision pcstate.
+Proof.
+  unfold EqDecision, Decision.
+  decide equality; apply (decide _).
+Qed.
+
+Instance rtl_state_eqdec : EqDecision rtl_state.
+Proof.
+  unfold EqDecision, Decision.
+  decide equality.
+  - apply (decide _).
+  - decide equality; apply (decide _).
+Qed.
+
+Definition exec_step (P: program) (s: rtl_state) : option rtl_state :=
+  match s with
+  | (σ, State f pc ρ, m) =>
+      match fn_code f !! pc with
+      | Some <{ nop -> pc' }> =>
+          Some (σ, State f pc' ρ, m)
+      | Some <{ ret r }> =>
+          Some (σ, ReturnState (get_reg r ρ), m)
+      | Some <{ dst := @op args -> pc' }> =>
+          match eval_op op (get_regs args ρ) with
+          | Some v => Some (σ, State f pc' (set_reg dst v ρ), m)
+          | None => None
+          end
+      | Some <{ dst := !src -> pc' }> =>
+          match get_at (get_reg src ρ) m with
+          | Some v => Some (σ, State f pc' (set_reg dst v ρ), m)
+          | None => None
+          end
+      | Some <{ !dst := src -> pc' }> =>
+          match set_at (get_reg dst ρ) (get_reg src ρ) m with
+          | Some m' => Some (σ, State f pc' ρ, m')
+          | None => None
+          end
+      | Some <{ if cond then goto ifso else goto ifnot }> =>
+          let v := get_reg cond ρ in
+          let pc' := if Z.eqb v 0 then ifso else ifnot in
+          Some (σ, State f pc' ρ, m)
+      | Some <{ dst := @call sig args -> pc' }> =>
+          match find_fun P sig with
+          | Some fn => Some (Stackframe dst f pc' ρ :: σ, CallState fn (get_regs args ρ), m)
+          | None => None
+          end
+      | _ => None
+      end
+  | (σ, CallState f args, m) =>
+      if decide (length args = length (fn_regs f)) then
+        Some (σ, State f (fn_entrypoint f) (init_regs args (fn_regs f)), m)
+      else None
+  | (Stackframe dst f pc ρ :: σ, ReturnState v, m) =>
+      Some (σ, State f pc (set_reg dst v ρ), m)
+  | _ => None
+  end.
+
+Lemma exec_step_sound P s t :
+  exec_step P s = Some t -> rtl_step P s t.
+Proof.
+  unfold exec_step. intro H.
+  now repeat (case_match; try (inv H; try (econstructor; now eauto))).
+Qed.
 
 Section SemProp.
-
   Let Λ : lang := rtl_lang.
   Context (P: prog Λ).
 

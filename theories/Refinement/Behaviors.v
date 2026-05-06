@@ -1,9 +1,11 @@
 From stdpp Require Import prelude.
-From Stdlib Require Import Setoid.
+
+From Stdlib Require Import Classical.
+
 From Coinduction Require Import all.
 
-From RSL.Commons Require Import Utils.
-From RSL.Commons Require Import Language.
+From RSL Require Import Commons.Utils.
+From RSL Require Import Commons.Language.
 
 (* Set Mangle Names. *)
 
@@ -61,7 +63,7 @@ Section Behavior.
       beh Diverging s
   | IsStuck : ∀ s,
       stuck P s ->
-      beh Unknown s
+      beh Unknown s             (* Undef? *)
   | IsSteping : ∀ s t b,
       beh b t ->
       P ⊨ s ->> t ->
@@ -122,7 +124,7 @@ Section Behavior.
   Definition does_end s : Prop :=
     ∃ t, P ⊨ s ->>* t ∧ ((∃ v, is_final t = Some v) ∨ stuck P t).
 
-  Lemma not_ending_diverges (EM: EM):
+  Lemma not_ending_diverges:
     ∀ s, ~(does_end s) -> ∀ t, P ⊨ s ->>* t -> diverges t.
   Proof.
     intros s H. unfold diverges.
@@ -130,28 +132,24 @@ Section Behavior.
     assert (Hs: ∀ t, P ⊨ s ->>* t -> is_final t = None ∧ ~ stuck P t).
     {
       intros t Hstep. apply not_ex_all_not with (n := t) in H.
-      pose proof (not_and_imply _ _ H Hstep) as Hnor. clear H Hstep.
-      destruct (not_or_and _ _ Hnor) as [Hnfin Hnstuck]. clear Hnor.
-      split; auto. clear Hnstuck.
-      destruct (is_final t) as [v | ].
-      - exfalso. apply Hnfin. now eexists.
-      - reflexivity.
+      split.
+      - destruct (is_final t) as [v | ].
+        + exfalso. apply H. split; auto. left. now eexists.
+        + reflexivity.
+      - intro Hs. apply H. now auto.
     }
     intros t Hrtc.
     destruct (Hs t) as [Hnfin Hnstuck]; auto.
     unfold stuck in Hnstuck.
-    pose proof (DNE EM (can_progress P t)).
     assert (Hprogress: can_progress P t) by tauto.
-    eapply mixin_can_progress_must_step in Hprogress.
-    - destruct Hprogress as [u Hstep]. exists u. split.
-      + apply Hstep.
-      + apply cih. eapply rtc_r; eassumption.
-    - apply lang_mixin.
+    destruct (can_progress_must_step _ _ Hprogress) as [u Hstep].
+    exists u. split; auto.
+    apply cih. eapply rtc_r; eassumption.
   Qed.
 
-  Theorem every_state_has_beh (EM: EM) : ∀ s, ∃ b, b ∈ s.
+  Theorem every_state_has_beh : ∀ s, ∃ b, b ∈ s.
   Proof.
-    intros s. destruct (EM (does_end s)) as [(t & Hrtc & [[v Hfin] | H]) | H].
+    intros s. destruct (classic (does_end s)) as [(t & Hrtc & [[v Hfin] | H]) | H].
     - exists (Terminating v). apply has_terminating_behavior.
       exists t; auto.
     - exists Unknown. apply has_stuck_behavior.

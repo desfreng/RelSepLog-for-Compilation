@@ -3,7 +3,7 @@ From stdpp Require Import tactics.
 
 From Coinduction Require Import all.
 
-From RSL.Commons Require Import Language.
+From RSL Require Import Commons.Language.
 
 (* Set Mangle Names. *)
 

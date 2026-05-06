@@ -41,28 +41,3 @@ Proof.
     inv Hstep as [ | ? ? ? ? Hr Hnsteps ]. apply rtc_nsteps_2 in Hnsteps.
     econstructor; eassumption.
 Qed.
-
-Definition EM := ∀ P, P ∨ ~P.
-
-Section ClassicalFacts.
-  Hypothesis EM : EM.
-
-  Lemma DNE P : ~~P -> P.
-  Proof. pose proof (EM P). tauto. Qed.
-
-  Lemma not_ex_all_not {T: Type} (P: T -> Prop) :
-    ~ (∃ n, P n) -> ∀ n, ~ P n.
-  Proof.
-    unfold not; intros notex n abs.
-    apply notex.
-    exists n; trivial.
-  Qed.
-
-  Lemma not_and_imply P Q :
-    ~(P ∧ Q) -> P -> ~Q.
-  Proof. tauto. Qed.
-
-  Lemma not_or_and P Q : ~ (P ∨ Q) -> ~ P ∧ ~ Q.
-  Proof. tauto. Qed.
-
-End ClassicalFacts.

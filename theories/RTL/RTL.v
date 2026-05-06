@@ -1,13 +1,9 @@
 From stdpp Require Import prelude.
-From stdpp Require Import strings.
 From stdpp Require Import gmap.
+From stdpp Require Import strings.
 
-Definition ident : Type := string.
-Definition val : Type := Z.
-
-Definition node := nat.
-Definition loc := positive.
-Definition reg := nat.
+From RSL Require Export Commons.Definitions.
+From RSL Require Import Commons.NoDupDec.
 
 Inductive op : Type :=
 | Add
@@ -51,58 +47,16 @@ Record function := {
     fn_regs: list reg;
     fn_entrypoint : node;
     fn_code : code;
-    fn_regs_no_dup : NoDup fn_regs;
+    fn_regs_no_dup : is_no_dup fn_regs = true;
   }.
 
 Record program := {
     prog_func: list function;
-    prog_main: ident;
-    prog_wf: ∃ f, In f prog_func ∧ fn_name f = prog_main;
+    prog_main: function;
 }.
 
 Definition find_fun (P: program) (s: ident) : option function :=
   List.find (fun f => (fn_name f =? s)%string) (prog_func P).
-
-(* [regmap] is a mapping from registers to a value *)
-Definition regmap : Type := gmap reg val.
-
-(* [memory] is a mapping from location to a value *)
-Definition memory : Type := gmap loc val.
-
-Definition val_to_loc (v: val) : option loc :=
-  if (v >=? 1)%Z
-  then Some (Z.to_pos v)
-  else None.
-
-Definition get_reg (r: reg) (ρ: regmap) : val :=
-  match ρ !! r with
-  | Some v => v
-  | None => 0%Z (* Dummy val *)
-  end.
-
-Definition get_regs (l: list reg) (ρ: regmap) : list val :=
-  map (fun r => get_reg r ρ) l.
-
-Definition set_reg (r: reg) (v: val) (ρ: regmap) : regmap := <[r := v]>ρ.
-
-Definition get_at (addr: val) (m: memory) : option val :=
-  match val_to_loc addr with
-  | Some loc => m !! loc
-  | None => None
-  end.
-
-Definition update_at (addr: val) (f: val -> val) (m: memory) : option memory
-  := match val_to_loc addr with
-     | Some loc =>
-         match m !! loc with
-         | Some old => Some (<[loc := f old]>m)
-         | None => None
-         end
-     | None => None
-     end.
-
-Definition set_at (addr: val) (v: val) (m: memory) : option memory :=
-  update_at addr (fun _ => v) m.
 
 (* Assert that instruction at [pc] in function [f] is [i] *)
 Notation "f '@' pc 'is' i" :=
@@ -117,3 +71,22 @@ Definition eval_op (op: op) (args: list val) : option val :=
   | LoadI v, [] => Some v
   | _, _ => None
   end.
+
+Instance op_eq_dec : EqDecision op.
+Proof. unfold EqDecision, Decision. decide equality; apply (decide _). Qed.
+
+Instance instr_eq_dec : EqDecision instr.
+Proof. unfold EqDecision, Decision. decide equality; apply (decide _). Qed.
+
+Instance function_eq_dec : EqDecision function.
+Proof.
+  intros [n1 r1 e1 c1 p1] [n2 r2 e2 c2 p2].
+  destruct (decide (n1 = n2)) as [-> | Hn]; [|right; intro H; inv H].
+  destruct (decide (r1 = r2)) as [-> | Hn]; [|right; intro H; inv H].
+  destruct (decide (e1 = e2)) as [-> | Hn]; [|right; intro H; inv H].
+  destruct (decide (c1 = c2)) as [-> | Hn]; [|right; intro H; inv H].
+  left. f_equal. apply proof_irrel.
+Qed.
+
+Instance program_eq_dec : EqDecision program.
+Proof. unfold EqDecision, Decision. decide equality; apply (decide _). Qed.

@@ -1,10 +1,10 @@
 From stdpp Require Import base.
 
-From RSL Require Import RTL.
+From RSL Require Import Commons.Definitions.
 
 (* Set Mangle Names. *)
 
-Definition postcondition : Type := (val * memory) -> Prop.
+Definition postcondition : Type := val -> memory -> Prop.
 Definition precondition : Type := list val -> memory -> Prop.
 
 Definition logic : Type := regmap -> memory -> nat -> Prop.

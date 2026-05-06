@@ -1,12 +1,14 @@
 From stdpp Require Import prelude.
 
+From Stdlib Require Import Classical.
+
 From Coinduction Require Import all.
 
-From RSL.Commons Require Import Utils.
-From RSL.Commons Require Import Language.
+From RSL Require Import Commons.Utils.
+From RSL Require Import Commons.Language.
 
-From RSL.Refinement Require Import Behaviors.
-From RSL.Refinement Require Import Sim.
+From RSL Require Import Refinement.Behaviors.
+From RSL Require Import Refinement.Sim.
 
 (* Set Mangle Names. *)
 
@@ -127,28 +129,36 @@ Section SimSound.
       left. exists t'. split; auto.
   Qed.
 
-  Lemma diverging_sim (EM: EM) Φ : ∀ t s,
+  Lemma diverging_sim Φ : ∀ t s,
     t ≲ s {{ Φ }} ->
     Diverging ∈ t ->
     ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
   Proof.
     intros t s Hsim Hdiv.
-    destruct (EM (∃ s', Pₛ ⊨ s ->>* s' ∧ stuck Pₛ s')) as [Hstuck | Hnstuck].
-    - exists Unknown. split; now apply has_stuck_behavior || constructor.
-    - exists Diverging. split; try constructor.
+    (* We see in the future: can s be stuck ? *)
+    destruct (classic (∃ s', Pₛ ⊨ s ->>* s' ∧ stuck Pₛ s')) as [Hstuck | Hnstuck].
+    - (* s can be stuck -> s has Unknown behavior *)
+      exists Unknown. split; now apply has_stuck_behavior || constructor.
+    - (* s is never stuck -> s is diverging *)
+      exists Diverging. split; try constructor.
       apply has_diverging_behavior in Hdiv.
       assert (H: sim Pₜ Pₛ Φ t s) by exact Hsim. clear Hsim.
+      (* We prove by coinduction that s diverges *)
       unfold diverges.
       revert t s Hdiv H Hnstuck. coinduction R cih.
       intros t s Hdiv Hsim Hnstuck.
+      (* [sim_lfp_progress] give us s' such that s ->> s' *)
       destruct (sim_lfp_progress _ _ _ Hsim Hdiv) as
         [Hstuck | (s' & Hstep & [(t' & ? & ?) | []])].
-      + exfalso. apply Hnstuck. exists s. split; auto.
-      + exists s'. split; auto. apply cih with t'; auto.
+      + (* s is stuck -> contradiction *)
+        exfalso. apply Hnstuck. exists s. split; auto.
+      + (* s steps and t too *)
+        exists s'. split; auto. apply cih with t'; auto.
         intros (s'' & ? & ? ).
         apply Hnstuck. exists s''. split; auto.
         econstructor; now eauto.
-      + exists s'. split; auto. apply cih with t; auto.
+      + (* Only s steps *)
+        exists s'. split; auto. apply cih with t; auto.
         intros (s'' & ? & ? ).
         apply Hnstuck. exists s''. split; auto.
         econstructor; now eauto.
@@ -213,7 +223,7 @@ Section SimSound.
   Definition refines Φ (t: state Λₜ) (s: state Λₛ) :=
     ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ⊑{Φ} b'.
 
-  Theorem sim_sound (EM: EM) Φ : ∀ t s,
+  Theorem sim_sound Φ : ∀ t s,
     t ≲ s {{ Φ }} -> refines Φ t s.
   Proof.
     intros t s Hsim [] Hb.
