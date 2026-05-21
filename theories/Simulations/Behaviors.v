@@ -1,8 +1,7 @@
 From RSL Require Import Prelude.
 
-From Coinduction Require Import all.
-
 From Stdlib Require Import Classical.
+From Coinduction Require Import all.
 
 (* Set Mangle Names. *)
 
@@ -48,7 +47,7 @@ Section Behavior.
   Variant behavior :=
   | Terminating (v: value Λ)
   | Diverging
-  | Unknown.
+  | Undef.
 
   (* [beh s] is the set of all the behaviors of [s] *)
   Inductive beh : behavior -> state Λ -> Prop :=
@@ -60,13 +59,13 @@ Section Behavior.
       beh Diverging s
   | IsStuck : ∀ s,
       stuck P s ->
-      beh Unknown s             (* Undef? *)
+      beh Undef s
   | IsSteping : ∀ s t b,
       beh b t ->
       P ⊨ s ->> t ->
       beh b s.
 
-  #[local] Instance beh_elem_state : ElemOf behavior (state Λ) := beh.
+  Global Instance beh_elem_state : ElemOf behavior (state Λ) := beh.
 
   (* [s] is terminating iff there is a execution from [s] to a final state. *)
   Lemma has_terminating_behavior : ∀ s v,
@@ -98,12 +97,12 @@ Section Behavior.
     - now apply IsDiverging.
   Qed.
 
-  (* [s] has a unknown behavior if [s] reduces to a stuck state. *)
-  Lemma has_stuck_behavior : ∀ s,
-    Unknown ∈ s <-> ∃ t, P ⊨ s ->>* t ∧ stuck P t.
+  (* [s] has a undef behavior if [s] reduces to a stuck state. *)
+  Lemma has_undef_behavior : ∀ s,
+    Undef ∈ s <-> ∃ t, P ⊨ s ->>* t ∧ stuck P t.
   Proof.
     intros s. split; intros Hbeh.
-    - remember Unknown as b eqn:Hb.
+    - remember Undef as b eqn:Hb.
       induction Hbeh as [ | | s | s t b ? IH Hstep ]; inv Hb; auto.
       + exists s. now split.
       + destruct (IH eq_refl) as (u & Hrtc & Hstuck).
@@ -149,9 +148,36 @@ Section Behavior.
     intros s. destruct (classic (does_end s)) as [(t & Hrtc & [[v Hfin] | H]) | H].
     - exists (Terminating v). apply has_terminating_behavior.
       exists t; auto.
-    - exists Unknown. apply has_stuck_behavior.
+    - exists Undef. apply has_undef_behavior.
       exists t; auto.
     - exists Diverging. apply has_diverging_behavior.
       apply not_ending_diverges with s; auto.
   Qed.
 End Behavior.
+
+Section Refinement.
+  Context {Λₜ Λₛ: lang}.
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+
+  Instance behₜ_elem : ElemOf behavior (state Λₜ) := beh Pₜ.
+  Instance behₛ_elem : ElemOf behavior (state Λₛ) := beh Pₛ.
+
+  Inductive behavior_order Φ : @behavior Λₜ -> @behavior Λₛ -> Prop :=
+  | TerminatingOrder : ∀ (vₜ: value Λₜ) (vₛ: value Λₛ),
+    Φ vₜ vₛ -> behavior_order Φ (Terminating vₜ) (Terminating vₛ)
+  | DivergingOrder : behavior_order Φ Diverging Diverging
+  | UndefOrder : ∀ s, behavior_order Φ s Undef.
+
+  Notation "a '⊑{' Φ '}' b" :=
+    (behavior_order Φ a b)
+      (at level 70, format "a  '⊑{' Φ '}'  b", no associativity).
+
+  (* A definition of state refinement: *)
+  (*    - if the target terminates on (v, m), *)
+  (*    the source must either terminate on (v, m) or be stuck. *)
+  (*    - if the target diverges, *)
+  (*    the source must either diverges or be stuck. *)
+  (*    - if the target is stuck, the source should also be stuck. *)
+  Definition refines Φ (t: state Λₜ) (s: state Λₛ) :=
+    ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ⊑{Φ} b'.
+End Refinement.

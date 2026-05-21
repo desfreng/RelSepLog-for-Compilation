@@ -41,3 +41,45 @@ Proof.
     inv Hstep as [ | ? ? ? ? Hr Hnsteps ]. apply rtc_nsteps_2 in Hnsteps.
     econstructor; eassumption.
 Qed.
+
+Lemma pstep_to_rtc {A: Type} {R : relation A} :
+  ∀ x y, psteps R x y -> rtc R x y.
+Proof.
+  intros x z H. inv H as [? y ? Hstep Hrtc].
+  now apply rtc_l with y.
+Qed.
+
+Lemma pstep_l {A: Type} {R : relation A} :
+  ∀ x y z, R x y -> psteps R y z -> psteps R x z.
+Proof.
+  intros x y z HR H. inv H as [? ? ? Hstep Hrtc].
+  econstructor.
+  + eassumption.
+  + eapply rtc_l; eassumption.
+Qed.
+
+Lemma pstep_r {A: Type} {R : relation A} :
+  ∀ x y z, psteps R x y -> R y z -> psteps R x z.
+Proof.
+  intros x y z H HR. inv H as [? ? ? Hstep Hrtc].
+  econstructor.
+  + eassumption.
+  + eapply rtc_r; eassumption.
+Qed.
+
+Lemma pstep_to_nstep_l {A: Type} {R : relation A} :
+  ∀ x z, psteps R x z -> ∃ n y, R x y ∧ nsteps R n y z.
+Proof.
+  intros x z H. inv H as [? y ? Hstep Hrtc].
+  destruct (rtc_nsteps_1 _ _ Hrtc) as [n Hnsteps].
+  exists n. exists y. now split.
+Qed.
+
+Lemma pstep_to_nstep_r {A: Type} {R : relation A} :
+  ∀ x z, psteps R x z -> ∃ n y, nsteps R n x y ∧ R y z.
+Proof.
+  intros x z H. apply pstep_inv_r in H.
+  destruct H as (y & Hrtc & Hstep).
+  destruct (rtc_nsteps_1 _ _ Hrtc) as [n Hnsteps].
+  exists n. exists y. now split.
+Qed.
