@@ -149,4 +149,6 @@ Section SimEquiv.
     - eassumption.
     - eassumption.
   Qed.
+
+  (* en supposant que soit ⊤ soit pas ⊤ dans Wₜ et Wₛ *)
 End SimEquiv.

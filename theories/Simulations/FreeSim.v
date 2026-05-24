@@ -96,9 +96,8 @@ Section FSimDef.
 
   Register Scheme fsim_lfp'_ind as ind_nodep for fsim_lfp'.
 
-  Program Definition fsim_lfp : mon (Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop) :=
-    {| body := fsim_lfp' |}.
-  Next Obligation.
+  Instance fsim_lfp'_mono : Proper (leq ==> leq) fsim_lfp'.
+  Proof.
     intros gfp gfp' Hgfp iₜ t iₛ s Hsim.
     induction Hsim as [ | | | ? ? ? ? Hprogress Ht |  ? ? ? Hprogress Hboth].
     - econstructor; eassumption.
@@ -111,6 +110,9 @@ Section FSimDef.
       apply Hgfp. eassumption.
   Qed.
 
+  Definition fsim_lfp : mon (Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop) :=
+    {| body := fsim_lfp' |}.
+
   Lemma fsim_unroll iₜ t iₛ s :
     gfp fsim_lfp iₜ t iₛ s -> fsim_lfp' (gfp fsim_lfp) iₜ t iₛ s.
   Proof. apply (gfp_fp fsim_lfp). Qed.
@@ -121,33 +123,68 @@ Section FSimDef.
 
   Definition fsim  := gfp fsim_lfp.
 
-  Lemma idx_mono: ∀ iₜ iₜ' iₛ iₛ' t s,
-    iₜ' ⊑ iₜ ->
-    iₛ' ⊑ iₛ ->
-    fsim iₜ' t iₛ' s ->
-    fsim iₜ t iₛ s.
+  Lemma idx_mono (R: Chain fsim_lfp):
+    ∀ iₜ iₛ t s,
+    (elem R) iₜ t iₛ s ->
+    ∀ iₜ' iₛ',
+    iₜ ⊑ iₜ' ->
+    iₛ ⊑ iₛ' ->
+    (elem R) iₜ' t iₛ' s.
   Proof.
-    unfold fsim at 2.
-    coinduction C CIH.
-    intros iₜ iₜ' iₛ iₛ' t s Ht Hs Hsim.
-    apply fsim_unroll in Hsim.
-    induction Hsim as [ ? t ? s Hfin
-                      | ? t ? s Hstuck
-                      | ? t ? ? s s' Hstep Hsim IH
-                      | ? t ? s Hprog IH
-                      | ? ? t  ? ? s Htt Hss Hsim ]
-      in iₜ, iₜ', iₛ, iₛ', t, s, Ht, Hs, Hsim |- *.
-    - now constructor.
-    - now constructor.
-    - eapply FSourceSteps.
-      { eassumption. }
-      apply IH; assumption || reflexivity.
-    - apply FTargetSteps.
-      { assumption. }
-      intros t' Hstep.
-      destruct (IH _ Hstep) as (iₜ' & Hsim & IHt).
-      eexists. apply IHt; assumption || reflexivity.
-    - admit.
-  Admitted.
+    apply tower.
+    - intros P Hp.
+      intros iₜ iₛ t s Hinf iₜ' iₛ' Ht Hs.
+      intros Q Hq.
+      eapply (Hp _ Hq).
+      + now apply Hinf.
+      + assumption.
+      + assumption.
+    - intros C CIH iₜ t iₛ s Hsim.
+      induction Hsim as [ ? t ? s Hfin
+                        | ? t ? s Hstuck
+                        | ? t ? ? s s' Hstep Hsim IH
+                        | ? t ? s Hprog IH
+                        | ? ? t  ? ? s Htt Hss Hsim ];
+        intros ? ? Ht Hs.
+      + now constructor.
+      + now constructor.
+      + eapply FSourceSteps.
+        { eassumption. }
+        apply IH; assumption || reflexivity.
+      + apply FTargetSteps.
+        { assumption. }
+        intros t' Hstep.
+        destruct (IH _ Hstep) as (? & Hsim & IHt).
+        eexists. apply IHt; assumption || reflexivity.
+      + inv Hs as [ ? Hs' | ]; inv Ht as [ ? Ht' | ];
+          eapply FProgress; try eassumption;
+          eapply CIH; eassumption || now constructor.
+  Qed.
 
+  Lemma fsim_mono :
+    ∀ iₜ iₛ t s,
+    fsim iₜ t iₛ s ->
+    ∀ iₜ' iₛ',
+    iₜ ⊑ iₜ' ->
+    iₛ ⊑ iₛ' ->
+    fsim iₜ' t iₛ' s.
+  Proof.
+    intros iₜ t iₛ s Hsim.
+    now apply idx_mono.
+  Qed.
+
+  Lemma fsim_wf_ind : ∀ t s,
+    (∀ iₜ iₛ,
+       (∀ iₜ' iₛ', iₜ' ⊏ iₜ -> iₛ' ⊏ iₛ -> fsim iₜ' t iₛ' s) ->
+       fsim iₜ t iₛ s) ->
+    ∀ iₜ iₛ, fsim iₜ t iₛ s.
+  Proof.
+    intros t s Hstep iₜ.
+    induction iₜ as [iₜ IH] using (well_founded_induction wf).
+    intros iₛ.
+    apply Hstep.
+    intros iₜ' iₛ' Ht' Hs'.
+    apply IH.
+    - exact Ht'.
+  Qed.
 End FSimDef.
