@@ -7,8 +7,6 @@ From RSL Require Import RTL.Notations.
 
 Import RTLNotations.
 
-(* Set Mangle Names. *)
-
 Fixpoint init_regs (vl: list val) (rl: list reg) : regmap :=
   match rl, vl with
   | r :: rs, v :: vs => <[r := v]>(init_regs vs rs)
@@ -103,76 +101,6 @@ Qed.
 
 Definition rtl_lang : lang := Lang _ _ _ _ _ rtl_mixin_lang.
 
-Instance stackframe_eq_dec : EqDecision stackframe.
-Proof.
-  unfold EqDecision, Decision.
-  decide equality; apply (decide _).
-Qed.
-
-Instance pcstate_eq_dec : EqDecision pcstate.
-Proof.
-  unfold EqDecision, Decision.
-  decide equality; apply (decide _).
-Qed.
-
-Instance rtl_state_eqdec : EqDecision rtl_state.
-Proof.
-  unfold EqDecision, Decision.
-  decide equality.
-  - apply (decide _).
-  - decide equality; apply (decide _).
-Qed.
-
-Definition exec_step (P: program) (s: rtl_state) : option rtl_state :=
-  match s with
-  | (σ, State f pc ρ, m) =>
-      match fn_code f !! pc with
-      | Some <{ nop -> pc' }> =>
-          Some (σ, State f pc' ρ, m)
-      | Some <{ ret r }> =>
-          Some (σ, ReturnState (get_reg r ρ), m)
-      | Some <{ dst := @op args -> pc' }> =>
-          match eval_op op (get_regs args ρ) with
-          | Some v => Some (σ, State f pc' (set_reg dst v ρ), m)
-          | None => None
-          end
-      | Some <{ dst := !src -> pc' }> =>
-          match get_at (get_reg src ρ) m with
-          | Some v => Some (σ, State f pc' (set_reg dst v ρ), m)
-          | None => None
-          end
-      | Some <{ !dst := src -> pc' }> =>
-          match set_at (get_reg dst ρ) (get_reg src ρ) m with
-          | Some m' => Some (σ, State f pc' ρ, m')
-          | None => None
-          end
-      | Some <{ if cond then goto ifso else goto ifnot }> =>
-          let v := get_reg cond ρ in
-          let pc' := if Z.eqb v 0 then ifso else ifnot in
-          Some (σ, State f pc' ρ, m)
-      | Some <{ dst := @call sig args -> pc' }> =>
-          match find_fun P sig with
-          | Some fn => Some (Stackframe dst f pc' ρ :: σ, CallState fn (get_regs args ρ), m)
-          | None => None
-          end
-      | _ => None
-      end
-  | (σ, CallState f args, m) =>
-      if decide (length args = length (fn_regs f)) then
-        Some (σ, State f (fn_entrypoint f) (init_regs args (fn_regs f)), m)
-      else None
-  | (Stackframe dst f pc ρ :: σ, ReturnState v, m) =>
-      Some (σ, State f pc (set_reg dst v ρ), m)
-  | _ => None
-  end.
-
-Lemma exec_step_sound P s t :
-  exec_step P s = Some t -> rtl_step P s t.
-Proof.
-  unfold exec_step. intro H.
-  now repeat (case_match; try (inv H; try (econstructor; now eauto))).
-Qed.
-
 Section SemProp.
   Let Λ : lang := rtl_lang.
   Context (P: prog Λ).
@@ -181,13 +109,13 @@ Section SemProp.
   Lemma is_final_struct : ∀ v m s,
     is_final s = Some (v, m) ->
     s = ([], ReturnState v, m).
-  Proof. intros v m [[[] []] ?] H; now inv H. Qed.
+  Proof using Type. intros v m [[[] []] ?] H; now inv H. Qed.
 
   Lemma ret_no_nsteps : ∀ n v m s t,
     is_final s = Some (v, m) ->
     P ⊨ s -{ n }> t ->
     t = ([], ReturnState v, m) ∧ n = 0.
-  Proof.
+  Proof using Type.
     intros n v m s t Hfin H.
     apply is_final_struct in Hfin. subst.
     destruct n.
@@ -200,7 +128,7 @@ Section SemProp.
     is_final s = Some (v, m) ->
     P ⊨ s ->>* t ->
     t = ([], ReturnState v, m).
-  Proof.
+  Proof using Type.
     intros v m s t Hfin H.
     destruct (rtc_nsteps_1 _ _ H) as [].
     eapply ret_no_nsteps; eassumption.
@@ -210,14 +138,14 @@ Section SemProp.
   Lemma lift_step : ∀ σ σ' Σ s t m m',
     P ⊨ (σ, s, m) ->> (σ', t, m') ->
     P ⊨ (σ ++ Σ, s, m) ->> (σ' ++ Σ, t, m').
-  Proof.
+  Proof using Type.
     intros ? ? ? ? ? ? ? H; inv H; econstructor; now eauto.
   Qed.
 
   Lemma unlift_step : ∀ σ s m σ' t m' Σ,
     P ⊨ (σ ++ Σ, s, m) ->> (σ' ++ Σ, t, m') ->
     P ⊨ (σ, s, m) ->> (σ', t, m').
-  Proof.
+  Proof using Type.
     intros ? ? ? ? ? ? ? H; inv H;
       rewrite ? app_comm_cons in *;
       eassert _ by (eapply app_inv_tail; eassumption);
@@ -227,7 +155,7 @@ Section SemProp.
   Theorem lift_steps : ∀ σ s m σ' t m' Σ,
     P ⊨ (σ, s, m) ->>* (σ', t, m') ->
     P ⊨ (σ ++ Σ, s, m) ->>* (σ' ++ Σ, t, m').
-  Proof.
+  Proof using Type.
     intros σ s m σ' t m' Σ Hrtc.
     remember (σ, s, m) as x eqn:Hx.
     remember (σ', t, m') as y eqn:Hy.
@@ -251,7 +179,7 @@ Section SemProp.
           ∧ P ⊨ ([], CallState fn args, m) -{m1}> ([], ReturnState v, m'')
           ∧ P ⊨ ([], State f pc (set_reg res v ρ), m'') -{m2}> (σ, t, m')
       ).
-  Proof.
+  Proof using Type.
     intros n.
     induction n as [ | n IH ];
       intros res f pc ρ args m σ t m' Hrtc.
@@ -278,16 +206,16 @@ Section SemProp.
 
   Lemma ret_not_stuck : ∀ frame σ v m,
     can_progress P (frame :: σ, ReturnState v, m).
-  Proof. intros []. repeat econstructor; now eauto. Qed.
+  Proof using Type. intros []. repeat econstructor; now eauto. Qed.
 
   Lemma ret_stuck_in_empty : ∀ v m,
     ~ can_progress P ([], ReturnState v, m).
-  Proof. intros v m [u H]. inv H. Qed.
+  Proof using Type. intros v m [u H]. inv H. Qed.
 
   Lemma lift_not_stuck : ∀ σ Σ s m,
     can_progress P (σ, s, m) ->
     can_progress P (σ ++ Σ, s, m).
-  Proof. intros σ Σ s m [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
+  Proof using Type. intros σ Σ s m [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
 
 End SemProp.
 
@@ -295,7 +223,7 @@ Section Regs.
   Lemma get_regs_insert : ∀ regs r v ρ,
     r ∉ regs ->
     get_regs regs (<[r := v]> ρ) = get_regs regs ρ.
-  Proof.
+  Proof using Type.
     intros regs r v ρ.
     induction regs as [|r' regs' IH]; intros Hnotin; [reflexivity |].
     simpl. f_equal.
@@ -307,7 +235,7 @@ Section Regs.
     NoDup regs ->
     length args = length regs ->
     get_regs regs (init_regs args regs) = args.
-  Proof.
+  Proof using Type.
     intros regs args Hnodup.
     revert args.
     induction Hnodup as [|r regs Hnotin Hnodup IH]; intros args Hlen.
@@ -322,7 +250,7 @@ Section Regs.
 
   Lemma get_reg_set_reg_eq : ∀ r v ρ,
     get_reg r (set_reg r v ρ) = v.
-  Proof.
+  Proof using Type.
     intros r v ρ.
     unfold get_reg, set_reg.
     now rewrite (lookup_insert_eq ρ).
@@ -330,7 +258,7 @@ Section Regs.
 
   Lemma get_reg_set_reg_neq : ∀ r r' v ρ,
     r ≠ r' -> get_reg r (set_reg r' v ρ) = get_reg r ρ.
-  Proof.
+  Proof using Type.
     intros r r' v ρ Hneq.
     unfold get_reg, set_reg.
     now rewrite (lookup_insert_ne ρ).

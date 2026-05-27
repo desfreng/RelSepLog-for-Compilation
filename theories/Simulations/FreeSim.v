@@ -4,8 +4,6 @@ From Coinduction Require Import all.
 
 From RSL Require Import Simulations.Commons.
 
-(* Set Mangle Names. *)
-
 Section FSimDef.
   Context {Λₜ Λₛ: lang}.
   Context (Wₜ Wₛ: WfRel).
@@ -74,7 +72,7 @@ Section FSimDef.
 
     Lemma fsim_lfp'_ind: ∀ iₜ t iₛ s,
       fsim_lfp' gfp iₜ t iₛ s -> P iₜ t iₛ s.
-    Proof.
+    Proof using HFinal HProgress HSourceSteps HStuck HTargetSteps.
       fix IH 5. intros iₜ t iₛ s Hsim.
       destruct Hsim as
         [ iₜ t iₛ s Hfin
@@ -97,7 +95,7 @@ Section FSimDef.
   Register Scheme fsim_lfp'_ind as ind_nodep for fsim_lfp'.
 
   Instance fsim_lfp'_mono : Proper (leq ==> leq) fsim_lfp'.
-  Proof.
+  Proof using Type.
     intros gfp gfp' Hgfp iₜ t iₛ s Hsim.
     induction Hsim as [ | | | ? ? ? ? Hprogress Ht |  ? ? ? Hprogress Hboth].
     - econstructor; eassumption.
@@ -115,22 +113,28 @@ Section FSimDef.
 
   Lemma fsim_unroll iₜ t iₛ s :
     gfp fsim_lfp iₜ t iₛ s -> fsim_lfp' (gfp fsim_lfp) iₜ t iₛ s.
-  Proof. apply (gfp_fp fsim_lfp). Qed.
+  Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
   Lemma fsim_roll iₜ t iₛ s :
     fsim_lfp' (gfp fsim_lfp) iₜ t iₛ s -> gfp fsim_lfp iₜ t iₛ s.
-  Proof. apply (gfp_fp fsim_lfp). Qed.
+  Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
   Definition fsim  := gfp fsim_lfp.
+End FSimDef.
 
-  Lemma idx_mono (R: Chain fsim_lfp):
+Section GenericRules.
+  Context {Λₜ Λₛ: lang}.
+  Context (Wₜ Wₛ: WfRel).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+
+  Lemma idx_mono (R: Chain (fsim_lfp Wₜ Wₛ Pₜ Pₛ Φ)):
     ∀ iₜ iₛ t s,
     (elem R) iₜ t iₛ s ->
     ∀ iₜ' iₛ',
     iₜ ⊑ iₜ' ->
     iₛ ⊑ iₛ' ->
     (elem R) iₜ' t iₛ' s.
-  Proof.
+  Proof using Type.
     apply tower.
     - intros P Hp.
       intros iₜ iₛ t s Hinf iₜ' iₛ' Ht Hs.
@@ -156,35 +160,21 @@ Section FSimDef.
         intros t' Hstep.
         destruct (IH _ Hstep) as (? & Hsim & IHt).
         eexists. apply IHt; assumption || reflexivity.
-      + inv Hs as [ ? Hs' | ]; inv Ht as [ ? Ht' | ];
+      + destruct Hs as [ Hs | -> ]; destruct Ht as [ Ht | -> ];
           eapply FProgress; try eassumption;
           eapply CIH; eassumption || now constructor.
   Qed.
 
-  Lemma fsim_mono :
+  Lemma fsim_mono:
     ∀ iₜ iₛ t s,
-    fsim iₜ t iₛ s ->
+    fsim Wₜ Wₛ Pₜ Pₛ Φ iₜ t iₛ s ->
     ∀ iₜ' iₛ',
     iₜ ⊑ iₜ' ->
     iₛ ⊑ iₛ' ->
-    fsim iₜ' t iₛ' s.
-  Proof.
+    fsim Wₜ Wₛ Pₜ Pₛ Φ  iₜ' t iₛ' s.
+  Proof using Type.
     intros iₜ t iₛ s Hsim.
     now apply idx_mono.
   Qed.
 
-  Lemma fsim_wf_ind : ∀ t s,
-    (∀ iₜ iₛ,
-       (∀ iₜ' iₛ', iₜ' ⊏ iₜ -> iₛ' ⊏ iₛ -> fsim iₜ' t iₛ' s) ->
-       fsim iₜ t iₛ s) ->
-    ∀ iₜ iₛ, fsim iₜ t iₛ s.
-  Proof.
-    intros t s Hstep iₜ.
-    induction iₜ as [iₜ IH] using (well_founded_induction wf).
-    intros iₛ.
-    apply Hstep.
-    intros iₜ' iₛ' Ht' Hs'.
-    apply IH.
-    - exact Ht'.
-  Qed.
-End FSimDef.
+End GenericRules.

@@ -19,19 +19,19 @@ Section PROOF.
   Lemma fsim_implies_gsim: ∀ iₜ t iₛ s,
     fsim Wₜ Wₛ Pₜ Pₛ Φ iₜ t iₛ s ->
     ∃ wₜ wₛ,
-      gsim _ _ (WfOrdTree StatePair) Pₜ Pₛ Φ iₜ wₜ t iₛ wₛ s.
-  Proof.
+      gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ iₜ wₜ t iₛ wₛ s.
+  Proof using Type.
     intros iₜ t iₛ s Hsim.
     apply fsim_unroll in Hsim.
     induction Hsim as [ iₜ t iₛ s Hfinal
                       | iₜ t iₛ s Hstuck
-                      | iₜ t iₛ iₛ' s s' Hs ? IHs
+                      | iₜ t iₛ iₛ' s s' Hs Hsim IHs
                       | iₜ t iₛ s Hprogress IHt
                       | iₜ iₜ' t iₛ iₛ' s Hprogress1 Hprogress2 Hasim ].
     - exists (ord_tree_base StatePair), (ord_tree_base StatePair).
-      apply GBothFinal; eassumption.
+      now econstructor.
     - exists (ord_tree_base StatePair), (ord_tree_base StatePair).
-      apply GSourceStuck; eassumption.
+      now econstructor.
     - destruct IHs as (wₜ' & wₛ' & Hinv).
       exists wₜ', (ord_tree_cons StatePair (fun _ => wₛ')).
       eapply GSourceSteps.
@@ -71,13 +71,14 @@ Section PROOF.
         exists iₜ'.
         exists wₜ'. split; [exact Hlt|exact Hsim']. }
       destruct (ord_tree_join StatePair P R2 Hord2) as [wₛ Hjoin2].
+      clear Hord R Hjoin1.
 
       exists wₜ, wₛ.
       eapply GTargetSteps.
-      + exact Hprogress.
+      + eassumption.
       + intros t' Hstep.
-        destruct (Hjoin2 (t', s)) as [wₛ' [Hrw Hlt]].
-        { split; [reflexivity|assumption]. }
+        destruct (Hjoin2 (t', s)) as (wₛ' & Hrw & Hlt).
+        { split; reflexivity || assumption. }
         destruct Hrw as (_ & Hstep' & iₜ' & wₜ' &  Hlt_wₜ & Hsim').
         exists iₜ'. exists wₜ'. split.
         * assumption.
@@ -85,6 +86,6 @@ Section PROOF.
           { assumption. }
           now constructor.
     - exists (ord_tree_base StatePair), (ord_tree_base StatePair).
-      eapply GProgress; eassumption.
+      econstructor; eassumption.
   Qed.
 End PROOF.

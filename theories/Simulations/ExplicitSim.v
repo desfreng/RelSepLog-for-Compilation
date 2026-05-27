@@ -4,8 +4,6 @@ From Coinduction Require Import all.
 
 From RSL Require Import Simulations.Commons.
 
-(* Set Mangle Names. *)
-
 Section ESimDef.
   Context {Λₜ Λₛ: lang}.
   Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
@@ -57,11 +55,11 @@ Section ESimDef.
 
   Lemma esim_unroll i t s :
     gfp esim_lfp i t s -> esim_lfp' (gfp esim_lfp) i t s.
-  Proof. apply (gfp_fp esim_lfp). Qed.
+  Proof using Type. apply (gfp_fp esim_lfp). Qed.
 
   Lemma esim_roll i t s :
     esim_lfp' (gfp esim_lfp) i t s -> gfp esim_lfp i t s.
-  Proof. apply (gfp_fp esim_lfp). Qed.
+  Proof using Type. apply (gfp_fp esim_lfp). Qed.
 
   Definition esim  := gfp esim_lfp.
 End ESimDef.

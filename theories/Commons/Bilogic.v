@@ -1,7 +1,5 @@
 From RSL Require Import Prelude.
 
-(* Set Mangle Names. *)
-
 Definition bilogic : Type := (regmap * memory) -> (regmap * memory) -> Prop.
 
 Declare Scope bilogic_scope.

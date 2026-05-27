@@ -16,7 +16,7 @@ Section PROOF.
     Pₛ ⊨ s -{ n }> s' ->
     esim_lax W Pₜ Pₛ Φ i t s' ->
     esim Wnew Pₜ Pₛ Φ (i, n) t s.
-  Proof.
+  Proof using Type.
     unfold esim.
     coinduction C cih.
     intros n.
@@ -24,47 +24,44 @@ Section PROOF.
     - intros i t s s' Hstep Hsim. inv Hstep.
       apply esim_lax_unroll in Hsim.
       induction Hsim as
-        [
-        |
-        | ? ? ? s s''
-        |
-        |
-        ].
+        [ i t s Hfin
+        | i t s Hstuck
+        | i i' t s s'' Hsteps Hlt Hgfp
+        | i t s Hprogress Ht
+        | i t s Hprogress Hboth ].
       + now constructor.
       + now constructor.
-      + destruct (pstep_to_nstep_l _ _ H) as (n & s' & Hstep & Hnstep).
+      + destruct (pstep_to_nstep_l _ _ Hsteps) as (n & s' & Hstep & Hnstep).
         eapply ESourceSteps.
-        { eassumption. }
-        2:{ eapply cih; eassumption. }
-        now constructor.
+        * eassumption.
+        * constructor. eassumption.
+        * eapply cih; eassumption.
       + apply ETargetSteps.
         { assumption. }
-        intros t' Hstep.
-        destruct (H0 _ Hstep) as (i' & Hlt & Hsim).
-        exists (i', 0).
-        split.
+        intros t' Hstep. destruct (Ht _ Hstep) as (i' & Hlt & Hgfp).
+        exists (i', 0). split.
         * now constructor.
         * eapply cih; eassumption || constructor.
       + apply EBothSteps.
         { assumption. }
         intros t' Hstep.
-        destruct (H0 _ Hstep) as (i' & s'' & Hs & Hsim).
+        destruct (Hboth _ Hstep) as (i' & s'' & Hs & Hgfp).
         destruct (pstep_to_nstep_l _ _ Hs) as (n & s' & Hsteps & Hnstep).
         do 2 eexists. split.
         * eassumption.
         * eapply cih; eassumption || constructor.
-    - intros i t s s' Hstep Hsim.
+    - intros i t s s' Hstep Hgfp.
       inv Hstep as [ | ? ? ? ? Hs Hnstep ].
-      eapply ESourceSteps.
-      { eassumption. }
-      2:{ eapply cih; eassumption. }
-      right. simpl. lia.
+      eapply ESourceSteps with (i' := (_, n)).
+      + eassumption.
+      + right. simpl. lia.
+      + eapply cih; eassumption.
   Qed.
 
   Lemma esim_lax_implies_esim: ∀ i t s,
     esim_lax W Pₜ Pₛ Φ i t s ->
     ∃ (R: WfRel) w, esim R Pₜ Pₛ Φ w t s.
-  Proof.
+  Proof using Type.
     intros i t s Hsim.
     exists Wnew, (i, 0).
     apply esim_lax_to_esim_inv with s.

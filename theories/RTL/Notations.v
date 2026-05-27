@@ -9,29 +9,32 @@ Module RTLNotations.
   Declare Custom Entry rtl_args.
 
   Notation "<{{ c }}>" :=
-    c (c custom rtl_code at level 99,
-       format "'[v ' '<{{' '//' c '//' '}}>' ']'").
+    c (at level 0,
+          c custom rtl_code at level 99,
+          format "'[v ' '<{{' '//' c '//' '}}>' ']'").
 
   Notation "<{ c }>" :=
-    c (c custom rtl_instr at level 99).
+    c (at level 0,
+          c custom rtl_instr at level 99).
 
   (* Code Block Notations *)
   Notation "n ':' i ';'" :=
     (singletonM n i)
-      (in custom rtl_code at level 0,
+      (in custom rtl_code at level 1,
           n constr at level 0,
-          i custom rtl_instr at level 0,
+          i custom rtl_instr at level 1,
           format "'[ ' n ':'  i ';' ']'").
 
   Notation "n ':' i ';' rest" :=
     (insert n i rest)
-      (in custom rtl_code at level 0,
+      (in custom rtl_code at level 1,
           n constr at level 0,
-          i custom rtl_instr at level 0,
-          rest custom rtl_code at level 0,
+          i custom rtl_instr at level 1,
+          rest custom rtl_code at level 1,
           format "'[ ' n ':'  i ';' ']' '//' rest").
 
-  Notation "'$' v" := (v) (in custom rtl_reg at level 0, v constr at level 0).
+  Notation "'$' v" := (v) (in custom rtl_reg at level 1, v constr at level 0).
+
   Notation "x" := x (in custom rtl_reg at level 0, x ident).
 
   (* Instruction Notations *)
@@ -39,13 +42,14 @@ Module RTLNotations.
   (* Nop *)
   Notation "'nop' '->' next" :=
     (Inop next)
-      (in custom rtl_instr at level 0, next constr at level 0).
+      (in custom rtl_instr at level 1,
+          next constr at level 0).
 
   (* Operations *)
   Notation "dst ':=' '@' op src '->' next" :=
     (Iop op src dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
           op ident,
           src constr at level 0,
           next constr at level 0).
@@ -53,76 +57,76 @@ Module RTLNotations.
   (* LoadI *)
   Notation "dst ':=' '#' val '->' next" :=
     (Iop (LoadI val%Z) [] dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
           val constr at level 0,
           next constr at level 0).
 
   (* Move *)
   Notation "dst ':=' src '->' next" :=
     (Iop Move [src] dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
-          src custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          src custom rtl_reg at level 1,
           next constr at level 0).
 
   (* Add *)
   Notation "dst ':=' src1 '+' src2 '->' next" :=
     (Iop Add [src1; src2] dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
-          src1 custom rtl_reg at level 0,
-          src2 custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          src1 custom rtl_reg at level 1,
+          src2 custom rtl_reg at level 1,
           next constr at level 0).
 
   (* Sub *)
   Notation "dst ':=' src1 '-' src2 '->' next" :=
     (Iop Sub [src1; src2] dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
-          src1 custom rtl_reg at level 0,
-          src2 custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          src1 custom rtl_reg at level 1,
+          src2 custom rtl_reg at level 1,
           next constr at level 0).
 
   (* Mult *)
   Notation "dst ':=' src1 '*' src2 '->' next" :=
     (Iop Mul [src1; src2] dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
-          src1 custom rtl_reg at level 0,
-          src2 custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          src1 custom rtl_reg at level 1,
+          src2 custom rtl_reg at level 1,
           next constr at level 0).
 
   (* Load *)
   Notation "dst ':=' '!' addr '->' next" :=
     (Iload addr dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
           addr constr at level 0,
           next constr at level 0).
 
   (* Store *)
   Notation "'!' addr ':=' src '->' next" :=
     (Istore addr src next)
-      (in custom rtl_instr at level 0,
+      (in custom rtl_instr at level 1,
           addr constr at level 0,
-          src custom rtl_reg at level 0,
+          src custom rtl_reg at level 1,
           next constr at level 0).
 
   (* Call *)
   Notation "dst ':=' 'call' sig args '->' next" :=
     (Icall sig args dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
           sig constr at level 0,
-          args custom rtl_args at level 0,
+          args custom rtl_args at level 1,
           next constr at level 0).
 
   (* Call *)
   Notation "dst ':=' '@call' sig args '->' next" :=
     (Icall sig args dst next)
-      (in custom rtl_instr at level 0,
-          dst custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
           sig constr at level 0,
           args constr at level 0,
           next constr at level 0).
@@ -130,16 +134,16 @@ Module RTLNotations.
   (* Cond *)
   Notation "'if' cond 'then' 'goto' ifso 'else' 'goto' ifnot" :=
     (Icond cond ifso ifnot)
-      (in custom rtl_instr at level 0,
-          cond custom rtl_reg at level 0,
+      (in custom rtl_instr at level 1,
+          cond custom rtl_reg at level 1,
           ifso constr at level 0,
           ifnot constr at level 0).
 
   (* Return *)
   Notation "'ret' src" :=
     (Ireturn src)
-      (in custom rtl_instr at level 0,
-          src custom rtl_reg at level 0).
+      (in custom rtl_instr at level 1,
+          src custom rtl_reg at level 1).
 
   (* Args list *)
 
@@ -147,15 +151,15 @@ Module RTLNotations.
   Notation "'(' ')'" := [] (in custom rtl_args at level 0).
   Notation "'()'" := [] (in custom rtl_args at level 0).
   Notation "'(' args ')'" :=
-    args (in custom rtl_args at level 0, args custom rtl_reg_list at level 0).
+    args (in custom rtl_args at level 0, args custom rtl_reg_list at level 1).
 
   Notation "'$' v" :=
-    [v] (in custom rtl_reg_list at level 0, v constr at level 0).
+    [v] (in custom rtl_reg_list at level 1, v constr at level 0).
   Notation "'$' v ',' rest" :=
     (v :: rest)
-      (in custom rtl_reg_list at level 0,
+      (in custom rtl_reg_list at level 1,
           v constr at level 0,
-          rest custom rtl_reg_list at level 0).
+          rest custom rtl_reg_list at level 1).
 End RTLNotations.
 
 Module Test.

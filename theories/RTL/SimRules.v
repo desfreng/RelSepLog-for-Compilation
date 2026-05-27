@@ -11,8 +11,6 @@ From RSL Require Import RTL.RTL.
 From RSL Require Import RTL.Semantics.
 From RSL Require Import RTL.Notations.
 
-(* Set Mangle Names. *)
-
 Import RTLNotations.
 
 Section Rules.
@@ -29,13 +27,13 @@ Section Rules.
 
   Notation "t '⟨' iₜ '≲' iₛ '⟩' s '{{' Φ '}}'" :=
     (sim Φ iₜ t iₛ s)
-      (at level 10, no associativity).
+      (at level 1, no associativity).
 
   Lemma source_nop iₜ iₛ fₜ fₛ pcₜ pcₛ : ∀ pc,
     fₛ@pcₛ is <{ nop -> pc }> ->
     ⊨ (fₜ, pcₜ) ⟨iₜ ≲ S iₛ⟩ (fₛ, pc) {{ Φ }} ->
     (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }}.
-  Proof.
+  Proof using Type.
     intros pc Hpc [ρₜ mₜ] [ρₛ mₛ] H.
     unfold_bilogic.
     apply (@fsim_roll Λₜ Λₛ).
@@ -49,7 +47,7 @@ Section Rules.
     fₜ@pcₜ is <{ nop -> pc }> ->
     ⊨ (fₜ, pc) ⟨S iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }} ->
     (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }}.
-  Proof.
+  Proof using Type.
     intros pc Hpc [ρₜ mₜ] [ρₛ mₛ] H.
     unfold_bilogic.
     apply (@fsim_roll Λₜ Λₛ).
@@ -67,8 +65,8 @@ Section Rules.
     eval_op op args = Some v ->
     ⊨ regs ↪ₛ args ->
       ⟦ dst ↩ₛ v ⟧ (fₜ, pcₜ) ⟨iₜ ≲ S iₛ⟩ (fₛ, pc) {{ Φ }} ->
-      (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩(fₛ, pcₛ) {{ Φ }}.
-  Proof.
+      (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }}.
+  Proof using Type.
     intros pc dst op regs args v Hpc Hv [ρₜ mₜ] [ρₛ mₛ].
     intros Harg Hsim. unfold_bilogic.
     apply (@fsim_roll Λₜ Λₛ). subst.
@@ -84,8 +82,8 @@ Section Rules.
     eval_op op args = Some v ->
     ⊨ regs ↪ₜ args ->
       ⟦ dst ↩ₜ v ⟧ (fₜ, pc) ⟨S iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }} ->
-      (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩(fₛ, pcₛ) {{ Φ }}.
-  Proof.
+      (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }}.
+  Proof using Type.
     intros pc dst op regs args v Hpc Hv [ρₜ mₜ] [ρₛ mₛ].
     intros Harg Hsim. unfold_bilogic.
     apply (@fsim_roll Λₜ Λₛ). subst.
@@ -102,8 +100,8 @@ Section Rules.
     fₛ@pcₛ is <{ if reg then goto pc_true else goto pc_false }> ->
     ⊨ reg ↪ₛ v ->
       (fₜ, pcₜ) ⟨iₜ ≲ S iₛ⟩ (fₛ, if (v =? 0)%Z then pc_true else pc_false) {{ Φ }} ->
-      (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩(fₛ, pcₛ) {{ Φ }}.
-  Proof.
+      (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }}.
+  Proof using Type.
     intros pc_true pc_false reg Hpc Hv [ρₜ mₜ] [ρₛ mₛ].
     intros Harg Hsim. unfold_bilogic.
     apply (@fsim_roll Λₜ Λₛ). subst.
@@ -118,8 +116,8 @@ Section Rules.
     fₜ@pcₜ is <{ if reg then goto pc_true else goto pc_false }> ->
     ⊨ reg ↪ₜ v ->
       (fₜ, if (v =? 0)%Z then pc_true else pc_false) ⟨S iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }} ->
-      (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩(fₛ, pcₛ) {{ Φ }}.
-  Proof.
+      (fₜ, pcₜ) ⟨iₜ ≲ iₛ⟩ (fₛ, pcₛ) {{ Φ }}.
+  Proof using Type.
     intros pc_true pc_false reg Hpc Hv [ρₜ mₜ] [ρₛ mₛ].
     intros Harg Hsim. unfold_bilogic.
     apply (@fsim_roll Λₜ Λₛ). subst.

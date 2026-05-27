@@ -14,7 +14,7 @@ Section PROOF.
   Lemma ealt_sim_implies_esim_lax: ∀ wₜ t wₛ s,
     ealt_sim Wₜ Wₛ Pₜ Pₛ Φ wₜ t wₛ s ->
     ∃ W i, esim_lax W Pₜ Pₛ Φ i t s.
-  Proof.
+  Proof using Type.
     intros wₜ t wₛ s Hsim.
     exists (WfWithBot (WfLexProd Wₜ Wₛ)), (Some (wₜ, wₛ)).
     revert wₜ t wₛ s Hsim.
@@ -24,68 +24,60 @@ Section PROOF.
     apply ealt_sim_unroll in Hsim.
     induction Hsim as [ wₜ t wₛ s Hfinal
                       | wₜ t wₛ s Hstuck
-                      | wₜ wₜ' t wₛ wₛ' s s' Hstep Hlt Hsim
+                      | wₜ wₜ' t wₛ wₛ' s s' Hstep _ Hsim
                       | wₜ t wₛ s Hprogress Ht
                       | wₜ t wₛ s Hprogress Hboth].
     - now constructor.
     - now constructor.
     - assert (Hrtc: Pₛ ⊨ s ->>+ s').
-      { econstructor. eassumption. reflexivity. }
-      clear Hstep.
-      revert wₜ' s' Hrtc Hsim.
-      induction wₛ' as [wₛ' IHwₛ'] using (well_founded_ind wf).
+      { econstructor; eassumption || reflexivity. }
+      clear Hstep. revert wₜ' s' Hrtc Hsim.
+      induction wₛ' as [wₛ' IHw] using (well_founded_ind wf).
       intros wₜ' s' Hrtc Hsim.
       apply ealt_sim_unroll in Hsim.
-      inv Hsim.
+      induction Hsim as [ wₜ' t wₛ' s' Hfinal
+                        | wₜ' t wₛ' s' Hstuck
+                        | wₜ' wₜ'' t wₛ' wₛ'' s' s'' Hstep Hlt Hsim
+                        | wₜ' t wₛ' s' Hprogress Ht
+                        | wₜ' t wₛ' s' Hprogress Hboth].
       + eapply ELaxSourceSteps.
         * eassumption.
         * now constructor.
-        * apply (@b_chain _ _ _ R).
-          now constructor.
+        * apply (@b_chain _ _ _ R). now constructor.
       + eapply ELaxSourceSteps.
         * eassumption.
         * now constructor.
-        * apply (@b_chain _ _ _ R).
-          now constructor.
-      + (* EAltSourceSteps *)
-        eapply IHwₛ'.
+        * apply (@b_chain _ _ _ R). now constructor.
+      + eapply IHw.
         * eassumption.
-        * etransitivity; eassumption.
         * eapply pstep_r; eassumption.
         * eassumption.
-      + (* EAltTargetSteps *)
-        (* The target finally stepped. We can emit EBothSteps directly from the original state s *)
-        eapply ELaxBothSteps.
-        * eassumption.
-        * intros t' Htstep.
-          destruct (H0 _ Htstep) as (wₜ'' & wₛ'' & Hlt_wₜ & Hsim_next).
-          exists (Some (wₜ'', wₛ'')), s'.
-          split; try apply cih; eassumption.
-      + (* EAltBothSteps *)
-        eapply ELaxBothSteps.
-        * eassumption.
-        * intros t' Htstep.
-          destruct (H0 _ Htstep) as (wₜ'' & wₛ'' & s'' & Hstep_s'' & Hsim_next).
-          exists (Some (wₜ'', wₛ'')), s''.
-          split.
-          -- eapply pstep_r; eassumption.
-          -- apply cih; eassumption.
+      + apply ELaxBothSteps.
+        { assumption. }
+        intros t' Htstep.
+        destruct (Ht _ Htstep) as (wₜ'' & wₛ'' & Hlt & Hsim).
+        exists (Some (wₜ'', wₛ'')), s'. split.
+        * assumption.
+        * apply cih. eassumption.
+      + apply ELaxBothSteps.
+        { assumption. }
+        intros t' Htstep.
+        destruct (Hboth _ Htstep) as (wₜ'' & wₛ'' & s'' & Hsteps & Hsim).
+        exists (Some (wₜ'', wₛ'')), s''. split.
+        * eapply pstep_r; eassumption.
+        * apply cih. eassumption.
     - apply ELaxTargetSteps.
       { assumption. }
       intros t' Hstep.
       destruct (Ht _ Hstep) as (wₜ' & wₛ' & Hlt & Hgfp).
       eexists. split.
-      2: {
-        apply cih.
-        eassumption.
-      }
-      constructor. now left.
+      + do 2 constructor. eassumption.
+      + apply cih. eassumption.
     - apply ELaxBothSteps.
       { assumption. }
       intros t' Hstep.
       edestruct (Hboth _ Hstep) as (wₜ' & wₛ' & s' & Hs & Hsim).
-      exists (Some (wₜ', wₛ')), s'.
-      split.
+      exists (Some (wₜ', wₛ')), s'. split.
       + econstructor; eassumption || reflexivity.
       + apply cih. assumption.
   Qed.

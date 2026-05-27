@@ -9,8 +9,6 @@ From RSL Require Import RTL.Semantics.
 
 Import RTLNotations.
 
-(* Set Mangle Names. *)
-
 Section RTLWP.
   Let Λ : lang := rtl_lang.
   Context (P: prog Λ).
@@ -21,7 +19,7 @@ Section RTLWP.
   Lemma wp_ret (Q: postcondition) f pc : ∀ r v,
     f@pc is <{ ret r }> ->
     ⊢ ▷ (r ↦ᵣ v ∧ ⌜Q v⌝ₘ) -> wp Q f pc.
-  Proof.
+  Proof using Type.
     intros r v Hpc ρ m [] H; [apply safe_init | ].
     unfold_Prop. destruct H as [Hv HQ]. subst.
     apply safe_to_step.
@@ -35,7 +33,7 @@ Section RTLWP.
   Lemma wp_nop Q f pc : ∀ pc',
     f@pc is <{ nop -> pc' }> ->
     ⊢ (▷ wp Q f pc') -> wp Q f pc.
-  Proof.
+  Proof using Type.
     intros v Hpc ρ m [] Hwp; [apply safe_init | ].
     apply safe_to_step.
     - repeat econstructor; now eauto.
@@ -48,7 +46,7 @@ Section RTLWP.
        ⌜eval_op op vals = Some v⌝ ∧
        ▷ ⟦dst <-ᵣ v⟧wp Q f pc') ->
     wp Q f pc.
-  Proof.
+  Proof using Type.
     intros dst op args pc' vals v Hpc ρ m [] (Hargs & Hv & Hwp);
       [apply safe_init | ]. unfold_Prop. subst.
     apply safe_to_step.
@@ -60,7 +58,7 @@ Section RTLWP.
     f@pc is <{ dst := !src -> pc' }> ->
     ⊢ (src ↦ᵣ addr ∧ addr ↦ v ∧ ▷ ⟦dst <-ᵣ v⟧ wp Q f pc') ->
     wp Q f pc.
-  Proof.
+  Proof using Type.
     intros dst src pc' addr v Hpc ρ m [] (Haddr & Hmem & Hwp)
     ; [apply safe_init | ]. unfold_Prop. subst.
     apply safe_to_step.
@@ -74,7 +72,7 @@ Section RTLWP.
        src ↦ᵣ v ∧
        ▷ ⟦addr <- v⟧ wp Q f pc') ->
     wp Q f pc.
-  Proof.
+  Proof using Type.
     intros dst src pc' addr v H ρ m [] (Haddr & Hmem & Hwp);
       [apply safe_init | ]. unfold_Prop. subst.
     destruct Hwp as (m' & Hm' & Hwp). apply safe_to_step.
@@ -89,7 +87,7 @@ Section RTLWP.
        then ▷ wp Q f ifso
        else ▷ wp Q f ifnot) ->
     wp Q f pc.
-  Proof.
+  Proof using Type.
     intros cond ifso ifnot v H ρ m [] (Hv & Hwp); [apply safe_init | ].
     unfold_Prop. apply safe_to_step.
     - repeat econstructor; now eauto.
@@ -107,7 +105,7 @@ Section RTLWP.
     Pre args m ->
     P ⊨ ([], CallState f args, m) -{ n }> ([], ReturnState v, m') ->
     Post v m'.
-  Proof.
+  Proof using Type.
     intros Hspec n args m v m' Hpre Hsteps.
     eapply safe_implies_progress with (Q := uncurry Post) in Hsteps.
     - destruct Hsteps as [Hfin | Hstuck].
@@ -129,7 +127,7 @@ Section RTLWP.
        ⌜Pre vals⌝ₘ ∧
        ▷ (∀ v, ⊢ₘ ⌜Post v⌝ₘ -> ⟦dst <-ᵣ v⟧ wp Q f pc')) ->
     wp Q f pc.
-  Proof.
+  Proof using Type.
     intros dst sig args pc' vals fn Pre Post H ρ m [ | n]
       (Hargs & Hfun & Hlen & Hspec & Hpre & Hwp); [apply safe_init | ].
     unfold_Prop. subst.
@@ -160,7 +158,7 @@ Section RTLWP.
     (∀ args,
        ⊢ (⌜Pre args⌝ₘ ∧ fn_regs f ↦ᵣ args) -> wp Post f (fn_entrypoint f))
     -> hoare Pre f Post.
-  Proof.
+  Proof using Type.
     intros H args m [ ] Hlen Hpre; [apply safe_init | ].
     unfold_Prop.
     apply safe_to_step.

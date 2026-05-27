@@ -1,7 +1,5 @@
 From RSL Require Import Prelude.
 
-(* Set Mangle Names. *)
-
 Section WPProp.
   Context {Λ: lang} (P: prog Λ).
 
@@ -26,7 +24,7 @@ Section WPProp.
   Lemma safe_from_progress Q s n :
     (∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ can_progress P t) ->
     safe Q s n.
-  Proof.
+  Proof using Type.
     induction n as [ | n IH] in s |- *; intros H.
     - constructor.
     - assert (Hstep: P ⊨ s -{0}> s) by constructor.
@@ -43,7 +41,7 @@ Section WPProp.
   Lemma safe_implies_progress Q s n :
     safe Q s n ->
     ∀ t m, m < n -> P ⊨ s -{m}> t -> final_with Q t ∨ can_progress P t.
-  Proof.
+  Proof using Type.
     intros Hsafe.
     induction Hsafe as [s' | s' n' Hfin | s' n' Hns Hsafe IH]
       in n, Hsafe |- *; intros t m Hlt Hrtc.
@@ -63,7 +61,7 @@ Section WPProp.
 
   Definition safe_mono Q s :
     ∀ n m, m <= n -> safe Q s n -> safe Q s m.
-  Proof.
+  Proof using Type.
     intros n m Hle Hsafe.
     induction Hsafe as [ | | ? ? Hns Hsafe IH ] in m, Hle |- *.
     - inv Hle. constructor.

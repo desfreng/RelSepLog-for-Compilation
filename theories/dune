@@ -2,4 +2,12 @@
 
 (rocq.theory
  (name RSL)
+ (flags
+  :standard
+  -set
+  "Mangle Names"
+  -set
+  "Suggest Proof Using"
+  -set
+  "Default Goal Selector=!")
  (theories Stdlib stdpp Coinduction))

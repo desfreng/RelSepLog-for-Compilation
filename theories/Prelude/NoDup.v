@@ -1,6 +1,6 @@
 From stdpp Require Import prelude.
 
-Section no_dup.
+Section NoDupProof.
   Context `{dec : EqDecision A}.
 
   Global Instance list_elem_of_dec : RelDecision (∈@{list A}).
@@ -24,7 +24,7 @@ Section no_dup.
 
   Lemma is_no_dup_sound:
     ∀ l, is_no_dup l = true <-> NoDup l.
-  Proof.
+  Proof using Type.
     intros l. induction l as [ | hd tl IH ].
     - split; constructor.
     - simpl; destruct (decide_rel elem_of hd tl) as [He | Hne].
@@ -37,11 +37,11 @@ Section no_dup.
   Qed.
 
   Lemma no_dup_dec : ∀ l : list A, Decision (NoDup l).
-  Proof.
+  Proof using dec.
     intros l. destruct (is_no_dup l) eqn:H.
     - left. now apply is_no_dup_sound.
     - right. intro HD.
       apply is_no_dup_sound in HD.
       congruence.
   Qed.
-End no_dup.
+End NoDupProof.

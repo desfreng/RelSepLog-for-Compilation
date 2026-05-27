@@ -58,7 +58,7 @@ Section Play.
   Lemma test_inv :
     NodeInv (fun v m => v = 10%Z) test 3
       ⌞ one ↦ᵣ 1 ∧ ten ↦ᵣ 10 ∧ ∃ v, x ↦ᵣ v ∧ ⌜v <= 10⌝%Z ⌟.
-  Proof.
+  Proof using Type.
     apply löb.
     intros ρ m n IH (Hone & Hten & v & Hres & Hv).
     step wp_op.
@@ -73,7 +73,7 @@ Section Play.
 
   Lemma test_correct :
     hoare P (fun args m => True) test (fun v m => v = 10%Z).
-  Proof.
+  Proof using Type.
     apply hoare_from_wp.
     intros args ρ m n _.
     step wp_op.

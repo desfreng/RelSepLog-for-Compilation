@@ -40,18 +40,24 @@ Section EAltSimDef.
     ealt_sim_lfp' gfp wₜ t wₛ s.
 
   Instance ealt_sim_mono : Proper (leq ==> leq) ealt_sim_lfp'.
+  Proof using Type.
     intros gfp gfp' Hgfp  wₜ t  wₛ s Hsim.
-    inv Hsim.
+    induction Hsim as
+      [ wₜ t wₛ s Hfin
+      | wₜ t wₛ s Hstuck
+      | wₜ wₜ' t wₛ wₛ' s Hstep Hlt Hs
+      | wₜ t wₛ s Hprogress Ht
+      | wₜ t wₛ s Hprogress Hboth ].
     - econstructor; eassumption.
     - econstructor; eassumption.
     - eapply EAltSourceSteps; eauto.
       apply Hgfp. eassumption.
     - apply EAltTargetSteps; auto. intros ? Hstep.
-      edestruct (H0 _ Hstep) as (wₜ' & wₛ' & HR & Isim).
+      edestruct (Ht _ Hstep) as (wₜ' & wₛ' & HR & Isim).
       do 2 eexists. split; eauto.
       apply Hgfp. eassumption.
     - apply EAltBothSteps; auto. intros ? Hstep.
-      edestruct (H0 _ Hstep) as (wₜ' & wₛ' & s' & HR & Isim).
+      edestruct (Hboth _ Hstep) as (wₜ' & wₛ' & s' & HR & Isim).
       do 3 eexists. split; eauto.
       apply Hgfp. eassumption.
   Qed.
@@ -61,80 +67,58 @@ Section EAltSimDef.
 
   Lemma ealt_sim_unroll wₜ t wₛ s :
     gfp ealt_sim_lfp wₜ t wₛ s -> ealt_sim_lfp' (gfp ealt_sim_lfp) wₜ t wₛ s.
-  Proof using. apply (gfp_fp ealt_sim_lfp). Qed.
+  Proof using Type. apply (gfp_fp ealt_sim_lfp). Qed.
 
   Lemma ealt_sim_roll wₜ t wₛ s :
     ealt_sim_lfp' (gfp ealt_sim_lfp) wₜ t wₛ s -> gfp ealt_sim_lfp wₜ t wₛ s.
-  Proof using. apply (gfp_fp ealt_sim_lfp). Qed.
+  Proof using Type. apply (gfp_fp ealt_sim_lfp). Qed.
 
-  Definition ealt_sim : Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop
-    := gfp ealt_sim_lfp.
+  Definition ealt_sim := gfp ealt_sim_lfp.
 
-  Lemma test (R: Chain ealt_sim_lfp):
+  Lemma ealt_sim_idx_mono (R: Chain ealt_sim_lfp):
     ∀ iₜ t iₛ s,
     (elem R) iₜ t iₛ s ->
     ∀ iₜ' iₛ',
     iₜ ⊑ iₜ' ->
     iₛ ⊑ iₛ' ->
     (elem R) iₜ' t iₛ' s.
-  Proof.
+  Proof using Type.
     apply tower.
-    - unfold inf_closed.
-      intros P Hp.
-      intros iₜ t iₛ s Hinf iₜ' iₛ' Ht Hs.
-      intros Q Hq.
-      eapply (Hp _ Hq).
-      + now apply Hinf.
-      + assumption.
-      + assumption.
-    - clear R. intros R CIH iₜ t iₛ s H.
-      induction H; intros iₜ' iₛ' Ht Hs.
-      + now constructor.
-      + now constructor.
-      + inv Hs as [ ? Hs' | ].
-        * eapply EAltSourceSteps.
-          { eassumption. }
-          { eassumption. }
-          eapply CIH.
-          eassumption.
-          reflexivity.
-          now left.
-        * eapply EAltSourceSteps.
-          { eassumption. }
-          { eassumption. }
-          eapply CIH.
-          eassumption.
-          reflexivity.
-          reflexivity.
-      + inv Ht as [ ? Ht' | ].
-        * apply EAltTargetSteps.
-          { eassumption. }
-          intros t' Hstep.
-          destruct (H0 _ Hstep) as (? & ? & ? & ?).
-          do 2 eexists.
-          split.
-          eassumption.
-          eapply CIH.
-          eassumption.
-          now left.
-          reflexivity.
-        * apply EAltTargetSteps.
-          { eassumption. }
-          intros t' Hstep.
-          destruct (H0 _ Hstep) as (? & ? & ? & ?).
-          do 2 eexists.
-          split.
-          eassumption.
-          eapply CIH.
-          eassumption.
-          reflexivity.
-          reflexivity.
-      + apply EAltBothSteps.
-        { assumption. }
+    { intros P Hp iₜ t iₛ s Hinf iₜ' iₛ' Ht Hs.
+      intros Q Hq. eapply (Hp _ Hq); try eassumption.
+      now apply Hinf.
+    }
+    clear R. intros R CIH iₜ t iₛ s Hsim.
+    induction Hsim as
+      [ wₜ t wₛ s Hfin
+      | wₜ t wₛ s Hstuck
+      | wₜ wₜ' t wₛ wₛ' s Hstep Hlt Hs
+      | wₜ t wₛ s Hprogress Ht
+      | wₜ t wₛ s Hprogress Hboth ]; intros iₜ' iₛ' Hleₜ Hleₛ.
+    - now constructor.
+    - now constructor.
+    - destruct Hleₛ as [ Hltₛ | -> ].
+      + eapply EAltSourceSteps; try eassumption.
+        eapply CIH.
+        * eassumption.
+        * reflexivity.
+        * now left.
+      + eapply EAltSourceSteps; eassumption.
+    - destruct Hleₜ as [ Hltₜ | -> ].
+      + apply EAltTargetSteps.
+        { eassumption. }
         intros t' Hstep.
-        edestruct H0 as (? & ? & ? & ? & ?). eassumption.
-        do 3 eexists. split.
-        eassumption.
-        eassumption.
+        destruct (Ht _ Hstep) as (wₜ' & wₛ' & Hlt & Hsim).
+        exists wₜ, wₛ'; split. 1: assumption.
+        eapply CIH.
+        * eassumption.
+        * now left.
+        * reflexivity.
+      + apply EAltTargetSteps; eassumption.
+    - apply EAltBothSteps.
+      { assumption. }
+      intros t' Hstep.
+      destruct (Hboth _ Hstep) as (wₜ' & wₛ' & s' & Hsteps & Hsim).
+      exists wₜ', wₛ', s'. split; now auto.
   Qed.
 End EAltSimDef.

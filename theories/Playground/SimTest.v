@@ -14,8 +14,6 @@ From RSL Require Import RTL.SimRules.
 
 Import RTLNotations.
 
-(* Set Mangle Names. *)
-
 Section T.
   Let Λₜ : lang := rtl_lang.
   Let Λₛ : lang := rtl_lang.
@@ -68,22 +66,18 @@ Section T.
 
   Notation "t '⟨' iₜ '≲' iₛ '⟩' s '{{' Φ '}}'" :=
     (sim Φ iₜ t iₛ s)
-      (at level 10, no associativity).
+      (at level 1, no associativity).
 
   Definition same_value (vₜ vₛ: val) (_ _: memory) :=
     vₜ = vₛ.
 
-  Notation "(≈)" := same_value (at level 70).
+  Notation "(≈)" := same_value (at level 0).
 
   Lemma inv: ∀ fuel l,
     ⊨ one ↪ₜ 1 ->
     addr ↪ₛ l ->
     l →ₛ 1 ->
-    (fact_good, 2) ⟨fuel ≲ fuel⟩(fact_bad, 2) {{ (≈) }}.
-  Proof.
-    induction fuel.
-    { admit. }
-    intros l [ρₜ mₜ] [ρₛ mₛ] Hone Haddr Hl.
-    unfold_bilogic.
+    (fact_good, 2) ⟨fuel ≲ fuel⟩ (fact_bad, 2) {{ (≈) }}.
+  Proof using Type.
   Admitted.
 End T.

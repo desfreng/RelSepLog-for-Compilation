@@ -6,8 +6,6 @@ From Coinduction Require Import all.
 From RSL Require Import Simulations.Behaviors.
 From RSL Require Import Simulations.ImplicitSim.
 
-(* Set Mangle Names. *)
-
 Section ISimSound.
   Context {Λₜ Λₛ: lang}.
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
@@ -21,13 +19,13 @@ Section ISimSound.
 
   Notation "t '≲' s '{{' Φ '}}'" :=
     (isim Pₜ Pₛ Φ t s)
-      (at level 70, no associativity).
+      (at level 1, no associativity).
 
   Lemma terminating_isim Φ : ∀ t s vₜ,
     t ≲ s {{ Φ }} ->
     Terminating vₜ ∈ t ->
     ∃ b, b ∈ s ∧ Terminating vₜ ⊑{Φ} b.
-  Proof.
+  Proof using Type.
     intros t s vₜ Hsim Hb.
     (* t Terminates -> it reduces to a final state *)
     apply has_terminating_behavior in Hb. destruct Hb as (t' & Hrtc & Hfin).
@@ -85,7 +83,7 @@ Section ISimSound.
     diverges Pₜ t ->
     stuck Pₛ s ∨
       ∃ t' s', Pₛ ⊨ s ->> s' ∧ t' ≲ s' {{ Φ }} ∧ diverges Pₜ t'.
-  Proof.
+  Proof using Type.
     intros t s Hsim Hdiv.
     (* Induction on the least-fixpoint of the relation *)
     apply isim_unroll in Hsim.
@@ -121,7 +119,7 @@ Section ISimSound.
     t ≲ s {{ Φ }} ->
     Diverging ∈ t ->
     ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
-  Proof.
+  Proof using Type.
     intros t s Hsim Hdiv.
     (* We see in the future: can s be stuck ? *)
     destruct (classic (∃ s', Pₛ ⊨ s ->>* s' ∧ stuck Pₛ s')) as [Hstuck | Hnstuck].
@@ -151,7 +149,7 @@ Section ISimSound.
     t ≲ s {{ Φ }} ->
     Undef ∈ t ->
     Undef ∈ s.
-  Proof.
+  Proof using Type.
     intros t s Hsim Hb.
     (* t reach a stuck state. *)
     apply has_undef_behavior in Hb. destruct Hb as (t' & Hrtc & Hstuck).
@@ -199,7 +197,7 @@ Section ISimSound.
 
   Theorem isim_sound Φ : ∀ t s,
     t ≲ s {{ Φ }} -> refines Pₜ Pₛ Φ t s.
-  Proof.
+  Proof using Type.
     intros t s Hsim [] Hb.
     - now apply terminating_isim with t.
     - now apply diverging_isim with t.

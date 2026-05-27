@@ -7,8 +7,6 @@ From RSL Require Import Simulations.Commons.
 From RSL Require Import Simulations.Behaviors.
 From RSL Require Import Simulations.ExplicitSim.
 
-(* Set Mangle Names. *)
-
 Section ESimSound.
   Context {Λₜ Λₛ: lang}.
   Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
@@ -22,13 +20,13 @@ Section ESimSound.
 
   Notation "t '≲' '[' i ']' s '{{' Φ '}}'" :=
     (esim W Pₜ Pₛ Φ i t s)
-      (at level 70, no associativity).
+      (at level 1, no associativity).
 
   Lemma terminating_esim Φ : ∀ i t s vₜ,
     t ≲[i] s {{ Φ }} ->
     Terminating vₜ ∈ t ->
     ∃ b, b ∈ s ∧ Terminating vₜ ⊑{Φ} b.
-  Proof.
+  Proof using Type.
     intros i t s vₜ Hsim Hb.
     (* t Terminates -> it reduces to a final state *)
     apply has_terminating_behavior in Hb. destruct Hb as (t' & Hrtc & Hfin).
@@ -94,7 +92,7 @@ Section ESimSound.
     diverges Pₜ t ->
     stuck Pₛ s ∨
       ∃ i' t' s', Pₛ ⊨ s ->> s' ∧ t' ≲[i'] s' {{ Φ }} ∧ diverges Pₜ t'.
-  Proof.
+  Proof using Type.
     intros i.
     (* Induction on the progress index *)
     induction i as [i IHi] using (well_founded_induction wf).
@@ -132,7 +130,7 @@ Section ESimSound.
     t ≲[i] s {{ Φ }} ->
     Diverging ∈ t ->
     ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
-  Proof.
+  Proof using Type.
     intros i t s Hsim Hdiv.
     (* We see in the future: can s be stuck ? *)
     destruct (classic (∃ s', Pₛ ⊨ s ->>* s' ∧ stuck Pₛ s')) as [Hstuck | Hnstuck].
@@ -161,7 +159,7 @@ Section ESimSound.
     t ≲[i] s {{ Φ }} ->
     Undef ∈ t ->
     Undef ∈ s.
-  Proof.
+  Proof using Type.
     intros i t s Hsim Hb.
     (* t reach a stuck state. *)
     apply has_undef_behavior in Hb. destruct Hb as (t' & Hrtc & Hstuck).
@@ -220,7 +218,7 @@ Section ESimSound.
 
   Theorem esim_sound Φ : ∀ i t s,
     t ≲[i] s {{ Φ }} -> refines Pₜ Pₛ Φ t s.
-  Proof.
+  Proof using Type.
     intros i t s Hsim [] Hb.
     - eapply terminating_esim; now eauto.
     - eapply diverging_esim; now eauto.

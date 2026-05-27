@@ -1,7 +1,5 @@
 From RSL Require Import Prelude.
 
-(* Set Mangle Names. *)
-
 Definition postcondition : Type := val -> memory -> Prop.
 Definition precondition : Type := list val -> memory -> Prop.
 

@@ -4,8 +4,6 @@ From Coinduction Require Import all.
 
 From RSL Require Import Simulations.Commons.
 
-(* Set Mangle Names. *)
-
 Section ISimDef.
   Context {Λₜ Λₛ: lang}.
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
@@ -32,7 +30,7 @@ Section ISimDef.
     isim_lfp' gfp t s.
 
   Instance isim_lfp'_proper : Proper (leq ==> leq) isim_lfp'.
-  Proof.
+  Proof using Type.
     intros gfp gfp' Hgfp s t H. induction H as [ | | | | ? ? ? H ];
       try (econstructor; eassumption || now apply Hlfp).
     apply IBothSteps; eauto. intros t' Hstep.
@@ -44,11 +42,11 @@ Section ISimDef.
 
   Lemma isim_unroll t s :
     gfp isim_lfp t s -> isim_lfp' (gfp isim_lfp) t s.
-  Proof. apply (gfp_fp isim_lfp). Qed.
+  Proof using Type. apply (gfp_fp isim_lfp). Qed.
 
   Lemma isim_roll t s :
     isim_lfp' (gfp isim_lfp) t s -> gfp isim_lfp t s.
-  Proof. apply (gfp_fp isim_lfp). Qed.
+  Proof using Type. apply (gfp_fp isim_lfp). Qed.
 
   Definition isim := gfp isim_lfp.
 End ISimDef.

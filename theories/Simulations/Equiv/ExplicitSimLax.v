@@ -4,8 +4,6 @@ From Coinduction Require Import all.
 
 From RSL Require Import Simulations.Commons.
 
-(* Set Mangle Names. *)
-
 Section ESimLaxDef.
   Context {Λₜ Λₛ: lang}.
   Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
@@ -59,11 +57,11 @@ Section ESimLaxDef.
 
   Lemma esim_lax_unroll i t s :
     gfp esim_lax_lfp i t s -> esim_lax_lfp' (gfp esim_lax_lfp) i t s.
-  Proof. apply (gfp_fp esim_lax_lfp). Qed.
+  Proof using Type. apply (gfp_fp esim_lax_lfp). Qed.
 
   Lemma esim_lax_roll i t s :
     esim_lax_lfp' (gfp esim_lax_lfp) i t s -> gfp esim_lax_lfp i t s.
-  Proof. apply (gfp_fp esim_lax_lfp). Qed.
+  Proof using Type. apply (gfp_fp esim_lax_lfp). Qed.
 
   Definition esim_lax  := gfp esim_lax_lfp.
 End ESimLaxDef.

@@ -75,7 +75,7 @@ Section GSimDef.
 
     Lemma gsim_ind: ∀ iₜ wₜ t iₛ wₛ s,
       gsim iₜ wₜ t iₛ wₛ s -> P iₜ wₜ t iₛ wₛ s.
-    Proof.
+    Proof using HFinal HProgress HSourceSteps HStuck HTargetSteps.
       fix IH 7. intros iₜ wₜ t iₛ wₛ s Hsim.
       destruct Hsim as
         [ iₜ wₜ t iₛ wₛ s Hfin
@@ -101,7 +101,7 @@ Section GSimDef.
     gsim iₜ wₜ t iₛ wₛ s ->
     ∀ w, wₜ ⊑ w ->
     gsim iₜ w t iₛ wₛ s.
-  Proof using.
+  Proof using Type.
     intros iₜ wₜ t iₛ wₛ s Hsim w Hle.
     induction Hsim as
       [ iₜ wₜ t iₛ wₛ s Hfin
@@ -113,18 +113,17 @@ Section GSimDef.
     - now constructor.
     - now constructor.
     - eapply GSourceSteps.
-      { eassumption. }
-      { eassumption. }
-      now apply IHs.
+      + eassumption.
+      + eassumption.
+      + now apply IHs.
     - apply GTargetSteps.
       { assumption. }
       intros t' Hstep.
       destruct (IHt _ Hstep) as (iₜ' & wₜ' & Hlt' & Hsim & IH).
-      inv Hle as [ ? Hlt | ].
+      destruct Hle as [ Hlt | -> ].
       + do 2 eexists. split.
         * eassumption.
-        * apply IH.
-          now left.
+        * apply IH. now left.
       + do 2 eexists. split; eauto.
     - eapply GProgress; try eassumption.
   Qed.
@@ -133,7 +132,7 @@ Section GSimDef.
     gsim iₜ wₜ t iₛ wₛ s ->
     ∀ w, wₛ ⊑ w ->
     gsim iₜ wₜ t iₛ w s.
-  Proof using.
+  Proof using Type.
     intros iₜ wₜ t iₛ wₛ s Hsim w Hle.
     induction Hsim as
       [ iₜ wₜ t iₛ wₛ s Hfin
@@ -144,16 +143,15 @@ Section GSimDef.
       in w, Hle |- *.
     - now constructor.
     - now constructor.
-    - inv Hle as [ ? Hlt | ].
+    - destruct Hle as [ Hlt | -> ].
       + eapply GSourceSteps.
-        { eassumption. }
-        { eassumption. }
-        apply IHs.
-        now left.
+        * eassumption.
+        * eassumption.
+        * apply IHs. now left.
       + eapply GSourceSteps.
-      { eassumption. }
-      { eassumption. }
-      apply IHs. now right.
+        * eassumption.
+        * eassumption.
+        * apply IHs. now right.
     - apply GTargetSteps.
       { assumption. }
       intros t' Hstep.
@@ -163,5 +161,4 @@ Section GSimDef.
       + apply IH. assumption.
     - eapply GProgress; try eassumption.
   Qed.
-
 End GSimDef.

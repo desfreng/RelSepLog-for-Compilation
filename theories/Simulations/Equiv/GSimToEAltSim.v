@@ -16,29 +16,16 @@ Section PROOF.
   Context (Wₜ Wₛ: WfRel).
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
-  Notation "t '⟨' iₜ '≲' iₛ '⟩' s '{{' Φ '}}'" :=
-    (fsim Wₜ Wₛ Pₜ Pₛ Φ iₜ t iₛ s)
-      (at level 70, iₜ at level 69, iₛ at level 69, no associativity).
-
   Definition StatePair := (state Λₜ * state Λₛ)%type.
 
-  Notation "t '⦉' iₜ ',' wₜ '≲' iₛ ',' wₛ '⦊' s '{{' Φ '}}'" :=
-    (gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ iₜ wₜ t iₛ wₛ s)
-      (at level 70, iₜ at level 69, iₛ at level 69, no associativity).
-
-  Notation "t '⟪' Rₜ ','  wₜ '≲' Rₛ ',' wₛ '⟫' s '{{' Φ '}}'" :=
-    (ealt_sim Rₜ Rₛ Pₜ Pₛ Φ wₜ t wₛ s)
-      (at level 70, wₜ at level 69, wₛ at level 69, no associativity).
-
   Lemma gsim_implies_ealt_sim: ∀ iₜ wₜ t iₛ wₛ s,
-    t ⦉ iₜ, wₜ ≲ iₛ, wₛ ⦊ s {{Φ}} ->
-    ∃ Rₜ Rₛ zₜ zₛ, t ⟪ Rₜ, zₜ ≲ Rₛ, zₛ ⟫ s {{Φ}}.
-  Proof.
+    gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ iₜ wₜ t iₛ wₛ s  ->
+    ∃ Rₜ Rₛ zₜ zₛ, ealt_sim Rₜ Rₛ Pₜ Pₛ Φ zₜ t zₛ s.
+  Proof using Type.
     intros iₜ wₜ t iₛ wₛ s Hsim.
     exists (WfLexProd Wₛ _), (WfLexProd Wₜ _), (iₛ, wₜ), (iₜ, wₛ).
     revert iₜ wₜ t iₛ wₛ s Hsim.
-    unfold ealt_sim.
-    coinduction R cih.
+    unfold ealt_sim. coinduction R cih.
     intros iₜ.
     induction iₜ as [iₜ IHi] using (well_founded_induction wf).
     intros wₜ t iₛ wₛ s Hsim.
@@ -51,23 +38,23 @@ Section PROOF.
     - now constructor.
     - now constructor.
     - eapply EAltSourceSteps.
-      { eassumption. }
-      { right. eassumption. }
-      apply cih. eassumption.
+      + eassumption.
+      + right. eassumption.
+      + apply cih. eassumption.
     - apply EAltTargetSteps.
       { assumption. }
       intros t' Hstep.
       edestruct (IHt _ Hstep) as (iₜ' & wₜ' & Hlt & Hsim & IH).
       eexists. eexists. split.
-      { right. eassumption. }
-      apply cih. eassumption.
+      + right. eassumption.
+      + apply cih. eassumption.
     - apply fsim_implies_gsim in Hsim.
       destruct Hsim as (wₜ' & wₛ' & Hsim).
-      eapply IHi in Hsim; try assumption.
-      clear cih IHi.
-      eapply test.
-      eassumption.
-      + left. now left.
-      + left. now left.
+      eapply IHi in Hsim.
+      + eapply ealt_sim_idx_mono.
+        * eassumption.
+        * left. now left.
+        * left. now left.
+      + assumption.
   Qed.
 End PROOF.

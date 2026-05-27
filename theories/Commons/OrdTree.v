@@ -14,7 +14,7 @@ Section Def.
   | ord_tree_lt_intro childs a : ord_tree_lt (childs a) (ord_tree_cons childs).
 
   Lemma ord_tree_wf : well_founded ord_tree_lt.
-  Proof using.
+  Proof using Type.
     intro x.
     induction x as [| childs IH];
       constructor; intros y Hlt; now inv Hlt.
@@ -35,13 +35,15 @@ Section Def.
   Lemma ord_tree_join (P: A -> Prop) (R: A -> ord_tree -> Prop)
     (ORD: ∀ a, P a -> ∃ o, R a o) :
     ∃ o, ∀ a, P a -> ∃ o', R a o' ∧ o' ⊏ o.
-  Proof.
+  Proof using Type.
     assert (Hchoice: ∀ a, ∃ o, P a -> R a o).
-    { intro a. destruct (classic (P a)).
+    { intro a. destruct (classic (P a)) as [H | H].
       - destruct (ORD a H) as [o Ho]. exists o. intro. exact Ho.
       - exists ord_tree_base. intro Hcontra. contradiction. }
     apply choice in Hchoice. destruct Hchoice as [f Hf].
     exists (ord_tree_cons f). intros a Ha.
-    exists (f a). split. apply Hf, Ha. now constructor.
+    exists (f a). split.
+    - now auto.
+    - now constructor.
   Qed.
 End Def.

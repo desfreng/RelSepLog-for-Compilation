@@ -19,7 +19,7 @@ Lemma pstep_inv_r {A: Type} {R : relation A} :
   ∀ x z, psteps R x z <-> ∃ y : A, rtc R x y ∧ R y z.
 Proof.
   intros x z; split; intros H.
-  - inv H as [? ? ? Hs Hrtc].
+  - inv H as [x' y z' Hs Hrtc].
     induction Hrtc as [y | x' y z Hstep Hrtc IH ] in x, y, z, Hrtc, Hs |- *.
     + exists x; split; eauto; constructor.
     + apply IH in Hstep. destruct Hstep as (y' & ? & ?).

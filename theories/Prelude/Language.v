@@ -2,8 +2,6 @@ From stdpp Require Import prelude.
 
 From RSL Require Import Prelude.Utils.
 
-(* Set Mangle Names. *)
-
 Section lang_mixin.
   Context {prog state value : Type}.
 
@@ -48,7 +46,7 @@ Section LangProp.
 
   Lemma final_no_step:
     ∀ s v, is_final s = Some v -> ∀ t, ~(P ⊨ s ->> t).
-  Proof.
+  Proof using Type.
     intros s v Hf t. eapply mixin_final_no_step.
     - apply lang_mixin.
     - exact Hf.
@@ -56,11 +54,11 @@ Section LangProp.
 
   Lemma can_progress_must_step:
     ∀ s, can_progress s -> ∃ t, P ⊨ s ->> t.
-  Proof. easy. Qed.
+  Proof using Type. easy. Qed.
 
   Lemma final_no_progress:
     ∀ s v, is_final s = Some v -> ~can_progress s.
-  Proof.
+  Proof using Type.
     intros s v Hfin Hp. destruct (can_progress_must_step _ Hp) as [? H].
     eapply mixin_final_no_step.
     - apply lang_mixin.
@@ -70,11 +68,11 @@ Section LangProp.
 
   Lemma final_not_stuck : ∀ s v,
     is_final s = Some v -> ~ stuck s.
-  Proof. intros ? ? H [? ?]. inv H. Qed.
+  Proof using Type. intros ? ? H [? ?]. inv H. Qed.
 
   Lemma progress_not_stuck : ∀ s,
     can_progress s -> ~ stuck s.
-  Proof. intros ? ? []. tauto. Qed.
+  Proof using Type. intros ? ? []. tauto. Qed.
 End LangProp.
 
 Tactic Notation "mixin" :=
@@ -88,7 +86,3 @@ Tactic Notation "mixin" :=
   | [ Hs: stuck ?P ?s, Hp: can_progress ?P ?s |- _ ] =>
       exfalso; now apply (progress_not_stuck _ _ Hp Hs)
   end.
-
-(* Lemma LPO {T: Type} : ∀ (P: T -> Prop), *)
-(*   (∀ x, Decision (P x)) -> *)
-(*   (∃ x, P x) ∨ (∀ x, ~ P x). *)

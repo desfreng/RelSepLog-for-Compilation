@@ -3,8 +3,6 @@ From RSL Require Import Prelude.
 From Stdlib Require Import Classical.
 From Coinduction Require Import all.
 
-(* Set Mangle Names. *)
-
 Section Behavior.
   Context {Λ: lang} (P: prog Λ).
   Implicit Type s : state Λ.
@@ -17,7 +15,7 @@ Section Behavior.
 
   Lemma diveges_sound : ∀ f,
     (∀ n, P ⊨ f n ->> f (S n)) -> diverges (f 0).
-  Proof.
+  Proof using Type.
     intros f Hf. cut (∀ n, diverges (f n)); auto.
     unfold diverges. coinduction R cih.
     intros n. exists (f (S n)); auto.
@@ -25,7 +23,7 @@ Section Behavior.
 
   Lemma diverges_unroll : ∀ t,
     diverges t -> ∃ t', P ⊨ t ->> t' ∧ diverges t'.
-  Proof.
+  Proof using Type.
     intros t H. unfold diverges in H. apply (gfp_fp diverges_) in H.
     inv H. eexists; now eauto.
   Qed.
@@ -33,7 +31,7 @@ Section Behavior.
   Lemma diverge_iff : ∀ s,
     (∀ t, P ⊨ s ->>* t -> ∃ u, P ⊨ t ->> u) <->
     ∀ t, P ⊨ s ->>* t -> diverges t.
-  Proof.
+  Proof using Type.
     intros s. split.
     - intros Hs. unfold diverges. coinduction R cih.
       intros t Hrtc. destruct (Hs _ Hrtc) as [u Hstep].
@@ -70,7 +68,7 @@ Section Behavior.
   (* [s] is terminating iff there is a execution from [s] to a final state. *)
   Lemma has_terminating_behavior : ∀ s v,
     Terminating v ∈ s <-> ∃ t, P ⊨ s ->>* t ∧ is_final t = Some v.
-  Proof.
+  Proof using Type.
     intros s v. split; intros Hbeh.
     - remember (Terminating v) as b eqn:Hb.
       induction Hbeh as [ s | | | s t b ? IH Hstep ]; inv Hb; auto.
@@ -86,12 +84,12 @@ Section Behavior.
   (* [s] is diverging iff [s] has a diverging execution *)
   Lemma has_diverging_behavior : ∀ s,
     Diverging ∈ s <-> diverges s.
-  Proof.
+  Proof using Type.
     intros s. split; intros Hbeh.
     - revert s Hbeh. unfold diverges. coinduction R cih.
-      intros s Hbeh. inv Hbeh.
-      + apply (gfp_pfp diverges_) in H.
-        destruct H as (s' & Hstep & Hdiv).
+      intros s Hbeh. inv Hbeh as [ | ? Hdiv | | ? t ? H Hstep ].
+      + apply (gfp_pfp diverges_) in Hdiv.
+        destruct Hdiv as (s' & Hstep & Hdiv).
         exists s'. split; auto. apply cih. apply IsDiverging. assumption.
       + exists t. split; auto.
     - now apply IsDiverging.
@@ -100,7 +98,7 @@ Section Behavior.
   (* [s] has a undef behavior if [s] reduces to a stuck state. *)
   Lemma has_undef_behavior : ∀ s,
     Undef ∈ s <-> ∃ t, P ⊨ s ->>* t ∧ stuck P t.
-  Proof.
+  Proof using Type.
     intros s. split; intros Hbeh.
     - remember Undef as b eqn:Hb.
       induction Hbeh as [ | | s | s t b ? IH Hstep ]; inv Hb; auto.
@@ -122,7 +120,7 @@ Section Behavior.
 
   Lemma not_ending_diverges:
     ∀ s, ~(does_end s) -> ∀ t, P ⊨ s ->>* t -> diverges t.
-  Proof.
+  Proof using Type.
     intros s H. unfold diverges.
     coinduction R cih.
     assert (Hs: ∀ t, P ⊨ s ->>* t -> is_final t = None ∧ ~ stuck P t).
@@ -144,7 +142,7 @@ Section Behavior.
   Qed.
 
   Theorem every_state_has_beh : ∀ s, ∃ b, b ∈ s.
-  Proof.
+  Proof using Type.
     intros s. destruct (classic (does_end s)) as [(t & Hrtc & [[v Hfin] | H]) | H].
     - exists (Terminating v). apply has_terminating_behavior.
       exists t; auto.

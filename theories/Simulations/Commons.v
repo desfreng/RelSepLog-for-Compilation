@@ -1,7 +1,5 @@
 From RSL Require Import Prelude.
 
-(* Set Mangle Names. *)
-
 Section CommonsDef.
   Context {Λₜ Λₛ: lang}.
   Context (Φ: value Λₜ -> value Λₛ -> Prop).

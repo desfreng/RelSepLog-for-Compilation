@@ -12,23 +12,21 @@ From RSL Require Import Simulations.Equiv.GSimToEAltSim.
 From RSL Require Import Simulations.Equiv.EAltSimToESimLax.
 From RSL Require Import Simulations.Equiv.ESimLaxToESim.
 
-(* Set Mangle Names. *)
-
 Section SimEquiv.
   Context {Λₜ Λₛ: lang}.
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
 
   Notation "t '≲' s '{{' Φ '}}'" :=
     (isim Pₜ Pₛ Φ t s)
-      (at level 70, no associativity).
+      (at level 1, no associativity).
 
   Notation "t '≲' '[' i ']' s '{{' Φ '}}'" :=
     (esim _ Pₜ Pₛ Φ i t s)
-      (at level 70, no associativity).
+      (at level 1, no associativity).
 
   Notation "t '⟨' iₜ '≲' iₛ '⟩' s '{{' Φ '}}'" :=
     (fsim _ _ Pₜ Pₛ Φ iₜ t iₛ s)
-      (at level 70, iₜ at level 69, iₛ at level 69, no associativity).
+      (at level 1, iₜ at level 0, iₛ at level 0, no associativity).
 
   Lemma isim_to_fsim {Wₜ Wₛ: WfRel} Φ :
     ∀ t s,
@@ -37,7 +35,7 @@ Section SimEquiv.
     iₜ ⊏ iₜ' ->
     iₛ ⊏ iₛ' ->
     t ⟨iₜ ≲ iₛ⟩ s {{ Φ }}.
-  Proof using.
+  Proof using Type.
     unfold fsim.
     coinduction R cih.
     intros t s Hsim.
@@ -80,7 +78,7 @@ Section SimEquiv.
     ∀ (i: W) t s,
     t ≲[i] s {{ Φ }} ->
     t ≲ s {{ Φ }}.
-  Proof using.
+  Proof using Type.
     unfold isim.
     coinduction ξ cih.
     intros i.
@@ -120,7 +118,7 @@ Section SimEquiv.
     ∀ (iₜ: Wₜ) t (iₛ: Wₛ) s,
     t ⟨iₜ ≲ iₛ⟩ s {{ Φ }} ->
     ∃ (W: WfRel) (i: W), t ≲[i] s {{ Φ }}.
-  Proof using.
+  Proof using Type.
     intros iₜ t iₛ s Hsim.
     apply fsim_implies_gsim in Hsim.
     destruct Hsim as (wₜ & wₛ & Hgsim).
@@ -140,7 +138,7 @@ Section SimEquiv.
     (∃ T : Wₜ, iₜ ⊏ T) ->
     (∃ T : Wₛ, iₛ ⊏ T) ->
     t ⟨iₜ ≲ iₛ⟩ s {{ Φ }}.
-  Proof using.
+  Proof using Type.
     intros t s (oₜ & oₛ & Hsim) iₜ iₛ (Tₜ & Ht) (Tₛ & Hs).
     apply fsim_to_esim in Hsim.
     destruct Hsim as (W & i & Hesim).
@@ -150,5 +148,38 @@ Section SimEquiv.
     - eassumption.
   Qed.
 
-  (* en supposant que soit ⊤ soit pas ⊤ dans Wₜ et Wₛ *)
+  Lemma index_irrel_no_isolated
+    {Wₜ Wₛ: WfRel} `{NoIsolatedElements Wₜ} `{NoIsolatedElements Wₛ} Φ:
+    ∀ t s (iₜ iₜ': Wₜ) (iₛ iₛ': Wₛ),
+    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }} ->
+    t ⟨iₜ' ≲ iₛ'⟩ s {{ Φ }}.
+  Proof using Type.
+    intros t s iₜ iₜ' iₛ iₛ' Hsim.
+    destruct (no_isolated iₜ') as [? [ | ]];
+    destruct (no_isolated iₛ') as [? [ | ]];
+      eassert (Hnsim: t ⟨_ ≲ _⟩ s {{ Φ }})
+        by (eapply index_irrel; repeat eexists; eassumption);
+      (eapply fsim_mono; [apply Hnsim | | ]);
+      (right; reflexivity) || (left; assumption).
+  Qed.
+
+  Lemma bool_index_irrel Φ:
+    ∀ t s (iₜ iₜ' iₛ iₛ': bool),
+    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }} ->
+    t ⟨iₜ' ≲ iₛ'⟩ s {{ Φ }}.
+  Proof using Type.
+    intros t s iₜ iₜ' iₛ iₛ' Hsim.
+    eapply index_irrel_no_isolated.
+    eassumption.
+  Qed.
+
+  Lemma nat_index_irrel Φ:
+    ∀ t s (iₜ iₜ' iₛ iₛ': nat),
+    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }} ->
+    t ⟨iₜ' ≲ iₛ'⟩ s {{ Φ }}.
+  Proof using Type.
+    intros t s iₜ iₜ' iₛ iₛ' Hsim.
+    eapply index_irrel_no_isolated.
+    eassumption.
+  Qed.
 End SimEquiv.

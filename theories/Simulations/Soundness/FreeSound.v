@@ -7,8 +7,6 @@ From RSL Require Import Simulations.Commons.
 From RSL Require Import Simulations.Behaviors.
 From RSL Require Import Simulations.FreeSim.
 
-(* Set Mangle Names. *)
-
 Section FSimSound.
   Context {Λₜ Λₛ: lang}.
   Context {Wₜ Wₛ: WfRel}.
@@ -23,13 +21,13 @@ Section FSimSound.
 
   Notation "'⟨' t ',' it '⟩' '≲' '⟨' s ',' is '⟩' '{{' Φ '}}'" :=
     (fsim Wₜ Wₛ Pₜ Pₛ Φ it t is s)
-      (at level 70, no associativity).
+      (at level 0, it at level 0, is at level 0, no associativity).
 
   Lemma terminating_fsim Φ : ∀ t iₜ s iₛ vₜ,
     ⟨t, iₜ⟩ ≲ ⟨s, iₛ⟩ {{ Φ }} ->
     Terminating vₜ ∈ t ->
     ∃ b, b ∈ s ∧ Terminating vₜ ⊑{Φ} b.
-  Proof.
+  Proof using Type.
     intros t iₜ s iₛ vₜ Hsim Hb.
     (* t Terminates -> it reduces to a final state *)
     apply has_terminating_behavior in Hb. destruct Hb as (t' & Hrtc & Hfin).
@@ -98,7 +96,7 @@ Section FSimSound.
         Pₛ ⊨ s ->> s' ∧
         diverges Pₜ t' ∧
         ⟨t', iₜ'⟩ ≲ ⟨s', iₛ'⟩ {{ Φ }}.
-  Proof.
+  Proof using Type.
     intros t iₜ s iₛ.
     (* Induction on the progress index of s *)
     revert t iₜ.
@@ -108,7 +106,7 @@ Section FSimSound.
     apply fsim_unroll in Hsim.
     induction Hsim as [ iₜ t iₛ s Hfinal
                       | iₜ t iₛ s Hstuck
-                      | iₜ t iₛ iₛ' s s' Hs ? IHs
+                      | iₜ t iₛ iₛ' s s' Hs Hsim IHs
                       | iₜ t iₛ s Hprogress IHt
                       | iₜ iₜ' t iₛ iₛ' s Hprogress ? Hgfp ].
     - (* BothFinal: Contradiction *)
@@ -140,7 +138,7 @@ Section FSimSound.
     ⟨t, iₜ⟩ ≲ ⟨s, iₛ⟩ {{ Φ }} ->
     Diverging ∈ t ->
     ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
-  Proof.
+  Proof using Type.
     intros t iₜ s iₛ Hsim Hdiv.
     (* We see in the future: can s be stuck ? *)
     destruct (classic (∃ s', Pₛ ⊨ s ->>* s' ∧ stuck Pₛ s')) as [Hstuck | Hnstuck].
@@ -170,7 +168,7 @@ Section FSimSound.
     ⟨t, iₜ⟩ ≲ ⟨s, iₛ⟩ {{ Φ }} ->
     Undef ∈ t ->
     Undef ∈ s.
-  Proof.
+  Proof using Type.
     intros t iₜ s iₛ Hsim Hb.
     (* t reach a stuck state. *)
     apply has_undef_behavior in Hb. destruct Hb as (t' & Hrtc & Hstuck).
@@ -229,7 +227,7 @@ Section FSimSound.
 
   Theorem fsim_sound Φ : ∀ t iₜ s iₛ,
     ⟨t, iₜ⟩ ≲ ⟨s, iₛ⟩ {{ Φ }} -> refines Pₜ Pₛ Φ t s.
-  Proof.
+  Proof using Type.
     intros t iₜ s iₛ Hsim [] Hb.
     - eapply terminating_fsim; now eauto.
     - eapply diverging_fsim; now eauto.
