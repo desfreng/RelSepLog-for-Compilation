@@ -11,35 +11,35 @@ Section PROOF.
   Context (Wₜ Wₛ: WfRel).
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
-  Lemma ealt_sim_implies_esim_lax: ∀ wₜ t wₛ s,
-    ealt_sim Wₜ Wₛ Pₜ Pₛ Φ wₜ t wₛ s ->
+  Lemma ealt_sim_implies_esim_lax: ∀ b t a s,
+    ealt_sim Wₜ Wₛ Pₜ Pₛ Φ b t a s ->
     ∃ W i, esim_lax W Pₜ Pₛ Φ i t s.
   Proof using Type.
-    intros wₜ t wₛ s Hsim.
-    exists (WfWithBot (WfLexProd Wₜ Wₛ)), (Some (wₜ, wₛ)).
-    revert wₜ t wₛ s Hsim.
+    intros b t a s Hsim.
+    exists (WfWithBot (WfLexProd Wₜ Wₛ)), (Some (b, a)).
+    revert b t a s Hsim.
     unfold esim_lax.
     coinduction R cih.
-    intros wₜ t wₛ s Hsim.
+    intros b t a s Hsim.
     apply ealt_sim_unroll in Hsim.
-    induction Hsim as [ wₜ t wₛ s Hfinal
-                      | wₜ t wₛ s Hstuck
-                      | wₜ wₜ' t wₛ wₛ' s s' Hstep _ Hsim
-                      | wₜ t wₛ s Hprogress Ht
-                      | wₜ t wₛ s Hprogress Hboth].
+    induction Hsim as [ b t a s Hfinal
+                      | b t a s Hstuck
+                      | b b' t a a' s s' Hstep _ Hsim
+                      | b t a s Hprogress Ht
+                      | b t a s Hprogress Hboth].
     - now constructor.
     - now constructor.
     - assert (Hrtc: Pₛ ⊨ s ->>+ s').
       { econstructor; eassumption || reflexivity. }
-      clear Hstep. revert wₜ' s' Hrtc Hsim.
-      induction wₛ' as [wₛ' IHw] using (well_founded_ind wf).
-      intros wₜ' s' Hrtc Hsim.
+      clear Hstep. revert b' s' Hrtc Hsim.
+      induction a' as [a' IHw] using (well_founded_ind wf).
+      intros b' s' Hrtc Hsim.
       apply ealt_sim_unroll in Hsim.
-      induction Hsim as [ wₜ' t wₛ' s' Hfinal
-                        | wₜ' t wₛ' s' Hstuck
-                        | wₜ' wₜ'' t wₛ' wₛ'' s' s'' Hstep Hlt Hsim
-                        | wₜ' t wₛ' s' Hprogress Ht
-                        | wₜ' t wₛ' s' Hprogress Hboth].
+      induction Hsim as [ b' t a' s' Hfinal
+                        | b' t a' s' Hstuck
+                        | b' b'' t a' a'' s' s'' Hstep Hlt Hsim
+                        | b' t a' s' Hprogress Ht
+                        | b' t a' s' Hprogress Hboth].
       + eapply ELaxSourceSteps.
         * eassumption.
         * now constructor.
@@ -55,29 +55,29 @@ Section PROOF.
       + apply ELaxBothSteps.
         { assumption. }
         intros t' Htstep.
-        destruct (Ht _ Htstep) as (wₜ'' & wₛ'' & Hlt & Hsim).
-        exists (Some (wₜ'', wₛ'')), s'. split.
+        destruct (Ht _ Htstep) as (b'' & a'' & Hlt & Hsim).
+        exists (Some (b'', a'')), s'. split.
         * assumption.
         * apply cih. eassumption.
       + apply ELaxBothSteps.
         { assumption. }
         intros t' Htstep.
-        destruct (Hboth _ Htstep) as (wₜ'' & wₛ'' & s'' & Hsteps & Hsim).
-        exists (Some (wₜ'', wₛ'')), s''. split.
+        destruct (Hboth _ Htstep) as (b'' & a'' & s'' & Hsteps & Hsim).
+        exists (Some (b'', a'')), s''. split.
         * eapply pstep_r; eassumption.
         * apply cih. eassumption.
     - apply ELaxTargetSteps.
       { assumption. }
       intros t' Hstep.
-      destruct (Ht _ Hstep) as (wₜ' & wₛ' & Hlt & Hgfp).
+      destruct (Ht _ Hstep) as (b' & a' & Hlt & Hgfp).
       eexists. split.
       + do 2 constructor. eassumption.
       + apply cih. eassumption.
     - apply ELaxBothSteps.
       { assumption. }
       intros t' Hstep.
-      edestruct (Hboth _ Hstep) as (wₜ' & wₛ' & s' & Hs & Hsim).
-      exists (Some (wₜ', wₛ')), s'. split.
+      edestruct (Hboth _ Hstep) as (b' & a' & s' & Hs & Hsim).
+      exists (Some (b', a')), s'. split.
       + econstructor; eassumption || reflexivity.
       + apply cih. assumption.
   Qed.

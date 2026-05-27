@@ -13,29 +13,29 @@ Section GSimDef.
   Unset Elimination Schemes.
 
   Inductive gsim : Wₜ -> W -> state Λₜ -> Wₛ -> W -> state Λₛ -> Prop :=
-  | GBothFinal : ∀ iₜ wₜ t iₛ wₛ s,
-    is_final Φ t s -> gsim iₜ wₜ t iₛ wₛ s
+  | GBothFinal : ∀ j b t i a s,
+    is_final Φ t s -> gsim j b t i a s
 
-  | GSourceStuck : ∀ iₜ wₜ t iₛ wₛ s,
-    stuck Pₛ s -> gsim iₜ wₜ t iₛ wₛ s
+  | GSourceStuck : ∀ j b t i a s,
+    stuck Pₛ s -> gsim j b t i a s
 
-  | GSourceSteps : ∀ iₜ wₜ t iₛ iₛ' wₛ s s' wₛ',
+  | GSourceSteps : ∀ j b t i i' a s s' a',
     Pₛ ⊨ s ->> s' ->
-    wₛ' ⊏ wₛ ->
-    gsim iₜ wₜ t iₛ' wₛ' s' ->
-    gsim iₜ wₜ t iₛ wₛ s
+    a' ⊏ a ->
+    gsim j b t i' a' s' ->
+    gsim j b t i a s
 
-  | GTargetSteps : ∀ iₜ wₜ t iₛ wₛ s,
+  | GTargetSteps : ∀ j b t i a s,
     can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ iₜ' wₜ',
-         wₜ' ⊏ wₜ ∧ gsim iₜ' wₜ' t' iₛ wₛ s) ->
-    gsim iₜ wₜ t iₛ wₛ s
+    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j' b',
+         b' ⊏ b ∧ gsim j' b' t' i a s) ->
+    gsim j b t i a s
 
-  | GProgress : ∀ iₜ iₜ' wₜ t iₛ iₛ' wₛ s,
-    iₜ' ⊏ iₜ ->
-    iₛ' ⊏ iₛ ->
-    fsim Wₜ Wₛ Pₜ Pₛ Φ iₜ' t iₛ' s ->
-    gsim iₜ wₜ t iₛ wₛ s.
+  | GProgress : ∀ j j' b t i i' a s,
+    j' ⊏ j ->
+    i' ⊏ i ->
+    fsim Wₜ Wₛ Pₜ Pₛ Φ j' t i' s ->
+    gsim j b t i a s.
 
   Set Elimination Schemes.
 
@@ -43,53 +43,53 @@ Section GSimDef.
     Variable P : Wₜ -> W -> state Λₜ -> Wₛ -> W -> state Λₛ -> Prop.
 
     Hypothesis HFinal:
-      ∀ iₜ wₜ t iₛ wₛ s, is_final Φ t s -> P iₜ wₜ t iₛ wₛ s.
+      ∀ j b t i a s, is_final Φ t s -> P j b t i a s.
 
     Hypothesis HStuck:
-      ∀ iₜ wₜ t iₛ wₛ s, stuck Pₛ s -> P iₜ wₜ t iₛ wₛ s.
+      ∀ j b t i a s, stuck Pₛ s -> P j b t i a s.
 
     Hypothesis HSourceSteps:
-      ∀ iₜ wₜ t iₛ iₛ' wₛ s s' wₛ',
+      ∀ j b t i i' a s s' a',
       Pₛ ⊨ s ->> s' ->
-      wₛ' ⊏ wₛ ->
-      gsim iₜ wₜ t iₛ' wₛ' s' ->
-      P iₜ wₜ t iₛ' wₛ' s' ->
-      P iₜ wₜ t iₛ wₛ s.
+      a' ⊏ a ->
+      gsim j b t i' a' s' ->
+      P j b t i' a' s' ->
+      P j b t i a s.
 
     Hypothesis HTargetSteps:
-      ∀ iₜ wₜ t iₛ wₛ s,
+      ∀ j b t i a s,
       can_progress Pₜ t ->
       (∀ t', Pₜ ⊨ t ->> t' ->
-             ∃ iₜ' wₜ',
-               wₜ' ⊏ wₜ ∧
-               gsim iₜ' wₜ' t' iₛ wₛ s ∧
-               P iₜ' wₜ' t' iₛ wₛ s) ->
-      P iₜ wₜ t iₛ wₛ s.
+             ∃ j' b',
+               b' ⊏ b ∧
+               gsim j' b' t' i a s ∧
+               P j' b' t' i a s) ->
+      P j b t i a s.
 
     Hypothesis HProgress:
-      ∀ iₜ iₜ' wₜ t iₛ iₛ' wₛ s,
-      iₜ' ⊏ iₜ ->
-      iₛ' ⊏ iₛ ->
-      fsim Wₜ Wₛ Pₜ Pₛ Φ iₜ' t iₛ' s ->
-      P iₜ wₜ t iₛ wₛ s.
+      ∀ j j' b t i i' a s,
+      j' ⊏ j ->
+      i' ⊏ i ->
+      fsim Wₜ Wₛ Pₜ Pₛ Φ j' t i' s ->
+      P j b t i a s.
 
-    Lemma gsim_ind: ∀ iₜ wₜ t iₛ wₛ s,
-      gsim iₜ wₜ t iₛ wₛ s -> P iₜ wₜ t iₛ wₛ s.
+    Lemma gsim_ind: ∀ j b t i a s,
+      gsim j b t i a s -> P j b t i a s.
     Proof using HFinal HProgress HSourceSteps HStuck HTargetSteps.
-      fix IH 7. intros iₜ wₜ t iₛ wₛ s Hsim.
+      fix IH 7. intros j b t i a s Hsim.
       destruct Hsim as
-        [ iₜ wₜ t iₛ wₛ s Hfin
-        | iₜ wₜ t iₛ wₛ s Hstuck
-        | iₜ wₜ t iₛ wₛ s s' wₛ' Hstep HR Hsim
-        | iₜ wₜ t iₛ wₛ s Hprogress Ht
-        | iₜ iₜ' wₜ t iₛ iₛ' wₛ s Ht Hs Hgfp ].
+        [ j b t i a s Hfin
+        | j b t i a s Hstuck
+        | j b t i a s s' a' Hstep HR Hsim
+        | j b t i a s Hprogress Ht
+        | j j' b t i i' a s Ht Hs Hgfp ].
       - apply HFinal. assumption.
       - apply HStuck. assumption.
       - eapply HSourceSteps; now eauto.
       - apply HTargetSteps.
         { assumption. }
         intros t' Hstep.
-        destruct (Ht _ Hstep) as (iₜ' & wₜ' & HR & Hsim).
+        destruct (Ht _ Hstep) as (j' & b' & HR & Hsim).
         do 2 eexists. now eauto.
       - eapply HProgress; now eauto.
     Qed.
@@ -97,18 +97,18 @@ Section GSimDef.
 
   Register Scheme gsim_ind as ind_nodep for gsim.
 
-  Lemma gsim_weaken_t: ∀ iₜ wₜ t iₛ wₛ s,
-    gsim iₜ wₜ t iₛ wₛ s ->
-    ∀ w, wₜ ⊑ w ->
-    gsim iₜ w t iₛ wₛ s.
+  Lemma gsim_weaken_t: ∀ j b t i a s,
+    gsim j b t i a s ->
+    ∀ w, b ⊑ w ->
+    gsim j w t i a s.
   Proof using Type.
-    intros iₜ wₜ t iₛ wₛ s Hsim w Hle.
+    intros j b t i a s Hsim w Hle.
     induction Hsim as
-      [ iₜ wₜ t iₛ wₛ s Hfin
-      | iₜ wₜ t iₛ wₛ s Hstuck
-      | iₜ wₜ t iₛ iₛ' wₛ s s' wₛ' Hstep HR Hsim IHs
-      | iₜ wₜ t iₛ wₛ s Hprogress IHt
-      | iₜ iₜ' wₜ t iₛ iₛ' wₛ s Ht Hs Hgfp]
+      [ j b t i a s Hfin
+      | j b t i a s Hstuck
+      | j b t i i' a s s' a' Hstep HR Hsim IHs
+      | j b t i a s Hprogress IHt
+      | j j' b t i i' a s Ht Hs Hgfp]
       in w, Hle |- *.
     - now constructor.
     - now constructor.
@@ -119,7 +119,7 @@ Section GSimDef.
     - apply GTargetSteps.
       { assumption. }
       intros t' Hstep.
-      destruct (IHt _ Hstep) as (iₜ' & wₜ' & Hlt' & Hsim & IH).
+      destruct (IHt _ Hstep) as (j' & b' & Hlt' & Hsim & IH).
       destruct Hle as [ Hlt | -> ].
       + do 2 eexists. split.
         * eassumption.
@@ -128,18 +128,18 @@ Section GSimDef.
     - eapply GProgress; try eassumption.
   Qed.
 
-  Lemma gsim_weaken_s: ∀ iₜ wₜ t iₛ wₛ s,
-    gsim iₜ wₜ t iₛ wₛ s ->
-    ∀ w, wₛ ⊑ w ->
-    gsim iₜ wₜ t iₛ w s.
+  Lemma gsim_weaken_s: ∀ j b t i a s,
+    gsim j b t i a s ->
+    ∀ w, a ⊑ w ->
+    gsim j b t i w s.
   Proof using Type.
-    intros iₜ wₜ t iₛ wₛ s Hsim w Hle.
+    intros j b t i a s Hsim w Hle.
     induction Hsim as
-      [ iₜ wₜ t iₛ wₛ s Hfin
-      | iₜ wₜ t iₛ wₛ s Hstuck
-      | iₜ wₜ t iₛ iₛ' wₛ s s' wₛ' Hstep HR Hsim IHs
-      | iₜ wₜ t iₛ wₛ s Hprogress IHt
-      | iₜ iₜ' wₜ t iₛ iₛ' wₛ s Ht Hs Hgfp]
+      [ j b t i a s Hfin
+      | j b t i a s Hstuck
+      | j b t i i' a s s' a' Hstep HR Hsim IHs
+      | j b t i a s Hprogress IHt
+      | j j' b t i i' a s Ht Hs Hgfp]
       in w, Hle |- *.
     - now constructor.
     - now constructor.
@@ -155,7 +155,7 @@ Section GSimDef.
     - apply GTargetSteps.
       { assumption. }
       intros t' Hstep.
-      destruct (IHt _ Hstep) as (iₜ' & wₜ' & Hlt' & Hsim & IH).
+      destruct (IHt _ Hstep) as (j' & b' & Hlt' & Hsim & IH).
       do 2 eexists. split.
       + eassumption.
       + apply IH. assumption.

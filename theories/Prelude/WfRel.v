@@ -86,6 +86,24 @@ Section BoolWfRel.
   Qed.
 End BoolWfRel.
 
+Section UnitWfRel.
+  Definition unit_lt : relation unit := fun _ _ => False.
+
+  Local Lemma unit_lt_wf : well_founded unit_lt.
+  Proof.
+    intros []; constructor; intros [] H; inv H.
+  Qed.
+
+  Local Lemma unit_lt_trans : Transitive unit_lt.
+  Proof. intros x y z Hxy Hyz. inv Hxy. Qed.
+
+  Canonical Structure WfUnit: WfRel :=
+    {|
+      wf := unit_lt_wf;
+      trans := unit_lt_trans;
+    |}.
+End UnitWfRel.
+
 Section WithTopWfRel.
   Context (W: WfRel).
  

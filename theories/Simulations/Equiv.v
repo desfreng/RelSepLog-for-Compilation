@@ -24,17 +24,17 @@ Section SimEquiv.
     (esim _ Pₜ Pₛ Φ i t s)
       (at level 1, no associativity).
 
-  Notation "t '⟨' iₜ '≲' iₛ '⟩' s '{{' Φ '}}'" :=
-    (fsim _ _ Pₜ Pₛ Φ iₜ t iₛ s)
-      (at level 1, iₜ at level 0, iₛ at level 0, no associativity).
+  Notation "t '⟨' j '≲' i '⟩' s '{{' Φ '}}'" :=
+    (fsim _ _ Pₜ Pₛ Φ j t i s)
+      (at level 1, j at level 0, i at level 0, no associativity).
 
-  Lemma isim_to_fsim {Wₜ Wₛ: WfRel} Φ :
+  Lemma isim_to_fsim {J I: WfRel} Φ :
     ∀ t s,
     t ≲ s {{ Φ }} ->
-    ∀ (iₜ iₜ': Wₜ) (iₛ iₛ': Wₛ),
-    iₜ ⊏ iₜ' ->
-    iₛ ⊏ iₛ' ->
-    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }}.
+    ∀ (j Tj: J) (i Ti: I),
+    j ⊏ Tj ->
+    i ⊏ Ti ->
+    t ⟨j ≲ i⟩ s {{ Φ }}.
   Proof using Type.
     unfold fsim.
     coinduction R cih.
@@ -45,7 +45,7 @@ Section SimEquiv.
                       | t s s' Hstep Hs IHs
                       | t s Hprogress Ht IHt
                       | t s Hprogress Hboth ];
-      intros iₜ iₜ' iₛ iₛ' HRt HRs.
+      intros j Tj i Ti Hj Hi.
     - (* Both Final *)
       now constructor.
     - (* Source Stuck *)
@@ -65,13 +65,8 @@ Section SimEquiv.
       destruct (Hboth _ Hstep) as (s' & Hstep_s & Hsim).
       eexists.
       eapply FSourceSteps; try eassumption.
-      eapply FProgress.
-      { eassumption. }
-      { eassumption. }
-      eapply cih.
-      + apply Hsim.
-      + eassumption.
-      + eassumption.
+      eapply FProgress; try eassumption.
+      eapply cih; eassumption.
   Qed.
 
   Lemma esim_to_isim {W: WfRel} Φ :
@@ -114,72 +109,62 @@ Section SimEquiv.
       eassumption.
   Qed.
 
-  Lemma fsim_to_esim {Wₜ Wₛ: WfRel} Φ:
-    ∀ (iₜ: Wₜ) t (iₛ: Wₛ) s,
-    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }} ->
+  Lemma fsim_to_esim {J I: WfRel} Φ:
+    ∀ (j: J) t (i: I) s,
+    t ⟨j ≲ i⟩ s {{ Φ }} ->
     ∃ (W: WfRel) (i: W), t ≲[i] s {{ Φ }}.
   Proof using Type.
-    intros iₜ t iₛ s Hsim.
+    intros j t i s Hsim.
     apply fsim_implies_gsim in Hsim.
-    destruct Hsim as (wₜ & wₛ & Hgsim).
+    destruct Hsim as (wt & ws & Hgsim).
     apply gsim_implies_ealt_sim in Hgsim.
-    destruct Hgsim as (Rₜ & Rₛ & zₜ & zₛ & Healtsim).
+    destruct Hgsim as (Rt & Rs & zt & zs & Healtsim).
     apply ealt_sim_implies_esim_lax in Healtsim.
-    destruct Healtsim as (W & i & Hesimlax).
+    destruct Healtsim as (W & ? & Hesimlax).
     apply esim_lax_implies_esim in Hesimlax.
     destruct Hesimlax as (R & w & Hesim).
     do 2 eexists. eassumption.
   Qed.
 
-  Lemma index_irrel {Wₜ Wₛ: WfRel} Φ:
-    ∀ t s,
-    (∃ (iₜ: Wₜ) (iₛ: Wₛ), t ⟨iₜ ≲ iₛ⟩ s {{ Φ }}) ->
-    ∀ iₜ iₛ,
-    (∃ T : Wₜ, iₜ ⊏ T) ->
-    (∃ T : Wₛ, iₛ ⊏ T) ->
-    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }}.
+  Lemma index_irrel
+    {J J' I I': WfRel} `{NoIsolatedElements J'} `{NoIsolatedElements I'} Φ:
+    ∀ t (j: J) s (i: I),
+    t ⟨j ≲ i⟩ s {{ Φ }} ->
+    ∀ (j': J') (i': I'),
+    t ⟨j' ≲ i'⟩ s {{ Φ }}.
   Proof using Type.
-    intros t s (oₜ & oₛ & Hsim) iₜ iₛ (Tₜ & Ht) (Tₛ & Hs).
+    intros t j s i Hsim.
     apply fsim_to_esim in Hsim.
-    destruct Hsim as (W & i & Hesim).
-    eapply isim_to_fsim.
-    - eapply esim_to_isim. eassumption.
-    - eassumption.
-    - eassumption.
+    destruct Hsim as (W & x & Hsim).
+    eapply esim_to_isim in Hsim.
+    clear W x i j.
+    intros j' i'.
+    destruct (no_isolated j') as [jj [ Hltj | Hgtj ]];
+      destruct (no_isolated i') as [ii [ Hlti | Hlti ]];
+      eapply fsim_mono;
+      (eapply isim_to_fsim; eassumption) || reflexivity || (left; eassumption).
   Qed.
 
-  Lemma index_irrel_no_isolated
-    {Wₜ Wₛ: WfRel} `{NoIsolatedElements Wₜ} `{NoIsolatedElements Wₛ} Φ:
-    ∀ t s (iₜ iₜ': Wₜ) (iₛ iₛ': Wₛ),
-    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }} ->
-    t ⟨iₜ' ≲ iₛ'⟩ s {{ Φ }}.
+  Theorem fsim_same_as_bool:
+    ∀ (J I: WfRel) Φ,
+    Inhabited J ->
+    Inhabited I ->
+    NoIsolatedElements J ->
+    NoIsolatedElements I ->
+    ∀ t s,
+    (∃ (j: J) (i: I), t ⟨j ≲ i⟩ s {{ Φ }})
+    <->
+      (∃ j i: bool, t ⟨j ≲ i⟩ s {{ Φ }}).
   Proof using Type.
-    intros t s iₜ iₜ' iₛ iₛ' Hsim.
-    destruct (no_isolated iₜ') as [? [ | ]];
-    destruct (no_isolated iₛ') as [? [ | ]];
-      eassert (Hnsim: t ⟨_ ≲ _⟩ s {{ Φ }})
-        by (eapply index_irrel; repeat eexists; eassumption);
-      (eapply fsim_mono; [apply Hnsim | | ]);
-      (right; reflexivity) || (left; assumption).
-  Qed.
-
-  Lemma bool_index_irrel Φ:
-    ∀ t s (iₜ iₜ' iₛ iₛ': bool),
-    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }} ->
-    t ⟨iₜ' ≲ iₛ'⟩ s {{ Φ }}.
-  Proof using Type.
-    intros t s iₜ iₜ' iₛ iₛ' Hsim.
-    eapply index_irrel_no_isolated.
-    eassumption.
-  Qed.
-
-  Lemma nat_index_irrel Φ:
-    ∀ t s (iₜ iₜ' iₛ iₛ': nat),
-    t ⟨iₜ ≲ iₛ⟩ s {{ Φ }} ->
-    t ⟨iₜ' ≲ iₛ'⟩ s {{ Φ }}.
-  Proof using Type.
-    intros t s iₜ iₜ' iₛ iₛ' Hsim.
-    eapply index_irrel_no_isolated.
-    eassumption.
+    intros J I Φ HInJ HInI HIsoJ HIsoI t s.
+    split; intros (j & i & Hsim).
+    - exists true, true.
+      eapply index_irrel.
+      eassumption.
+    - destruct HInJ as [jj].
+      destruct HInI as [ii].
+      exists jj, ii.
+      eapply index_irrel.
+      eassumption.
   Qed.
 End SimEquiv.

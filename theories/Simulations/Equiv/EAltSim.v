@@ -6,95 +6,95 @@ From RSL Require Import Simulations.Commons.
 
 Section EAltSimDef.
   Context {Λₜ Λₛ: lang}.
-  Context (Wₜ Wₛ: WfRel).
+  Context (J I: WfRel).
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
-  Variant ealt_sim_lfp' (gfp: Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop)
-    : Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop :=
-  | EAltBothFinal : ∀ wₜ t wₛ s,
-    is_final Φ t s -> ealt_sim_lfp' gfp wₜ t wₛ s
+  Variant ealt_sim_lfp' (gfp: J -> state Λₜ -> I -> state Λₛ -> Prop)
+    : J -> state Λₜ -> I -> state Λₛ -> Prop :=
+  | EAltBothFinal : ∀ j t i s,
+    is_final Φ t s -> ealt_sim_lfp' gfp j t i s
 
-  | EAltSourceStuck : ∀ wₜ t wₛ s,
-    stuck Pₛ s -> ealt_sim_lfp' gfp wₜ t wₛ s
+  | EAltSourceStuck : ∀ j t i s,
+    stuck Pₛ s -> ealt_sim_lfp' gfp j t i s
 
-  | EAltSourceSteps : ∀ wₜ wₜ' t wₛ wₛ' s s',
+  | EAltSourceSteps : ∀ j j' t i i' s s',
     Pₛ ⊨ s ->> s' ->
-    wₛ' ⊏ wₛ ->
-    gfp  wₜ' t wₛ' s' ->
-    ealt_sim_lfp' gfp wₜ t wₛ s
+    i' ⊏ i ->
+    gfp  j' t i' s' ->
+    ealt_sim_lfp' gfp j t i s
 
-  | EAltTargetSteps : ∀ wₜ t wₛ s,
+  | EAltTargetSteps : ∀ j t i s,
     can_progress Pₜ t ->
     (∀ t', Pₜ ⊨ t ->> t' ->
-           ∃ wₜ' wₛ',
-             wₜ' ⊏ wₜ ∧
-             gfp wₜ' t' wₛ' s) ->
-    ealt_sim_lfp' gfp wₜ t wₛ s
+           ∃ j' i',
+             j' ⊏ j ∧
+             gfp j' t' i' s) ->
+    ealt_sim_lfp' gfp j t i s
 
-  | EAltBothSteps : ∀ wₜ t wₛ s,
+  | EAltBothSteps : ∀ j t i s,
     can_progress Pₜ t ->
     (∀ t', Pₜ ⊨ t ->> t' ->
-           ∃ wₜ' wₛ' s' ,
+           ∃ j' i' s' ,
              Pₛ ⊨ s ->> s' ∧
-             gfp wₜ' t' wₛ' s') ->
-    ealt_sim_lfp' gfp wₜ t wₛ s.
+             gfp j' t' i' s') ->
+    ealt_sim_lfp' gfp j t i s.
 
   Instance ealt_sim_mono : Proper (leq ==> leq) ealt_sim_lfp'.
   Proof using Type.
-    intros gfp gfp' Hgfp  wₜ t  wₛ s Hsim.
+    intros gfp gfp' Hgfp  j t  i s Hsim.
     induction Hsim as
-      [ wₜ t wₛ s Hfin
-      | wₜ t wₛ s Hstuck
-      | wₜ wₜ' t wₛ wₛ' s Hstep Hlt Hs
-      | wₜ t wₛ s Hprogress Ht
-      | wₜ t wₛ s Hprogress Hboth ].
+      [ j t i s Hfin
+      | j t i s Hstuck
+      | j j' t i i' s Hstep Hlt Hs
+      | j t i s Hprogress Ht
+      | j t i s Hprogress Hboth ].
     - econstructor; eassumption.
     - econstructor; eassumption.
     - eapply EAltSourceSteps; eauto.
       apply Hgfp. eassumption.
     - apply EAltTargetSteps; auto. intros ? Hstep.
-      edestruct (Ht _ Hstep) as (wₜ' & wₛ' & HR & Isim).
+      edestruct (Ht _ Hstep) as (j' & i' & HR & Isim).
       do 2 eexists. split; eauto.
       apply Hgfp. eassumption.
     - apply EAltBothSteps; auto. intros ? Hstep.
-      edestruct (Hboth _ Hstep) as (wₜ' & wₛ' & s' & HR & Isim).
+      edestruct (Hboth _ Hstep) as (j' & i' & s' & HR & Isim).
       do 3 eexists. split; eauto.
       apply Hgfp. eassumption.
   Qed.
 
-  Definition ealt_sim_lfp : mon (Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop) :=
+  Definition ealt_sim_lfp : mon (J -> state Λₜ -> I -> state Λₛ -> Prop) :=
     {| body := ealt_sim_lfp' |}.
 
-  Lemma ealt_sim_unroll wₜ t wₛ s :
-    gfp ealt_sim_lfp wₜ t wₛ s -> ealt_sim_lfp' (gfp ealt_sim_lfp) wₜ t wₛ s.
+  Lemma ealt_sim_unroll j t i s :
+    gfp ealt_sim_lfp j t i s -> ealt_sim_lfp' (gfp ealt_sim_lfp) j t i s.
   Proof using Type. apply (gfp_fp ealt_sim_lfp). Qed.
 
-  Lemma ealt_sim_roll wₜ t wₛ s :
-    ealt_sim_lfp' (gfp ealt_sim_lfp) wₜ t wₛ s -> gfp ealt_sim_lfp wₜ t wₛ s.
+  Lemma ealt_sim_roll j t i s :
+    ealt_sim_lfp' (gfp ealt_sim_lfp) j t i s -> gfp ealt_sim_lfp j t i s.
   Proof using Type. apply (gfp_fp ealt_sim_lfp). Qed.
 
   Definition ealt_sim := gfp ealt_sim_lfp.
 
   Lemma ealt_sim_idx_mono (R: Chain ealt_sim_lfp):
-    ∀ iₜ t iₛ s,
-    (elem R) iₜ t iₛ s ->
-    ∀ iₜ' iₛ',
-    iₜ ⊑ iₜ' ->
-    iₛ ⊑ iₛ' ->
-    (elem R) iₜ' t iₛ' s.
+    ∀ j t i s,
+    (elem R) j t i s ->
+    ∀ j' i',
+    j ⊑ j' ->
+    i ⊑ i' ->
+    (elem R) j' t i' s.
   Proof using Type.
     apply tower.
-    { intros P Hp iₜ t iₛ s Hinf iₜ' iₛ' Ht Hs.
+    { intros P Hp j t i s Hinf j' i' Ht Hs.
       intros Q Hq. eapply (Hp _ Hq); try eassumption.
       now apply Hinf.
     }
-    clear R. intros R CIH iₜ t iₛ s Hsim.
+    clear R. intros R CIH j t i s Hsim.
     induction Hsim as
-      [ wₜ t wₛ s Hfin
-      | wₜ t wₛ s Hstuck
-      | wₜ wₜ' t wₛ wₛ' s Hstep Hlt Hs
-      | wₜ t wₛ s Hprogress Ht
-      | wₜ t wₛ s Hprogress Hboth ]; intros iₜ' iₛ' Hleₜ Hleₛ.
+      [ j t i s Hfin
+      | j t i s Hstuck
+      | j j'' t i i'' s Hstep Hlt Hs
+      | j t i s Hprogress Ht
+      | j t i s Hprogress Hboth ]; intros j' i' Hleₜ Hleₛ.
     - now constructor.
     - now constructor.
     - destruct Hleₛ as [ Hltₛ | -> ].
@@ -108,8 +108,8 @@ Section EAltSimDef.
       + apply EAltTargetSteps.
         { eassumption. }
         intros t' Hstep.
-        destruct (Ht _ Hstep) as (wₜ' & wₛ' & Hlt & Hsim).
-        exists wₜ, wₛ'; split. 1: assumption.
+        destruct (Ht _ Hstep) as (j'' & i'' & Hlt & Hsim).
+        exists j, i''; split. 1: assumption.
         eapply CIH.
         * eassumption.
         * now left.
@@ -118,7 +118,7 @@ Section EAltSimDef.
     - apply EAltBothSteps.
       { assumption. }
       intros t' Hstep.
-      destruct (Hboth _ Hstep) as (wₜ' & wₛ' & s' & Hsteps & Hsim).
-      exists wₜ', wₛ', s'. split; now auto.
+      destruct (Hboth _ Hstep) as (j'' & i'' & s' & Hsteps & Hsim).
+      exists j'', i'', s'. split; now auto.
   Qed.
 End EAltSimDef.

@@ -16,24 +16,24 @@ Section PROOF.
 
   Definition StatePair := (state Λₜ * state Λₛ)%type.
 
-  Lemma fsim_implies_gsim: ∀ iₜ t iₛ s,
-    fsim Wₜ Wₛ Pₜ Pₛ Φ iₜ t iₛ s ->
-    ∃ wₜ wₛ,
-      gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ iₜ wₜ t iₛ wₛ s.
+  Lemma fsim_implies_gsim: ∀ j t i s,
+    fsim Wₜ Wₛ Pₜ Pₛ Φ j t i s ->
+    ∃ b a,
+      gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s.
   Proof using Type.
-    intros iₜ t iₛ s Hsim.
+    intros j t i s Hsim.
     apply fsim_unroll in Hsim.
-    induction Hsim as [ iₜ t iₛ s Hfinal
-                      | iₜ t iₛ s Hstuck
-                      | iₜ t iₛ iₛ' s s' Hs Hsim IHs
-                      | iₜ t iₛ s Hprogress IHt
-                      | iₜ iₜ' t iₛ iₛ' s Hprogress1 Hprogress2 Hasim ].
+    induction Hsim as [ j t i s Hfinal
+                      | j t i s Hstuck
+                      | j t i i' s s' Hs Hsim IHs
+                      | j t i s Hprogress IHt
+                      | j j' t i i' s Hprogress1 Hprogress2 Hasim ].
     - exists (ord_tree_base StatePair), (ord_tree_base StatePair).
       now econstructor.
     - exists (ord_tree_base StatePair), (ord_tree_base StatePair).
       now econstructor.
-    - destruct IHs as (wₜ' & wₛ' & Hinv).
-      exists wₜ', (ord_tree_cons StatePair (fun _ => wₛ')).
+    - destruct IHs as (b' & a' & Hinv).
+      exists b', (ord_tree_cons StatePair (fun _ => a')).
       eapply GSourceSteps.
       + eassumption.
       + constructor. apply ord_tree_lt_intro with (a := (t, s')).
@@ -45,44 +45,44 @@ Section PROOF.
       pose (R := fun (a: StatePair) (o: ord_tree StatePair) =>
                    let (t', s') := a in
                    s' = s ∧ Pₜ ⊨ t ->> t' ∧
-                   ∃ (iₜ: Wₜ) wₛ,
-                     gsim _ _ _ Pₜ Pₛ Φ iₜ o t' iₛ wₛ s).
+                   ∃ (j: Wₜ) a,
+                     gsim _ _ _ Pₜ Pₛ Φ j o t' i a s).
 
       assert (Hord: ∀ a, P a -> ∃ o, R a o).
       { intros [t' s'] [Heq Hstep]. subst s'.
-        destruct (IHt t' Hstep) as (iₜ' & ? & wₜ' & wₛ' & Hsim').
-        exists wₜ'. split; [reflexivity|]. split; [assumption|].
-        exists iₜ'. exists wₛ'. exact Hsim'. }
-      destruct (ord_tree_join StatePair P R Hord) as [wₜ Hjoin1].
+        destruct (IHt t' Hstep) as (j' & ? & b' & a' & Hsim').
+        exists b'. split; [reflexivity|]. split; [assumption|].
+        exists j'. exists a'. exact Hsim'. }
+      destruct (ord_tree_join StatePair P R Hord) as [b Hjoin1].
 
       pose (R2 := fun (a: StatePair) (o: ord_tree StatePair) =>
                     let (t', s') := a in
                     s' = s ∧
                     Pₜ ⊨ t ->> t' ∧
-                    ∃ (iₜ': Wₜ) wₜ',
-                       wₜ' ⊏ wₜ ∧
-                      gsim _ _ _ Pₜ Pₛ Φ iₜ' wₜ' t' iₛ o s).
+                    ∃ (j': Wₜ) b',
+                       b' ⊏ b ∧
+                      gsim _ _ _ Pₜ Pₛ Φ j' b' t' i o s).
       assert (Hord2: ∀ a, P a -> ∃ o, R2 a o).
       { intros [t' s'] [Heq Hstep]. subst s'.
-        destruct (Hjoin1 (t', s)) as [wₜ' [Hrw Hlt]].
+        destruct (Hjoin1 (t', s)) as [b' [Hrw Hlt]].
         { split; [reflexivity|assumption]. }
-        destruct Hrw as (_ & Hstep' & iₜ' & wₛ' & Hsim').
-        exists wₛ'. split; [reflexivity|]. split; [assumption|].
-        exists iₜ'.
-        exists wₜ'. split; [exact Hlt|exact Hsim']. }
-      destruct (ord_tree_join StatePair P R2 Hord2) as [wₛ Hjoin2].
+        destruct Hrw as (_ & Hstep' & j' & a' & Hsim').
+        exists a'. split; [reflexivity|]. split; [assumption|].
+        exists j'.
+        exists b'. split; [exact Hlt|exact Hsim']. }
+      destruct (ord_tree_join StatePair P R2 Hord2) as [a Hjoin2].
       clear Hord R Hjoin1.
 
-      exists wₜ, wₛ.
+      exists b, a.
       eapply GTargetSteps.
       + eassumption.
       + intros t' Hstep.
-        destruct (Hjoin2 (t', s)) as (wₛ' & Hrw & Hlt).
+        destruct (Hjoin2 (t', s)) as (a' & Hrw & Hlt).
         { split; reflexivity || assumption. }
-        destruct Hrw as (_ & Hstep' & iₜ' & wₜ' &  Hlt_wₜ & Hsim').
-        exists iₜ'. exists wₜ'. split.
+        destruct Hrw as (_ & Hstep' & j' & b' &  Hlt_b & Hsim').
+        exists j'. exists b'. split.
         * assumption.
-        * apply gsim_weaken_s with wₛ'.
+        * apply gsim_weaken_s with a'.
           { assumption. }
           now constructor.
     - exists (ord_tree_base StatePair), (ord_tree_base StatePair).

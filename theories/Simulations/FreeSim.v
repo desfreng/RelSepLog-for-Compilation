@@ -13,27 +13,27 @@ Section FSimDef.
 
   Inductive fsim_lfp' (gfp: Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop)
     : Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop :=
-  | FBothFinal : ∀ iₜ t iₛ s,
-    is_final Φ t s -> fsim_lfp' gfp iₜ t iₛ s
+  | FBothFinal : ∀ j t i s,
+    is_final Φ t s -> fsim_lfp' gfp j t i s
 
-  | FSourceStuck : ∀ iₜ t iₛ s,
-    stuck Pₛ s -> fsim_lfp' gfp iₜ t iₛ s
+  | FSourceStuck : ∀ j t i s,
+    stuck Pₛ s -> fsim_lfp' gfp j t i s
 
-  | FSourceSteps : ∀ iₜ t iₛ iₛ' s s',
+  | FSourceSteps : ∀ j t i i' s s',
     Pₛ ⊨ s ->> s' ->
-    fsim_lfp' gfp iₜ t iₛ' s' ->
-    fsim_lfp' gfp iₜ t iₛ s
+    fsim_lfp' gfp j t i' s' ->
+    fsim_lfp' gfp j t i s
 
-  | FTargetSteps : ∀ iₜ t iₛ s,
+  | FTargetSteps : ∀ j t i s,
     can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ iₜ', fsim_lfp' gfp iₜ' t' iₛ s) ->
-    fsim_lfp' gfp iₜ t iₛ s
+    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j', fsim_lfp' gfp j' t' i s) ->
+    fsim_lfp' gfp j t i s
 
-  | FProgress : ∀ iₜ iₜ' t iₛ iₛ' s,
-    iₜ' ⊏ iₜ ->
-    iₛ' ⊏ iₛ ->
-    gfp iₜ' t iₛ' s ->
-    fsim_lfp' gfp iₜ t iₛ s.
+  | FProgress : ∀ j j' t i i' s,
+    j' ⊏ j ->
+    i' ⊏ i ->
+    gfp j' t i' s ->
+    fsim_lfp' gfp j t i s.
 
   Set Elimination Schemes.
 
@@ -42,52 +42,52 @@ Section FSimDef.
     Variable P : Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop.
 
     Hypothesis HFinal:
-      ∀ iₜ t iₛ s, is_final Φ t s -> P iₜ t iₛ s.
+      ∀ j t i s, is_final Φ t s -> P j t i s.
 
     Hypothesis HStuck:
-      ∀ iₜ t iₛ s, stuck Pₛ s -> P iₜ t iₛ s.
+      ∀ j t i s, stuck Pₛ s -> P j t i s.
 
     Hypothesis HSourceSteps:
-      ∀ iₜ t iₛ iₛ' s s',
+      ∀ j t i i' s s',
       Pₛ ⊨ s ->> s' ->
-      fsim_lfp' gfp iₜ t iₛ' s' ->
-      P iₜ t iₛ' s' ->
-      P iₜ t iₛ s.
+      fsim_lfp' gfp j t i' s' ->
+      P j t i' s' ->
+      P j t i s.
 
     Hypothesis HTargetSteps:
-      ∀ iₜ t iₛ s,
+      ∀ j t i s,
       can_progress Pₜ t ->
       (∀ t', Pₜ ⊨ t ->> t' ->
-             ∃ iₜ',
-               fsim_lfp' gfp iₜ' t' iₛ s ∧
-               P iₜ' t' iₛ s) ->
-      P iₜ t iₛ s.
+             ∃ j',
+               fsim_lfp' gfp j' t' i s ∧
+               P j' t' i s) ->
+      P j t i s.
 
     Hypothesis HProgress:
-      ∀ iₜ iₜ' t iₛ iₛ' s,
-      iₜ' ⊏ iₜ ->
-      iₛ' ⊏ iₛ ->
-      gfp iₜ' t iₛ' s ->
-      P iₜ t iₛ s.
+      ∀ j j' t i i' s,
+      j' ⊏ j ->
+      i' ⊏ i ->
+      gfp j' t i' s ->
+      P j t i s.
 
-    Lemma fsim_lfp'_ind: ∀ iₜ t iₛ s,
-      fsim_lfp' gfp iₜ t iₛ s -> P iₜ t iₛ s.
+    Lemma fsim_lfp'_ind: ∀ j t i s,
+      fsim_lfp' gfp j t i s -> P j t i s.
     Proof using HFinal HProgress HSourceSteps HStuck HTargetSteps.
-      fix IH 5. intros iₜ t iₛ s Hsim.
+      fix IH 5. intros j t i s Hsim.
       destruct Hsim as
-        [ iₜ t iₛ s Hfin
-        | iₜ t iₛ s Hstuck
-        | iₜ t iₛ' iₛ s s' Hstep Hsim
-        | iₜ t iₛ s Hprogress Ht
-        | iₜ iₜ' t iₛ iₛ' s Ht Hs Hgfp ].
+        [ j t i s Hfin
+        | j t i s Hstuck
+        | j t i' i s s' Hstep Hsim
+        | j t i s Hprogress Ht
+        | j j' t i i' s Ht Hs Hgfp ].
       - apply HFinal. assumption.
       - apply HStuck. assumption.
       - eapply HSourceSteps; now eauto.
       - apply HTargetSteps.
         { assumption. }
         intros t' Hstep.
-        destruct (Ht _ Hstep) as (iₜ' & Hsim).
-        exists iₜ'. now auto.
+        destruct (Ht _ Hstep) as (j' & Hsim).
+        exists j'. now auto.
       - eapply HProgress; now eauto.
     Qed.
   End FSimInd.
@@ -96,14 +96,14 @@ Section FSimDef.
 
   Instance fsim_lfp'_mono : Proper (leq ==> leq) fsim_lfp'.
   Proof using Type.
-    intros gfp gfp' Hgfp iₜ t iₛ s Hsim.
+    intros gfp gfp' Hgfp j t i s Hsim.
     induction Hsim as [ | | | ? ? ? ? Hprogress Ht |  ? ? ? Hprogress Hboth].
     - econstructor; eassumption.
     - econstructor; eassumption.
     - econstructor; eassumption.
     - apply FTargetSteps; auto. intros ? Hstep.
-      destruct (Ht _ Hstep) as (i & Isim & IH).
-      exists i. auto.
+      destruct (Ht _ Hstep) as (j' & Isim & IH).
+      exists j'. auto.
     - eapply FProgress; try eassumption.
       apply Hgfp. eassumption.
   Qed.
@@ -111,12 +111,12 @@ Section FSimDef.
   Definition fsim_lfp : mon (Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop) :=
     {| body := fsim_lfp' |}.
 
-  Lemma fsim_unroll iₜ t iₛ s :
-    gfp fsim_lfp iₜ t iₛ s -> fsim_lfp' (gfp fsim_lfp) iₜ t iₛ s.
+  Lemma fsim_unroll j t i s :
+    gfp fsim_lfp j t i s -> fsim_lfp' (gfp fsim_lfp) j t i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
-  Lemma fsim_roll iₜ t iₛ s :
-    fsim_lfp' (gfp fsim_lfp) iₜ t iₛ s -> gfp fsim_lfp iₜ t iₛ s.
+  Lemma fsim_roll j t i s :
+    fsim_lfp' (gfp fsim_lfp) j t i s -> gfp fsim_lfp j t i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
   Definition fsim  := gfp fsim_lfp.
@@ -128,22 +128,22 @@ Section GenericRules.
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
   Lemma idx_mono (R: Chain (fsim_lfp Wₜ Wₛ Pₜ Pₛ Φ)):
-    ∀ iₜ iₛ t s,
-    (elem R) iₜ t iₛ s ->
-    ∀ iₜ' iₛ',
-    iₜ ⊑ iₜ' ->
-    iₛ ⊑ iₛ' ->
-    (elem R) iₜ' t iₛ' s.
+    ∀ j i t s,
+    (elem R) j t i s ->
+    ∀ j' i',
+    j ⊑ j' ->
+    i ⊑ i' ->
+    (elem R) j' t i' s.
   Proof using Type.
     apply tower.
     - intros P Hp.
-      intros iₜ iₛ t s Hinf iₜ' iₛ' Ht Hs.
+      intros j i t s Hinf j' i' Ht Hs.
       intros Q Hq.
       eapply (Hp _ Hq).
       + now apply Hinf.
       + assumption.
       + assumption.
-    - intros C CIH iₜ t iₛ s Hsim.
+    - intros C CIH j t i s Hsim.
       induction Hsim as [ ? t ? s Hfin
                         | ? t ? s Hstuck
                         | ? t ? ? s s' Hstep Hsim IH
@@ -166,14 +166,14 @@ Section GenericRules.
   Qed.
 
   Lemma fsim_mono:
-    ∀ iₜ iₛ t s,
-    fsim Wₜ Wₛ Pₜ Pₛ Φ iₜ t iₛ s ->
-    ∀ iₜ' iₛ',
-    iₜ ⊑ iₜ' ->
-    iₛ ⊑ iₛ' ->
-    fsim Wₜ Wₛ Pₜ Pₛ Φ  iₜ' t iₛ' s.
+    ∀ j i t s,
+    fsim Wₜ Wₛ Pₜ Pₛ Φ j t i s ->
+    ∀ j' i',
+    j ⊑ j' ->
+    i ⊑ i' ->
+    fsim Wₜ Wₛ Pₜ Pₛ Φ  j' t i' s.
   Proof using Type.
-    intros iₜ t iₛ s Hsim.
+    intros j t i s Hsim.
     now apply idx_mono.
   Qed.
 

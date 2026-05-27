@@ -18,23 +18,23 @@ Section PROOF.
 
   Definition StatePair := (state Λₜ * state Λₛ)%type.
 
-  Lemma gsim_implies_ealt_sim: ∀ iₜ wₜ t iₛ wₛ s,
-    gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ iₜ wₜ t iₛ wₛ s  ->
+  Lemma gsim_implies_ealt_sim: ∀ j b t i a s,
+    gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s  ->
     ∃ Rₜ Rₛ zₜ zₛ, ealt_sim Rₜ Rₛ Pₜ Pₛ Φ zₜ t zₛ s.
   Proof using Type.
-    intros iₜ wₜ t iₛ wₛ s Hsim.
-    exists (WfLexProd Wₛ _), (WfLexProd Wₜ _), (iₛ, wₜ), (iₜ, wₛ).
-    revert iₜ wₜ t iₛ wₛ s Hsim.
+    intros j b t i a s Hsim.
+    exists (WfLexProd Wₛ _), (WfLexProd Wₜ _), (i, b), (j, a).
+    revert j b t i a s Hsim.
     unfold ealt_sim. coinduction R cih.
-    intros iₜ.
-    induction iₜ as [iₜ IHi] using (well_founded_induction wf).
-    intros wₜ t iₛ wₛ s Hsim.
+    intros j.
+    induction j as [j IHi] using (well_founded_induction wf).
+    intros b t i a s Hsim.
     induction Hsim as
-      [ iₜ wₜ t iₛ wₛ s Hfin
-      | iₜ wₜ t iₛ wₛ s Hstuck
-      | iₜ wₜ t iₛ iₛ' wₛ s s' wₛ' Hstep Hlt Hsim IHs
-      | iₜ wₜ t iₛ wₛ s Hprogress IHt
-      | iₜ iₜ' wₜ t iₛ iₛ' wₛ s Ht Hs Hsim].
+      [ j b t i a s Hfin
+      | j b t i a s Hstuck
+      | j b t i i' a s s' a' Hstep Hlt Hsim IHs
+      | j b t i a s Hprogress IHt
+      | j j' b t i i' a s Ht Hs Hsim].
     - now constructor.
     - now constructor.
     - eapply EAltSourceSteps.
@@ -44,12 +44,12 @@ Section PROOF.
     - apply EAltTargetSteps.
       { assumption. }
       intros t' Hstep.
-      edestruct (IHt _ Hstep) as (iₜ' & wₜ' & Hlt & Hsim & IH).
+      edestruct (IHt _ Hstep) as (j' & b' & Hlt & Hsim & IH).
       eexists. eexists. split.
       + right. eassumption.
       + apply cih. eassumption.
     - apply fsim_implies_gsim in Hsim.
-      destruct Hsim as (wₜ' & wₛ' & Hsim).
+      destruct Hsim as (b' & a' & Hsim).
       eapply IHi in Hsim.
       + eapply ealt_sim_idx_mono.
         * eassumption.
