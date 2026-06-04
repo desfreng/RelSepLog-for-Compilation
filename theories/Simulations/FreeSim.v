@@ -6,43 +6,47 @@ From RSL Require Import Simulations.Commons.
 
 Section FSimDef.
   Context {Λₜ Λₛ: lang}.
-  Context (Wₜ Wₛ: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (J I: WfRel).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+
+  Abbreviation post := (value Λₜ -> value Λₛ -> Prop).
 
   Unset Elimination Schemes.
 
-  Inductive fsim_lfp' (gfp: Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop)
-    : Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop :=
+  Inductive fsim_lfp'
+    (gfp: post -> J -> state Λₜ -> I -> state Λₛ -> Prop)
+    (Φ : post) : J -> state Λₜ -> I -> state Λₛ -> Prop :=
   | FBothFinal : ∀ j t i s,
-    is_final Φ t s -> fsim_lfp' gfp j t i s
+    are_final Φ t s -> fsim_lfp' gfp Φ j t i s
 
   | FSourceStuck : ∀ j t i s,
-    stuck Pₛ s -> fsim_lfp' gfp j t i s
+    stuck Pₛ s -> fsim_lfp' gfp Φ j t i s
 
   | FSourceSteps : ∀ j t i i' s s',
     Pₛ ⊨ s ->> s' ->
-    fsim_lfp' gfp j t i' s' ->
-    fsim_lfp' gfp j t i s
+    fsim_lfp' gfp Φ j t i' s' ->
+    fsim_lfp' gfp Φ j t i s
 
   | FTargetSteps : ∀ j t i s,
     can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j', fsim_lfp' gfp j' t' i s) ->
-    fsim_lfp' gfp j t i s
+    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j', fsim_lfp' gfp Φ j' t' i s) ->
+    fsim_lfp' gfp Φ j t i s
 
   | FProgress : ∀ j j' t i i' s,
     j' ⊏ j ->
     i' ⊏ i ->
-    gfp j' t i' s ->
-    fsim_lfp' gfp j t i s.
+    gfp Φ j' t i' s ->
+    fsim_lfp' gfp Φ j t i s.
 
   Set Elimination Schemes.
 
   Section FSimInd.
-    Variable gfp : Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop.
-    Variable P : Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop.
+    Variable gfp : post -> J -> state Λₜ -> I -> state Λₛ -> Prop.
+    Variable Φ : post.
+    Variable P : J -> state Λₜ -> I -> state Λₛ -> Prop.
 
     Hypothesis HFinal:
-      ∀ j t i s, is_final Φ t s -> P j t i s.
+      ∀ j t i s, are_final Φ t s -> P j t i s.
 
     Hypothesis HStuck:
       ∀ j t i s, stuck Pₛ s -> P j t i s.
@@ -50,7 +54,7 @@ Section FSimDef.
     Hypothesis HSourceSteps:
       ∀ j t i i' s s',
       Pₛ ⊨ s ->> s' ->
-      fsim_lfp' gfp j t i' s' ->
+      fsim_lfp' gfp Φ j t i' s' ->
       P j t i' s' ->
       P j t i s.
 
@@ -59,7 +63,7 @@ Section FSimDef.
       can_progress Pₜ t ->
       (∀ t', Pₜ ⊨ t ->> t' ->
              ∃ j',
-               fsim_lfp' gfp j' t' i s ∧
+               fsim_lfp' gfp Φ j' t' i s ∧
                P j' t' i s) ->
       P j t i s.
 
@@ -67,11 +71,11 @@ Section FSimDef.
       ∀ j j' t i i' s,
       j' ⊏ j ->
       i' ⊏ i ->
-      gfp j' t i' s ->
+      gfp Φ j' t i' s ->
       P j t i s.
 
     Lemma fsim_lfp'_ind: ∀ j t i s,
-      fsim_lfp' gfp j t i s -> P j t i s.
+      fsim_lfp' gfp Φ j t i s -> P j t i s.
     Proof using HFinal HProgress HSourceSteps HStuck HTargetSteps.
       fix IH 5. intros j t i s Hsim.
       destruct Hsim as
@@ -96,7 +100,7 @@ Section FSimDef.
 
   Instance fsim_lfp'_mono : Proper (leq ==> leq) fsim_lfp'.
   Proof using Type.
-    intros gfp gfp' Hgfp j t i s Hsim.
+    intros gfp gfp' Hgfp Φ j t i s Hsim.
     induction Hsim as [ | | | ? ? ? ? Hprogress Ht |  ? ? ? Hprogress Hboth].
     - econstructor; eassumption.
     - econstructor; eassumption.
@@ -108,32 +112,25 @@ Section FSimDef.
       apply Hgfp. eassumption.
   Qed.
 
-  Definition fsim_lfp : mon (Wₜ -> state Λₜ -> Wₛ -> state Λₛ -> Prop) :=
-    {| body := fsim_lfp' |}.
+  Definition fsim_lfp := {| body := fsim_lfp' |}.
 
-  Lemma fsim_unroll j t i s :
-    gfp fsim_lfp j t i s -> fsim_lfp' (gfp fsim_lfp) j t i s.
+  Lemma fsim_unroll Φ j t i s :
+    gfp fsim_lfp Φ j t i s -> fsim_lfp' (gfp fsim_lfp) Φ j t i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
-  Lemma fsim_roll j t i s :
-    fsim_lfp' (gfp fsim_lfp) j t i s -> gfp fsim_lfp j t i s.
+  Lemma fsim_roll Φ j t i s :
+    fsim_lfp' (gfp fsim_lfp) Φ j t i s -> gfp fsim_lfp Φ j t i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
-  Definition fsim  := gfp fsim_lfp.
-End FSimDef.
+  Definition fsim := gfp fsim_lfp.
 
-Section GenericRules.
-  Context {Λₜ Λₛ: lang}.
-  Context (Wₜ Wₛ: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
-
-  Lemma idx_mono (R: Chain (fsim_lfp Wₜ Wₛ Pₜ Pₛ Φ)):
+  Lemma idx_mono (R: Chain fsim_lfp) Φ:
     ∀ j i t s,
-    (elem R) j t i s ->
+    (elem R) Φ j t i s ->
     ∀ j' i',
     j ⊑ j' ->
     i ⊑ i' ->
-    (elem R) j' t i' s.
+    (elem R) Φ j' t i' s.
   Proof using Type.
     apply tower.
     - intros P Hp.
@@ -165,16 +162,27 @@ Section GenericRules.
           eapply CIH; eassumption || now constructor.
   Qed.
 
-  Lemma fsim_mono:
+  Lemma fsim_mono Φ:
     ∀ j i t s,
-    fsim Wₜ Wₛ Pₜ Pₛ Φ j t i s ->
+    fsim Φ j t i s ->
     ∀ j' i',
     j ⊑ j' ->
     i ⊑ i' ->
-    fsim Wₜ Wₛ Pₜ Pₛ Φ  j' t i' s.
+    fsim Φ j' t i' s.
   Proof using Type.
     intros j t i s Hsim.
     now apply idx_mono.
   Qed.
 
-End GenericRules.
+  Lemma fsim_lfp_mono (R: Chain fsim_lfp) Φ:
+    ∀ j i t s,
+    fsim_lfp (elem R) Φ j t i s ->
+    ∀ j' i',
+    j ⊑ j' ->
+    i ⊑ i' ->
+    fsim_lfp (elem R) Φ j' t i' s.
+  Proof using Type.
+    intros j t i s Hsim.
+    now apply idx_mono.
+  Qed.
+End FSimDef.

@@ -11,7 +11,7 @@ Section ESimDef.
   Variant esim_lfp' (gfp: W -> state Λₜ -> state Λₛ -> Prop)
     : W -> state Λₜ -> state Λₛ -> Prop :=
   | EBothFinal : ∀ i t s,
-    is_final Φ t s -> esim_lfp' gfp i t s
+    are_final Φ t s -> esim_lfp' gfp i t s
 
   | ESourceStuck : ∀ i t s,
     stuck Pₛ s -> esim_lfp' gfp i t s

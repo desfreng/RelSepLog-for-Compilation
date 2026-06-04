@@ -1,16 +1,9 @@
-From stdpp Require Import prelude.
-From stdpp Require Import strings.
+From Stdlib Require Import ZArith.
+
 From stdpp Require Import gmap.
 
-Definition ident : Type := string.
 Definition val : Type := Z.
-
-Definition node := nat.
-Definition loc := positive.
-Definition reg := nat.
-
-(* [regmap] is a mapping from registers to a value *)
-Definition regmap : Type := gmap reg val.
+Definition loc : Type := positive.
 
 (* [memory] is a mapping from location to a value *)
 Definition memory : Type := gmap loc val.
@@ -21,17 +14,6 @@ Definition val_to_loc (v: val) : option loc :=
   if (v >=? 1)%Z
   then Some (Z.to_pos v)
   else None.
-
-Definition get_reg (r: reg) (ρ: regmap) : val :=
-  match ρ !! r with
-  | Some v => v
-  | None => 0%Z (* Dummy val *)
-  end.
-
-Definition get_regs (l: list reg) (ρ: regmap) : list val :=
-  map (fun r => get_reg r ρ) l.
-
-Definition set_reg (r: reg) (v: val) (ρ: regmap) : regmap := <[r := v]>ρ.
 
 Definition get_at (addr: val) (m: memory) : option val :=
   match val_to_loc addr with
@@ -51,3 +33,29 @@ Definition update_at (addr: val) (f: val -> val) (m: memory) : option memory
 
 Definition set_at (addr: val) (v: val) (m: memory) : option memory :=
   update_at addr (fun _ => v) m.
+
+Lemma get_at_unfold : ∀ addr m v,
+  get_at addr m = Some v ->
+  ∃ l, val_to_loc addr = Some l ∧ m !! l = Some v.
+Proof using Type.
+  intros addr m v H.
+  unfold get_at in H.
+  case_match; try congruence.
+  eexists. split; eassumption || reflexivity.
+Qed.
+
+Lemma update_at_unfold : ∀ addr f m m',
+  update_at addr f m = Some m' ->
+  ∃ l old,
+    val_to_loc addr = Some l ∧
+    m !! l = Some old ∧
+    <[l := f old]>m = m'.
+Proof using Type.
+  intros addr f m m' H.
+  unfold update_at in H.
+  case_match eqn:Hloc; try congruence.
+  case_match eqn:Hmem; try congruence.
+  do 2 eexists. repeat split.
+  - eassumption.
+  - now inv H.
+Qed.

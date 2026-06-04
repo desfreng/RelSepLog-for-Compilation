@@ -18,7 +18,7 @@ Section RTLWP.
 
   Lemma wp_ret (Q: postcondition) f pc : ∀ r v,
     f@pc is <{ ret r }> ->
-    ⊢ ▷ (r ↦ᵣ v ∧ ⌜Q v⌝ₘ) -> wp Q f pc.
+    ⊢ ▷ (r ⇒ v ∧ ⌜Q v⌝ₘ) -> wp Q f pc.
   Proof using Type.
     intros r v Hpc ρ m [] H; [apply safe_init | ].
     unfold_Prop. destruct H as [Hv HQ]. subst.
@@ -42,9 +42,9 @@ Section RTLWP.
 
   Lemma wp_op Q f pc : ∀ dst op args pc' vals v,
     f@pc is <{ dst := @op args -> pc' }> ->
-    ⊢ (args ↦ᵣ vals ∧
+    ⊢ (args ⇒ vals ∧
        ⌜eval_op op vals = Some v⌝ ∧
-       ▷ ⟦dst <-ᵣ v⟧wp Q f pc') ->
+       ▷ ⟦dst ⇐ v⟧wp Q f pc') ->
     wp Q f pc.
   Proof using Type.
     intros dst op args pc' vals v Hpc ρ m [] (Hargs & Hv & Hwp);
@@ -56,7 +56,7 @@ Section RTLWP.
 
   Lemma wp_load Q f pc : ∀ dst src pc' addr v,
     f@pc is <{ dst := !src -> pc' }> ->
-    ⊢ (src ↦ᵣ addr ∧ addr ↦ v ∧ ▷ ⟦dst <-ᵣ v⟧ wp Q f pc') ->
+    ⊢ (src ⇒ addr ∧ addr ↦ v ∧ ▷ ⟦dst ⇐ v⟧ wp Q f pc') ->
     wp Q f pc.
   Proof using Type.
     intros dst src pc' addr v Hpc ρ m [] (Haddr & Hmem & Hwp)
@@ -68,8 +68,8 @@ Section RTLWP.
 
   Lemma wp_store Q f pc : ∀ dst src pc' addr v,
     f@pc is <{ !dst := src -> pc' }> ->
-    ⊢ (dst ↦ᵣ addr ∧
-       src ↦ᵣ v ∧
+    ⊢ (dst ⇒ addr ∧
+       src ⇒ v ∧
        ▷ ⟦addr <- v⟧ wp Q f pc') ->
     wp Q f pc.
   Proof using Type.
@@ -82,7 +82,7 @@ Section RTLWP.
 
   Lemma wp_cond Q f pc : ∀ cond ifso ifnot v,
     f@pc is <{ if cond then goto ifso else goto ifnot }> ->
-    ⊢ (cond ↦ᵣ v ∧
+    ⊢ (cond ⇒ v ∧
        if (v =? 0)%Z
        then ▷ wp Q f ifso
        else ▷ wp Q f ifnot) ->
@@ -91,7 +91,7 @@ Section RTLWP.
     intros cond ifso ifnot v H ρ m [] (Hv & Hwp); [apply safe_init | ].
     unfold_Prop. apply safe_to_step.
     - repeat econstructor; now eauto.
-    - intros ? Hs. inv Hs. now destruct (get_reg cond ρ =? 0)%Z.
+    - intros ? Hs. inv Hs. now destruct (get_reg ρ cond =? 0)%Z.
   Qed.
 
   Definition hoare (Pre: precondition) f (Post: postcondition) : Prop :=
@@ -120,12 +120,12 @@ Section RTLWP.
 
   Lemma wp_call f pc Q : ∀ dst name args pc' vals fn Pre Post,
     f@pc is <{ dst := @call name args -> pc' }> ->
-    ⊢ (args ↦ᵣ vals ∧
+    ⊢ (args ⇒ vals ∧
        ⌜find_fun P name = Some fn⌝ ∧
-       ⌜length args = length (fn_regs fn)⌝ ∧
+       ⌜length (fn_regs fn) = length args⌝ ∧
        ⌜hoare Pre fn Post⌝ ∧
        ⌜Pre vals⌝ₘ ∧
-       ▷ (∀ v, ⊢ₘ ⌜Post v⌝ₘ -> ⟦dst <-ᵣ v⟧ wp Q f pc')) ->
+       ▷ (∀ v, ⊢ₘ ⌜Post v⌝ₘ -> ⟦dst ⇐ v⟧ wp Q f pc')) ->
     wp Q f pc.
   Proof using Type.
     intros dst sig args pc' vals fn Pre Post H ρ m [ | n]
@@ -145,7 +145,7 @@ Section RTLWP.
           apply ret_not_stuck.
         * subst. now apply lift_not_stuck.
         * apply Hspec with (n := n+1); auto.
-          unfold get_regs. now rewrite length_map.
+          now rewrite length_map.
         * lia.
       + eapply safe_implies_progress in Hrest.
         * eassumption.
@@ -154,19 +154,52 @@ Section RTLWP.
         * lia.
   Qed.
 
+  Local Lemma get_regs_not_in : ∀ regs args r ρ v,
+    r ∉ regs ->
+    map (get_reg ρ) regs = args ->
+    map (get_reg (<[r:=v]> ρ)) regs = args.
+  Proof using Type.
+    intros regs args r ρ v Hr Hmap.
+    induction args as [| a args IH ] in regs, Hmap, Hr |- *.
+    - apply map_eq_nil in Hmap. now subst regs.
+    - apply map_eq_cons in Hmap.
+      destruct Hmap as (reg & tl & -> & Hreg & Hmap).
+      apply not_elem_of_cons in Hr.
+      destruct Hr as [Hr Htl].
+      simpl. f_equal.
+      + unfold get_reg. now rewrite (fin_maps.lookup_insert_ne ρ).
+      + now apply IH.
+  Qed.
+
+  Local Lemma initial_context_exists : ∀ args regs,
+    length args = length regs ->
+    NoDup regs ->
+    ∃ ρ, map (get_reg ρ) regs = args.
+  Proof using Type.
+    intros args.
+    induction args as [| v args IH]; intros regs Hlen Hdup.
+    - exists ∅. symmetry in Hlen. now rewrite (nil_length_inv _ Hlen).
+    - simpl in Hlen. destruct regs as [| r regs]; inv Hlen as [ H ].
+      apply NoDup_cons in Hdup.
+      destruct Hdup as [Hr Hdup].
+      destruct (IH _ H Hdup) as [ρ Hmap].
+      exists (<[r := v]>ρ).
+      simpl. f_equal.
+      + unfold get_reg. now rewrite (fin_maps.lookup_insert_eq ρ).
+      + now apply get_regs_not_in.
+  Qed.
+
   Lemma hoare_from_wp (Pre: precondition) f (Post: postcondition):
     (∀ args,
-       ⊢ (⌜Pre args⌝ₘ ∧ fn_regs f ↦ᵣ args) -> wp Post f (fn_entrypoint f))
+       ⊢ (⌜Pre args⌝ₘ ∧ fn_regs f ⇒ args) -> wp Post f (fn_entrypoint f))
     -> hoare Pre f Post.
   Proof using Type.
     intros H args m [ ] Hlen Hpre; [apply safe_init | ].
     unfold_Prop.
     apply safe_to_step.
-    - repeat econstructor; eauto.
-    - intros ? Hs. inv Hs. apply H with args. split.
-      + eassumption.
-      + apply get_regs_init_regs.
-        * apply is_no_dup_sound. apply fn_regs_no_dup.
-        * assumption.
+    - destruct (initial_context_exists _ _ Hlen) as [ρ Hρ].
+      + apply is_no_dup_sound. now apply fn_regs_no_dup.
+      + do 2 econstructor; eassumption.
+    - intros ? Hs. inv Hs. eapply H. split; eassumption || reflexivity.
   Qed.
 End RTLWP.

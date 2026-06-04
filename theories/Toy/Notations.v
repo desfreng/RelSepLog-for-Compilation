@@ -126,7 +126,7 @@ Section Playground.
   Let result : reg := 2.
   Let one : reg := 3.
   Let addr : reg := 4.
-  Let fun_name : ident := "toto"%string.
+  Let fun_name := "toto"%string.
 
   Definition notation_test : tinstr :=
     <{|

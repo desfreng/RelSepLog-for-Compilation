@@ -7,25 +7,19 @@ From RSL Require Import RTL.Notations.
 
 Import RTLNotations.
 
-Fixpoint init_regs (vl: list val) (rl: list reg) : regmap :=
-  match rl, vl with
-  | r :: rs, v :: vs => <[r := v]>(init_regs vs rs)
-  | _, _ => ∅
-  end.
-
 Inductive stackframe : Type :=
 | Stackframe
     (res: reg) (* where to store the result *)
     (f: function) (* calling function *)
     (pc: node) (* program point in caller function *)
-    (ρ: regmap) (* state in caller function *)
+    (ρ: regbank) (* state in caller function *)
 .
 
 Inductive pcstate : Type :=
 | State
     (f: function) (* current function *)
     (pc: node) (* current program point in c *)
-    (ρ: regmap) (* register state *)
+    (ρ: regbank) (* register state *)
 
 | CallState
     (f: function) (* function to call *)
@@ -43,44 +37,46 @@ Inductive rtl_step (P: program) : rtl_state -> rtl_state -> Prop :=
 
 | exec_Iret: forall σ m ρ f pc r v,
   f@pc is <{ ret r }> ->
-  get_reg r ρ = v ->
+  get_reg ρ r = v ->
   rtl_step P (σ, State f pc ρ, m) (σ, ReturnState v, m)
 
-| exec_Iop: forall σ m ρ f pc op args dst pc' ρ' v,
+| exec_Iop: forall σ m ρ f pc op args dst pc' ρ' v vals,
   f@pc is <{ dst := @op args -> pc' }> ->
-  eval_op op (get_regs args ρ) = Some v ->
+  map (get_reg ρ) args = vals ->
+  eval_op op vals = Some v ->
   set_reg dst v ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
 | exec_Iload: forall σ m ρ f pc dst src pc' ρ' addr v,
   f@pc is <{ dst := !src -> pc' }> ->
-  get_reg src ρ = addr ->
+  get_reg ρ src = addr ->
   get_at addr m = Some v ->
   set_reg dst v ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
 | exec_Istore: forall σ m ρ f pc dst src pc' m' addr v,
   f@pc is <{ !dst := src -> pc' }> ->
-  get_reg dst ρ = addr ->
-  get_reg src ρ = v ->
+  get_reg ρ dst = addr ->
+  get_reg ρ src = v ->
   set_at addr v m = Some m' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m')
 
 | exec_Icond: forall  σ m ρ f pc cond ifso ifnot v pc',
   f@pc is <{ if cond then goto ifso else goto ifnot }> ->
-  get_reg cond ρ = v ->
+  get_reg ρ cond = v ->
   pc' = (if Z.eqb v 0 then ifso else ifnot) ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
 
-| exec_Icall: forall σ m ρ f pc dst sig args pc' σ' fn,
+| exec_Icall: forall σ m ρ f pc dst sig args pc' σ' fn vals,
   f@pc is <{ dst := @call sig args -> pc' }> ->
   find_fun P sig = Some fn ->
+  map (get_reg ρ) args = vals ->
   Stackframe dst f pc' ρ :: σ = σ' ->
-  rtl_step P (σ, State f pc ρ, m) (σ', CallState fn (get_regs args ρ), m)
+  rtl_step P (σ, State f pc ρ, m) (σ', CallState fn vals, m)
 
 | exec_function: forall σ m ρ f args,
   length args = length (fn_regs f) ->
-  init_regs args (fn_regs f) = ρ ->
+  map (get_reg ρ) (fn_regs f) = args ->
   rtl_step P (σ, CallState f args, m) (σ, State f (fn_entrypoint f) ρ, m)
 
 | exec_return: forall σ m ρ f pc dst v ρ',
@@ -218,90 +214,3 @@ Section SemProp.
   Proof using Type. intros σ Σ s m [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
 
 End SemProp.
-
-Section Regs.
-  Lemma get_regs_insert : ∀ regs r v ρ,
-    r ∉ regs ->
-    get_regs regs (<[r := v]> ρ) = get_regs regs ρ.
-  Proof using Type.
-    intros regs r v ρ.
-    induction regs as [|r' regs' IH]; intros Hnotin; [reflexivity |].
-    simpl. f_equal.
-    - unfold get_reg. rewrite (lookup_insert_ne ρ); set_solver.
-    - apply IH. set_solver.
-  Qed.
-
-  Lemma get_regs_init_regs : ∀ regs args,
-    NoDup regs ->
-    length args = length regs ->
-    get_regs regs (init_regs args regs) = args.
-  Proof using Type.
-    intros regs args Hnodup.
-    revert args.
-    induction Hnodup as [|r regs Hnotin Hnodup IH]; intros args Hlen.
-    - destruct args; [reflexivity | discriminate Hlen].
-    - destruct args as [|v args]; [discriminate Hlen |].
-      simpl in Hlen. injection Hlen as Hlen'.
-      simpl. f_equal.
-      + unfold get_reg. now rewrite (lookup_insert_eq (init_regs args regs)).
-      + rewrite get_regs_insert by exact Hnotin.
-        apply IH. exact Hlen'.
-  Qed.
-
-  Lemma get_reg_set_reg_eq : ∀ r v ρ,
-    get_reg r (set_reg r v ρ) = v.
-  Proof using Type.
-    intros r v ρ.
-    unfold get_reg, set_reg.
-    now rewrite (lookup_insert_eq ρ).
-  Qed.
-
-  Lemma get_reg_set_reg_neq : ∀ r r' v ρ,
-    r ≠ r' -> get_reg r (set_reg r' v ρ) = get_reg r ρ.
-  Proof using Type.
-    intros r r' v ρ Hneq.
-    unfold get_reg, set_reg.
-    now rewrite (lookup_insert_ne ρ).
-  Qed.
-End Regs.
-
-Tactic Notation "simpl_reg" "by" tactic3(tac) :=
-  repeat match goal with
-    | _ => progress tac
-    | |- context[get_reg _ (set_reg _ _ _)] =>
-        (rewrite get_reg_set_reg_neq by tac)
-        || (rewrite get_reg_set_reg_eq by tac)
-    | H: get_reg ?r ?rho = _ |- context[get_reg ?r ?rho] =>
-        repeat rewrite H
-    end.
-
-Global Tactic Notation "simpl_reg" :=
-  simpl_reg by repeat (f_equal || lia ||split).
-
-Section Succ.
-  Let Λ : lang := rtl_lang.
-  Context (P: prog Λ).
-
-  Definition next (f: function) (pc: node) : list node :=
-    match fn_code f !! pc with
-    | Some (Inop succ) => [succ]
-    | Some (Iop _ _ _ succ) => [succ]
-    | Some (Iload _ _ succ) => [succ]
-    | Some (Istore _ _ succ) => [succ]
-    | Some (Icall _ _ _ succ) => [succ]
-    | Some (Icond _ ifso ifnot) => [ifso; ifnot]
-    | Some (Ireturn _) => []
-    | None => []
-    end.
-
-  Lemma next_correct f pc : ∀ ρ ρ' m m' pc',
-    P ⊨ ([], State f pc ρ, m) ->> ([], State f pc' ρ', m') ->
-    pc' ∈ next f pc.
-  Proof using Type.
-    unfold next.
-    intros ρ ρ' m m' pc' H.
-    destruct (fn_code f !! pc) as [[] | ] eqn:Hi;
-      inv H; try now constructor.
-    case_match; do 2 constructor.
-  Qed.
-End Succ.

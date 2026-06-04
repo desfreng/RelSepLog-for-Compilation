@@ -11,7 +11,7 @@ Section ESimLaxDef.
   Inductive esim_lax_lfp' (gfp: W -> state Λₜ -> state Λₛ -> Prop)
     : W -> state Λₜ -> state Λₛ -> Prop :=
   | ELaxBothFinal : ∀ i t s,
-    is_final Φ t s ->
+    are_final Φ t s ->
     esim_lax_lfp' gfp i t s
 
   | ELaxSourceStuck : ∀ i t s,

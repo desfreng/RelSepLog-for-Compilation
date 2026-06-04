@@ -9,7 +9,7 @@ From RSL Require Import Simulations.FreeSim.
 
 Section FSimSound.
   Context {Λₜ Λₛ: lang}.
-  Context {Wₜ Wₛ: WfRel}.
+  Context {J I: WfRel}.
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
 
   Instance behₜ_elem : ElemOf behavior (state Λₜ) := beh Pₜ.
@@ -20,7 +20,7 @@ Section FSimSound.
       (at level 70, format "a  '⊑{' Φ '}'  b", no associativity).
 
   Notation "'⟨' t ',' j '⟩' '≲' '⟨' s ',' i '⟩' '{{' Φ '}}'" :=
-    (fsim Wₜ Wₛ Pₜ Pₛ Φ j t i s)
+    (fsim J I Pₜ Pₛ Φ j t i s)
       (at level 0, i at level 0, j at level 0, no associativity).
 
   Lemma terminating_fsim Φ : ∀ t j s i vₜ,

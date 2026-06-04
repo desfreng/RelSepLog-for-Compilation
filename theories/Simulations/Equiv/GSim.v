@@ -7,14 +7,14 @@ From RSL Require Import Simulations.FreeSim.
 
 Section GSimDef.
   Context {Λₜ Λₛ: lang}.
-  Context (Wₜ Wₛ W: WfRel).
+  Context (J I W: WfRel).
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
   Unset Elimination Schemes.
 
-  Inductive gsim : Wₜ -> W -> state Λₜ -> Wₛ -> W -> state Λₛ -> Prop :=
+  Inductive gsim : J -> W -> state Λₜ -> I -> W -> state Λₛ -> Prop :=
   | GBothFinal : ∀ j b t i a s,
-    is_final Φ t s -> gsim j b t i a s
+    are_final Φ t s -> gsim j b t i a s
 
   | GSourceStuck : ∀ j b t i a s,
     stuck Pₛ s -> gsim j b t i a s
@@ -34,16 +34,16 @@ Section GSimDef.
   | GProgress : ∀ j j' b t i i' a s,
     j' ⊏ j ->
     i' ⊏ i ->
-    fsim Wₜ Wₛ Pₜ Pₛ Φ j' t i' s ->
+    fsim J I Pₜ Pₛ Φ j' t i' s ->
     gsim j b t i a s.
 
   Set Elimination Schemes.
 
   Section GSimInd.
-    Variable P : Wₜ -> W -> state Λₜ -> Wₛ -> W -> state Λₛ -> Prop.
+    Variable P : J -> W -> state Λₜ -> I -> W -> state Λₛ -> Prop.
 
     Hypothesis HFinal:
-      ∀ j b t i a s, is_final Φ t s -> P j b t i a s.
+      ∀ j b t i a s, are_final Φ t s -> P j b t i a s.
 
     Hypothesis HStuck:
       ∀ j b t i a s, stuck Pₛ s -> P j b t i a s.
@@ -70,7 +70,7 @@ Section GSimDef.
       ∀ j j' b t i i' a s,
       j' ⊏ j ->
       i' ⊏ i ->
-      fsim Wₜ Wₛ Pₜ Pₛ Φ j' t i' s ->
+      fsim J I Pₜ Pₛ Φ j' t i' s ->
       P j b t i a s.
 
     Lemma gsim_ind: ∀ j b t i a s,

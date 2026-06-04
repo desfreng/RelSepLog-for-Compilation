@@ -11,15 +11,15 @@ From RSL Require Import Simulations.Equiv.GSim.
 
 Section PROOF.
   Context {Λₜ Λₛ: lang}.
-  Context (Wₜ Wₛ: WfRel).
+  Context (J I: WfRel).
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
   Definition StatePair := (state Λₜ * state Λₛ)%type.
 
   Lemma fsim_implies_gsim: ∀ j t i s,
-    fsim Wₜ Wₛ Pₜ Pₛ Φ j t i s ->
+    fsim J I Pₜ Pₛ Φ j t i s ->
     ∃ b a,
-      gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s.
+      gsim J I (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s.
   Proof using Type.
     intros j t i s Hsim.
     apply fsim_unroll in Hsim.
@@ -45,7 +45,7 @@ Section PROOF.
       pose (R := fun (a: StatePair) (o: ord_tree StatePair) =>
                    let (t', s') := a in
                    s' = s ∧ Pₜ ⊨ t ->> t' ∧
-                   ∃ (j: Wₜ) a,
+                   ∃ (j: J) a,
                      gsim _ _ _ Pₜ Pₛ Φ j o t' i a s).
 
       assert (Hord: ∀ a, P a -> ∃ o, R a o).
@@ -59,7 +59,7 @@ Section PROOF.
                     let (t', s') := a in
                     s' = s ∧
                     Pₜ ⊨ t ->> t' ∧
-                    ∃ (j': Wₜ) b',
+                    ∃ (j': J) b',
                        b' ⊏ b ∧
                       gsim _ _ _ Pₜ Pₛ Φ j' b' t' i o s).
       assert (Hord2: ∀ a, P a -> ∃ o, R2 a o).

@@ -10,4 +10,4 @@
   "Suggest Proof Using"
   -set
   "Default Goal Selector=!")
- (theories Stdlib stdpp Coinduction))
+ (theories Stdlib stdpp Coinduction Ltac2))

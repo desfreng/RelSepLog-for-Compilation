@@ -11,7 +11,7 @@ Section ISimDef.
   Inductive isim_lfp'
     (gfp: state Λₜ -> state Λₛ -> Prop) : state Λₜ -> state Λₛ-> Prop :=
   | IBothFinal : ∀ t s,
-    is_final Φ t s -> isim_lfp' gfp t s
+    are_final Φ t s -> isim_lfp' gfp t s
 
   | ISourceStuck : ∀ t s,
     stuck Pₛ s -> isim_lfp' gfp t s

@@ -8,15 +8,15 @@ From RSL Require Import Simulations.Equiv.EAltSim.
 
 Section PROOF.
   Context {Λₜ Λₛ: lang}.
-  Context (Wₜ Wₛ: WfRel).
+  Context (J I: WfRel).
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
   Lemma ealt_sim_implies_esim_lax: ∀ b t a s,
-    ealt_sim Wₜ Wₛ Pₜ Pₛ Φ b t a s ->
+    ealt_sim J I Pₜ Pₛ Φ b t a s ->
     ∃ W i, esim_lax W Pₜ Pₛ Φ i t s.
   Proof using Type.
     intros b t a s Hsim.
-    exists (WfWithBot (WfLexProd Wₜ Wₛ)), (Some (b, a)).
+    exists (WfWithBot (WfLexProd J I)), (Some (b, a)).
     revert b t a s Hsim.
     unfold esim_lax.
     coinduction R cih.

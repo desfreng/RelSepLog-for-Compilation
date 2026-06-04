@@ -8,13 +8,11 @@ From Stdlib Require Import Arith.Wf_nat.
 Structure WfRel : Type :=
   wf_rel
     {
-      element: Type;
-      lt: relation element;
-      wf: well_founded lt;
-      trans: Transitive lt;
+      element :> Type;
+      lt : relation element;
+      wf : well_founded lt;
+      trans : Transitive lt;
     }.
-
-Coercion element : WfRel >-> Sortclass.
 
 Arguments lt {_} _ _.
 Arguments wf {_} _.

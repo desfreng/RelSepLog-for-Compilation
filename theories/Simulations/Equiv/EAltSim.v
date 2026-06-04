@@ -12,7 +12,7 @@ Section EAltSimDef.
   Variant ealt_sim_lfp' (gfp: J -> state Λₜ -> I -> state Λₛ -> Prop)
     : J -> state Λₜ -> I -> state Λₛ -> Prop :=
   | EAltBothFinal : ∀ j t i s,
-    is_final Φ t s -> ealt_sim_lfp' gfp j t i s
+    are_final Φ t s -> ealt_sim_lfp' gfp j t i s
 
   | EAltSourceStuck : ∀ j t i s,
     stuck Pₛ s -> ealt_sim_lfp' gfp j t i s

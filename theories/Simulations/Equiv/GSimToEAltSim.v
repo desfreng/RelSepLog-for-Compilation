@@ -13,17 +13,17 @@ From RSL Require Import Simulations.Equiv.FSimToGSim.
 
 Section PROOF.
   Context {Λₜ Λₛ: lang}.
-  Context (Wₜ Wₛ: WfRel).
+  Context (J I: WfRel).
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
   Definition StatePair := (state Λₜ * state Λₛ)%type.
 
   Lemma gsim_implies_ealt_sim: ∀ j b t i a s,
-    gsim Wₜ Wₛ (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s  ->
+    gsim J I (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s  ->
     ∃ Rₜ Rₛ zₜ zₛ, ealt_sim Rₜ Rₛ Pₜ Pₛ Φ zₜ t zₛ s.
   Proof using Type.
     intros j b t i a s Hsim.
-    exists (WfLexProd Wₛ _), (WfLexProd Wₜ _), (i, b), (j, a).
+    exists (WfLexProd I _), (WfLexProd J _), (i, b), (j, a).
     revert j b t i a s Hsim.
     unfold ealt_sim. coinduction R cih.
     intros j.

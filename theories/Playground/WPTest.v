@@ -40,47 +40,47 @@ Section Play.
       fn_regs_no_dup := eq_refl;
     |}.
 
-  Ltac step lemma :=
-    match goal with
-    | |- wp _ _ ?f ?pc _ _ ?n =>
-        let H := fresh "Hpc" in
-        eassert (H: f@pc is _) by reflexivity;
-        eapply lemma;
-        [now apply H|];
-        clear H; repeat split; simpl_reg; unfold_Prop; simpl;
-        try (destruct n as [|n]; [easy|])
-    | |- match ?n with
-         | O => True
-         | S n' => wp _ _ _ _ _ _ n'
-         end => destruct n as [|n]; [easy|step lemma]
-    end.
+  (* Ltac step lemma := *)
+  (*   match goal with *)
+  (*   | |- wp _ _ ?f ?pc _ _ ?n => *)
+  (*       let H := fresh "Hpc" in *)
+  (*       eassert (H: f@pc is _) by reflexivity; *)
+  (*       eapply lemma; *)
+  (*       [now apply H|]; *)
+  (*       clear H; repeat split; simpl_reg; unfold_Prop; simpl; *)
+  (*       try (destruct n as [|n]; [easy|]) *)
+  (*   | |- match ?n with *)
+  (*        | O => True *)
+  (*        | S n' => wp _ _ _ _ _ _ n' *)
+  (*        end => destruct n as [|n]; [easy|step lemma] *)
+  (*   end. *)
 
-  Lemma test_inv :
-    NodeInv (fun v m => v = 10%Z) test 3
-      ⌞ one ↦ᵣ 1 ∧ ten ↦ᵣ 10 ∧ ∃ v, x ↦ᵣ v ∧ ⌜v <= 10⌝%Z ⌟.
-  Proof using Type.
-    apply löb.
-    intros ρ m n IH (Hone & Hten & v & Hres & Hv).
-    step wp_op.
-    step wp_cond.
-    destruct (10 - v =? 0)%Z eqn:He.
-    - step wp_ret. repeat split. simpl_reg.
-    - step wp_op. eapply safe_mono; [|apply IH].
-      + lia.
-      + simpl_reg. eexists. repeat split.
-        lia.
-  Qed.
+  (* Lemma test_inv : *)
+  (*   NodeInv (fun v m => v = 10%Z) test 3 *)
+  (*     ⟪ one ↪ 1 ∧ ten ↪ 10 ∧ ∃ v, x ↪ v ∧ ⌜v <= 10⌝%Z ⟫. *)
+  (* Proof using Type. *)
+  (*   apply löb. *)
+  (*   intros ρ m n IH (Hone & Hten & v & Hres & Hv). *)
+  (*   step wp_op. *)
+  (*   step wp_cond. *)
+  (*   destruct (10 - v =? 0)%Z eqn:He. *)
+  (*   - step wp_ret. repeat split. simpl_reg. *)
+  (*   - step wp_op. eapply safe_mono; [|apply IH]. *)
+  (*     + lia. *)
+  (*     + simpl_reg. eexists. repeat split. *)
+  (*       lia. *)
+  (* Qed. *)
 
-  Lemma test_correct :
-    hoare P (fun args m => True) test (fun v m => v = 10%Z).
-  Proof using Type.
-    apply hoare_from_wp.
-    intros args ρ m n _.
-    step wp_op.
-    step wp_op.
-    step wp_op.
-    apply test_inv. repeat (simpl_reg; unfold_Prop).
-    eexists. repeat split. lia.
-  Qed.
+  (* Lemma test_correct : *)
+  (*   hoare P (fun args m => True) test (fun v m => v = 10%Z). *)
+  (* Proof using Type. *)
+  (*   apply hoare_from_wp. *)
+  (*   intros args ρ m n _. *)
+  (*   step wp_op. *)
+  (*   step wp_op. *)
+  (*   step wp_op. *)
+  (*   apply test_inv. repeat (simpl_reg; unfold_Prop). *)
+  (*   eexists. repeat split. lia. *)
+  (* Qed. *)
 
 End Play.

@@ -1,9 +1,10 @@
 From RSL Require Import Prelude.
+From RSL Require Import Commons.RegisterBank.
 
 Definition postcondition : Type := val -> memory -> Prop.
 Definition precondition : Type := list val -> memory -> Prop.
 
-Definition logic : Type := regmap -> memory -> nat -> Prop.
+Definition logic : Type := regbank -> memory -> nat -> Prop.
 
 Declare Scope logic_scope.
 Delimit Scope logic_scope with logic.
@@ -77,7 +78,10 @@ Notation "'⊢ᵨ' P" :=
   (logic_register_entails P)
     (at level 99, right associativity) : logic_scope.
 
-Notation "'⌞' P '⌟'" := P%logic.
+Notation "⦇ P ⦈" := (P)%logic (at level 0, P at level 200, format "⦇ P ⦈").
+
+Global Instance top_logic : Top logic := fun _ _ _ => True.
+Global Instance bot_logic : Bottom logic := fun _ _ _ => False.
 
 (* Definition logic_entails `{Logic L} (P Q : L) : Prop := *)
 (*   logic_empty_entails (logic_impl P Q). *)
@@ -103,22 +107,22 @@ Notation "l '↦' v" :=
   (logic_assert_mem l%positive v%Z)
     (at level 70, no associativity, format "l ↦ v") : logic_scope.
 
-Notation "'⟦' dst '<-ᵣ' v '⟧' P" :=
+Notation "'⟦' dst '⇐' v '⟧' P" :=
   (logic_set_reg dst%nat v%Z P)
     (at level 20, P at level 20, right associativity,
-       format "⟦ dst <-ᵣ v ⟧  P") : logic_scope.
+       format "⟦ dst ⇐ v ⟧  P") : logic_scope.
 
 Class LogicAssertReg (R V : Type) := logic_assert_reg : R -> V -> logic.
 
-Notation "r '↦ᵣ' v" :=
+Notation "r '⇒' v" :=
   (logic_assert_reg r%nat v%Z)
-    (at level 70, no associativity, format "r ↦ᵣ v").
+    (at level 70, no associativity, format "r ⇒ v").
 
 Instance assert_reg_single : LogicAssertReg reg val :=
-  fun (r: reg) (v: val) ρ _ _ => get_reg r ρ = v.
+  fun (r: reg) (v: val) ρ _ _ => get_reg ρ r = v.
 
 Instance assert_reg_list : LogicAssertReg (list reg) (list val) :=
-  fun (r: list reg) (v: list val) ρ _ _ => get_regs r ρ = v.
+  fun (r: list reg) (v: list val) ρ _ _ => map (get_reg ρ) r = v.
 
 Create HintDb custom_anyProp discriminated.
 

@@ -1,11 +1,13 @@
-From RSL Require Import Prelude.
+From RSL Require Import Prelude RelLogic.
 
 From stdpp Require Import strings.
+From stdpp Require Import gmap.
+From stdpp Require Import tactics.
+
 From Coinduction Require Import all.
 
-From RSL Require Import Commons.Bilogic.
-
 From RSL Require Import Simulations.FreeSim.
+From RSL Require Import Simulations.FreeSimRules.
 
 From RSL Require Import RTL.RTL.
 From RSL Require Import RTL.Notations.
@@ -57,27 +59,84 @@ Section T.
       fn_regs_no_dup := eq_refl;
     |}.
 
-  Definition sim Φ (stepₜ: nat) '(fₜ, pcₜ) (stepₛ: nat) '(fₛ, pcₛ) : bilogic :=
-    let Φ := fun '(vₜ, mₜ) '(vₛ, mₛ) => Φ vₜ vₛ mₜ mₛ in
-    fun '(ρₜ, mₜ) '(ρₛ, mₛ) =>
-      gfp (fsim_lfp _ _ Pₜ Pₛ Φ) stepₜ ([], State fₜ pcₜ ρₜ, mₜ) stepₛ ([], State fₛ pcₛ ρₛ, mₛ).
+  Abbreviation fsim := (fsim WfNat WfNat Pₜ Pₛ).
+  Abbreviation fsim_lfp := (fsim_lfp WfNat WfNat Pₜ Pₛ).
 
-  Hint Unfold sim : custom_bilogic.
+  Notation "C ⊢ '⟨' ft '@' pct ',' j '⟩' '≲' '⟨' fs '@' pcs ',' i '⟩' '{{' Φ '}}'" :=
+    (sim Pₜ Pₛ (elem C) Φ j ft pct i fs pcs)
+      (at level 1, ft at level 0, fs at level 0, no associativity).
 
-  Notation "t '⟨' iₜ '≲' iₛ '⟩' s '{{' Φ '}}'" :=
-    (sim Φ iₜ t iₛ s)
-      (at level 1, no associativity).
-
-  Definition same_value (vₜ vₛ: val) (_ _: memory) :=
+  Definition veq (vₜ vₛ : val) (mₜ mₛ: memory) :=
     vₜ = vₛ.
 
-  Notation "(≈)" := same_value (at level 0).
+  (* Haddr : get_reg addr ρₛ = v *)
+  (* ρₜ : regmap *)
+  (* Ht : get_reg n ρₜ = x *)
+  (* Hs : get_reg n ρₛ = x *)
+  (* l : loc *)
+  (* Hloc : val_to_loc v = Some l *)
+  (* mₛ : memory *)
+  (* Hmem : mₛ !! l = Some 1%Z *)
+  (* Hreg : get_reg result ρₛ = 1%Z *)
+  (* Hreg0 : get_reg result ρₜ = 1%Z *)
+  (* Hreg1 : get_reg one ρₜ = 1%Z *)
+  (* ============================ *)
+  (* C ⊢ ⟨ fact_good @ 2, 2 ⟩ ≲ ⟨ fact_bad @ 2, 2 ⟩ {{veq}} (ρₜ, mₜ) (ρₛ, mₛ) *)
 
-  Lemma inv: ∀ fuel l,
-    ⊨ one ↪ₜ 1 ->
-    addr ↪ₛ l ->
-    l →ₛ 1 ->
-    (fact_good, 2) ⟨fuel ≲ fuel⟩ (fact_bad, 2) {{ (≈) }}.
+  Lemma inv (C: Chain fsim_lfp) : ∀  loc,
+    ⊨ addr ⇒ₛ loc ->
+    result ₜ≈ₛ result ->
+    n ₜ≈ₛ n ->
+    one ⇒ₜ 1 ->
+    loc →ₛ 1 ->
+    C ⊢ ⟨fact_good @ 2, 0⟩ ≲ ⟨fact_bad @ 2, 0⟩ {{ veq }}.
   Proof using Type.
+    intros loc.
+    intros ρₜ ρₛ mₜ mₛ Haddr Hres Hn Hone Hloc Ψ Hpost. simp.
+    injection Haddr as Haddr.
+    injection Hres as Hres.
+    injection Hn as Hn.
+    injection Hone as Hone.
+
+    eapply @coind_rule.
+    intros C' j i CIH.
+    cut (C' ⊢ ⟨ fact_good @ 2, 0 ⟩ ≲ ⟨ fact_bad @ 2, 0 ⟩ {{veq}} ρₜ ρₛ mₜ mₛ).
+    {
+      intros H. unfold sim in H. simp.
+      eapply (@fsim_lfp_mono).
+      - eapply (H Ψ).
+        apply Hpost.
+      - destruct j.
+        + now right.
+        + left. simpl. lia.
+      - destruct i.
+        + now right.
+        + left. simpl. lia.
+    }
+    eapply source_if; try reflexivity.
+  (*   iRegUpdate. *)
+
+    admit.
   Admitted.
+
+  (*   unfold_bilogic. *)
+  (*   simpl_memory by idtac. *)
+
+  (*   eapply source_op; try reflexivity. *)
+  (*   { reflexivity. } *)
+  (*   iRegUpdate. *)
+
+  (*   eapply target_op; try reflexivity. *)
+  (*   { reflexivity. } *)
+  (*   iRegUpdate. *)
+
+  (*   eapply source_store; try reflexivity. *)
+  (*   rewrite Haddr, Hreg. *)
+  (*   iMemUpdate. *)
+
+  (*   eapply target_op; try reflexivity. *)
+  (*   { reflexivity. } *)
+  (*   iRegUpdate. *)
+
+  (* Admitted. *)
 End T.

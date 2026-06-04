@@ -14,29 +14,21 @@ From RSL Require Import Simulations.Equiv.ESimLaxToESim.
 
 Section SimEquiv.
   Context {Λₜ Λₛ: lang}.
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ → value Λₛ → Prop).
 
-  Notation "t '≲' s '{{' Φ '}}'" :=
-    (isim Pₜ Pₛ Φ t s)
-      (at level 1, no associativity).
+  Abbreviation isim := (isim Pₜ Pₛ Φ).
+  Abbreviation esim := (esim _ Pₜ Pₛ Φ).
+  Abbreviation fsim := (fsim _ _  Pₜ Pₛ Φ).
 
-  Notation "t '≲' '[' i ']' s '{{' Φ '}}'" :=
-    (esim _ Pₜ Pₛ Φ i t s)
-      (at level 1, no associativity).
-
-  Notation "t '⟨' j '≲' i '⟩' s '{{' Φ '}}'" :=
-    (fsim _ _ Pₜ Pₛ Φ j t i s)
-      (at level 1, j at level 0, i at level 0, no associativity).
-
-  Lemma isim_to_fsim {J I: WfRel} Φ :
+  Lemma isim_to_fsim {J I: WfRel} :
     ∀ t s,
-    t ≲ s {{ Φ }} ->
+    isim t s ->
     ∀ (j Tj: J) (i Ti: I),
     j ⊏ Tj ->
     i ⊏ Ti ->
-    t ⟨j ≲ i⟩ s {{ Φ }}.
+    fsim j t i s.
   Proof using Type.
-    unfold fsim.
+    unfold fsim, FreeSim.fsim.
     coinduction R cih.
     intros t s Hsim.
     apply isim_unroll in Hsim.
@@ -69,13 +61,13 @@ Section SimEquiv.
       eapply cih; eassumption.
   Qed.
 
-  Lemma esim_to_isim {W: WfRel} Φ :
+  Lemma esim_to_isim {W: WfRel} :
     ∀ (i: W) t s,
-    t ≲[i] s {{ Φ }} ->
-    t ≲ s {{ Φ }}.
+    esim i t s ->
+    isim t s.
   Proof using Type.
     unfold isim.
-    coinduction ξ cih.
+    coinduction C cih.
     intros i.
     induction i as [i IH] using (well_founded_induction wf).
     intros t s Hsim.
@@ -109,10 +101,10 @@ Section SimEquiv.
       eassumption.
   Qed.
 
-  Lemma fsim_to_esim {J I: WfRel} Φ:
+  Lemma fsim_to_esim {J I: WfRel}:
     ∀ (j: J) t (i: I) s,
-    t ⟨j ≲ i⟩ s {{ Φ }} ->
-    ∃ (W: WfRel) (i: W), t ≲[i] s {{ Φ }}.
+    fsim j t i s ->
+    ∃ (W: WfRel) (i: W), esim i t s.
   Proof using Type.
     intros j t i s Hsim.
     apply fsim_implies_gsim in Hsim.
@@ -127,13 +119,13 @@ Section SimEquiv.
   Qed.
 
   Lemma index_irrel
-    {J J' I I': WfRel} `{NoIsolatedElements J'} `{NoIsolatedElements I'} Φ:
-    ∀ t (j: J) s (i: I),
-    t ⟨j ≲ i⟩ s {{ Φ }} ->
+    {J J' I I': WfRel} `{NoIsolatedElements J'} `{NoIsolatedElements I'}:
+    ∀ (j: J) t (i: I) s,
+    fsim j t i s ->
     ∀ (j': J') (i': I'),
-    t ⟨j' ≲ i'⟩ s {{ Φ }}.
+    fsim j' t i' s.
   Proof using Type.
-    intros t j s i Hsim.
+    intros j t i s Hsim.
     apply fsim_to_esim in Hsim.
     destruct Hsim as (W & x & Hsim).
     eapply esim_to_isim in Hsim.
@@ -146,17 +138,17 @@ Section SimEquiv.
   Qed.
 
   Theorem fsim_same_as_bool:
-    ∀ (J I: WfRel) Φ,
+    ∀ (J I: WfRel),
     Inhabited J ->
     Inhabited I ->
     NoIsolatedElements J ->
     NoIsolatedElements I ->
     ∀ t s,
-    (∃ (j: J) (i: I), t ⟨j ≲ i⟩ s {{ Φ }})
+    (∃ (j: J) (i: I), fsim j t i s)
     <->
-      (∃ j i: bool, t ⟨j ≲ i⟩ s {{ Φ }}).
+      (∃ j i : bool, fsim j t i s).
   Proof using Type.
-    intros J I Φ HInJ HInI HIsoJ HIsoI t s.
+    intros J I HInJ HInI HIsoJ HIsoI t s.
     split; intros (j & i & Hsim).
     - exists true, true.
       eapply index_irrel.

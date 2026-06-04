@@ -1,7 +1,12 @@
 From RSL Require Import Prelude.
 
+From RSL Require Export Commons.RegisterBank.
+
 From stdpp Require Import gmap.
 From stdpp Require Import strings.
+
+Definition node : Type := nat.
+Definition ident : Type := string.
 
 Inductive op : Type :=
 | Add
@@ -69,22 +74,3 @@ Definition eval_op (op: op) (args: list val) : option val :=
   | LoadI v, [] => Some v
   | _, _ => None
   end.
-
-Instance op_eq_dec : EqDecision op.
-Proof. unfold EqDecision, Decision. decide equality; apply (decide _). Qed.
-
-Instance instr_eq_dec : EqDecision instr.
-Proof. unfold EqDecision, Decision. decide equality; apply (decide _). Qed.
-
-Instance function_eq_dec : EqDecision function.
-Proof.
-  intros [n1 r1 e1 c1 p1] [n2 r2 e2 c2 p2].
-  destruct (decide (n1 = n2)) as [-> | Hn]; [|right; intro H; inv H].
-  destruct (decide (r1 = r2)) as [-> | Hn]; [|right; intro H; inv H].
-  destruct (decide (e1 = e2)) as [-> | Hn]; [|right; intro H; inv H].
-  destruct (decide (c1 = c2)) as [-> | Hn]; [|right; intro H; inv H].
-  left. f_equal. apply proof_irrel.
-Qed.
-
-Instance program_eq_dec : EqDecision program.
-Proof. unfold EqDecision, Decision. decide equality; apply (decide _). Qed.
