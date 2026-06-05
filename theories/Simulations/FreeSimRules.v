@@ -85,11 +85,11 @@ Section FSimRules.
     now apply (b_chain C').
   Qed.
 
-  Lemma coind_rule (C: Chain fsim_lfp) Φ:
+  Lemma coind (C: Chain fsim_lfp) Φ:
     ∀ t s,
     (∀ C': Chain fsim_lfp,
        ∀ j i,
-       (∀ j' i', (elem C') Φ j' t i' s) ->
+       (∀ i' j', i ⊏ i' -> j ⊏ j' -> fsim_lfp (elem C') Φ j' t i' s) ->
        fsim_lfp (elem C') Φ j t i s) ->
     ∀ j i, fsim_lfp (elem C) Φ j t i s.
   Proof using Type.
@@ -97,8 +97,10 @@ Section FSimRules.
     apply tower.
     { intros P Hp j i Q Hq. eapply Hp; now eauto. }
     intros C' CIH j i.
-    eapply fsim_lfp'_mono with (x := fun j t i s => (elem C') j t i s).
-    - intros Ψ j' t' i' s' Hc. assumption.
-    - eapply RIH; try eassumption.
+    eapply fsim_lfp'_mono with (x := elem C').
+    - intros Ψ i' l' j' r' Hsim. assumption.
+    - eapply RIH.
+      intros i' j' Hi Hj.
+      eapply FProgress; now eauto.
   Qed.
 End FSimRules.
