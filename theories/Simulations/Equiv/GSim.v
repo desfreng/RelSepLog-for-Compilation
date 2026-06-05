@@ -2,7 +2,6 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
 From RSL Require Import Simulations.FreeSim.
 
 Section GSimDef.
@@ -13,8 +12,8 @@ Section GSimDef.
   Unset Elimination Schemes.
 
   Inductive gsim : J -> W -> state Λₜ -> I -> W -> state Λₛ -> Prop :=
-  | GBothFinal : ∀ j b t i a s,
-    are_final Φ t s -> gsim j b t i a s
+  | GRelated : ∀ j b t i a s,
+    both_final Φ t s -> gsim j b t i a s
 
   | GSourceStuck : ∀ j b t i a s,
     stuck Pₛ s -> gsim j b t i a s
@@ -43,7 +42,7 @@ Section GSimDef.
     Variable P : J -> W -> state Λₜ -> I -> W -> state Λₛ -> Prop.
 
     Hypothesis HFinal:
-      ∀ j b t i a s, are_final Φ t s -> P j b t i a s.
+      ∀ j b t i a s, both_final Φ t s -> P j b t i a s.
 
     Hypothesis HStuck:
       ∀ j b t i a s, stuck Pₛ s -> P j b t i a s.

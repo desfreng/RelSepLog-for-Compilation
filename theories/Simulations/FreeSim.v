@@ -2,8 +2,6 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
-
 Section FSimDef.
   Context {Λₜ Λₛ: lang}.
   Context (J I: WfRel).
@@ -16,8 +14,8 @@ Section FSimDef.
   Inductive fsim_lfp'
     (gfp: post -> J -> state Λₜ -> I -> state Λₛ -> Prop)
     (Φ : post) : J -> state Λₜ -> I -> state Λₛ -> Prop :=
-  | FBothFinal : ∀ j t i s,
-    are_final Φ t s -> fsim_lfp' gfp Φ j t i s
+  | FRelated : ∀ j t i s,
+    both_final Φ t s -> fsim_lfp' gfp Φ j t i s
 
   | FSourceStuck : ∀ j t i s,
     stuck Pₛ s -> fsim_lfp' gfp Φ j t i s
@@ -46,7 +44,7 @@ Section FSimDef.
     Variable P : J -> state Λₜ -> I -> state Λₛ -> Prop.
 
     Hypothesis HFinal:
-      ∀ j t i s, are_final Φ t s -> P j t i s.
+      ∀ j t i s, both_final Φ t s -> P j t i s.
 
     Hypothesis HStuck:
       ∀ j t i s, stuck Pₛ s -> P j t i s.

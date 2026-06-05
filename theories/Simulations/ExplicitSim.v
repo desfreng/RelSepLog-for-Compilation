@@ -2,16 +2,14 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
-
 Section ESimDef.
   Context {Λₜ Λₛ: lang}.
   Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
   Variant esim_lfp' (gfp: W -> state Λₜ -> state Λₛ -> Prop)
     : W -> state Λₜ -> state Λₛ -> Prop :=
-  | EBothFinal : ∀ i t s,
-    are_final Φ t s -> esim_lfp' gfp i t s
+  | ERelated : ∀ i t s,
+    both_final Φ t s -> esim_lfp' gfp i t s
 
   | ESourceStuck : ∀ i t s,
     stuck Pₛ s -> esim_lfp' gfp i t s

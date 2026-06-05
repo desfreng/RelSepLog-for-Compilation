@@ -2,8 +2,6 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
-
 Section EAltSimDef.
   Context {Λₜ Λₛ: lang}.
   Context (J I: WfRel).
@@ -12,7 +10,7 @@ Section EAltSimDef.
   Variant ealt_sim_lfp' (gfp: J -> state Λₜ -> I -> state Λₛ -> Prop)
     : J -> state Λₜ -> I -> state Λₛ -> Prop :=
   | EAltBothFinal : ∀ j t i s,
-    are_final Φ t s -> ealt_sim_lfp' gfp j t i s
+    both_final Φ t s -> ealt_sim_lfp' gfp j t i s
 
   | EAltSourceStuck : ∀ j t i s,
     stuck Pₛ s -> ealt_sim_lfp' gfp j t i s

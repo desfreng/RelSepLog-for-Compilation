@@ -8,12 +8,12 @@ Module RTLNotations.
   Declare Custom Entry rtl_reg_list.
   Declare Custom Entry rtl_args.
 
-  Notation "<{{ c }}>" :=
+  Notation "<<{{ c }}>>" :=
     c (at level 0,
           c custom rtl_code at level 99,
-          format "'[v ' '<{{' '//' c '//' '}}>' ']'").
+          format "'[v ' '<<{{' '//' c '//' '}}>>' ']'").
 
-  Notation "<{ c }>" :=
+  Notation "<<{ c }>>" :=
     c (at level 0,
           c custom rtl_instr at level 99).
 
@@ -165,7 +165,7 @@ End RTLNotations.
 Module Test.
   Import RTLNotations.
 
-  Definition my_code : code := <{{
+  Definition my_code : code := <<{{
           1: nop -> 2;
           2: $1 := #32 -> 3;
           3: $1 := $2 -> 4;
@@ -175,9 +175,9 @@ Module Test.
           7: !1 := $2 -> 8;
           8: if $1 then goto 9 else goto 9;
           9: ret $1;
-      }}>.
+      }}>>.
 
-  Definition my_code_2 (r: reg) (n: node) (v: val) (op: op): code := <{{
+  Definition my_code_2 (r: reg) (n: node) (v: val) (op: op): code := <<{{
           (n): nop -> (n+1);
           (n+1): r := #v -> (n+2);
           (n+2): r := r -> (n+3);
@@ -188,5 +188,5 @@ Module Test.
           (n+7): !r := r -> (n+8);
           (n+8): if r then goto (n+9) else goto (n+9);
           (n+9): ret r;
-      }}>.
+      }}>>.
 End Test.

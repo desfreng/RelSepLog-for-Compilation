@@ -4,9 +4,7 @@ From Coinduction Require Import all.
 
 From RSL Require Import Commons.OrdTree.
 
-From RSL Require Import Simulations.Commons.
 From RSL Require Import Simulations.FreeSim.
-
 From RSL Require Import Simulations.Equiv.GSim.
 
 Section PROOF.

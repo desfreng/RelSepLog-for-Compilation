@@ -75,7 +75,14 @@ Section LangProp.
   Proof using Type. intros ? ? []. tauto. Qed.
 End LangProp.
 
-Tactic Notation "mixin" :=
+Section BiLang.
+  Context {Λₜ Λₛ: lang}.
+
+  Definition both_final (Φ: value Λₜ -> value Λₛ -> Prop) (t: state Λₜ) (s: state Λₛ) : Prop :=
+    ∃ vₜ vₛ, is_final t = Some vₜ ∧ is_final s = Some vₛ ∧ Φ vₜ vₛ.
+End BiLang.
+
+Ltac langmixin :=
   match goal with
   | [ Hf: is_final ?s = Some _, Hp: can_progress _ ?s |- _ ] =>
       exfalso; now apply (final_no_progress _ _ _ Hf Hp)
@@ -85,4 +92,6 @@ Tactic Notation "mixin" :=
       exfalso; now apply (final_not_stuck _ _ _ Hf Hs)
   | [ Hs: stuck ?P ?s, Hp: can_progress ?P ?s |- _ ] =>
       exfalso; now apply (progress_not_stuck _ _ Hp Hs)
+  | [ Hfin: both_final _ _ _ |- _ ] =>
+      destruct Hfin as (? & ? & ? & ? & ?); now langmixin
   end.

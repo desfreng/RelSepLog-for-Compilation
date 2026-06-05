@@ -17,7 +17,7 @@ Section RTLWP.
     fun ρ m n => safe P (uncurry Q) ([], State f pc ρ, m) n.
 
   Lemma wp_ret (Q: postcondition) f pc : ∀ r v,
-    f@pc is <{ ret r }> ->
+    f@pc is <<{ ret r }>> ->
     ⊢ ▷ (r ⇒ v ∧ ⌜Q v⌝ₘ) -> wp Q f pc.
   Proof using Type.
     intros r v Hpc ρ m [] H; [apply safe_init | ].
@@ -31,7 +31,7 @@ Section RTLWP.
   Qed.
 
   Lemma wp_nop Q f pc : ∀ pc',
-    f@pc is <{ nop -> pc' }> ->
+    f@pc is <<{ nop -> pc' }>> ->
     ⊢ (▷ wp Q f pc') -> wp Q f pc.
   Proof using Type.
     intros v Hpc ρ m [] Hwp; [apply safe_init | ].
@@ -41,7 +41,7 @@ Section RTLWP.
   Qed.
 
   Lemma wp_op Q f pc : ∀ dst op args pc' vals v,
-    f@pc is <{ dst := @op args -> pc' }> ->
+    f@pc is <<{ dst := @op args -> pc' }>> ->
     ⊢ (args ⇒ vals ∧
        ⌜eval_op op vals = Some v⌝ ∧
        ▷ ⟦dst ⇐ v⟧wp Q f pc') ->
@@ -55,7 +55,7 @@ Section RTLWP.
   Qed.
 
   Lemma wp_load Q f pc : ∀ dst src pc' addr v,
-    f@pc is <{ dst := !src -> pc' }> ->
+    f@pc is <<{ dst := !src -> pc' }>> ->
     ⊢ (src ⇒ addr ∧ addr ↦ v ∧ ▷ ⟦dst ⇐ v⟧ wp Q f pc') ->
     wp Q f pc.
   Proof using Type.
@@ -67,7 +67,7 @@ Section RTLWP.
   Qed.
 
   Lemma wp_store Q f pc : ∀ dst src pc' addr v,
-    f@pc is <{ !dst := src -> pc' }> ->
+    f@pc is <<{ !dst := src -> pc' }>> ->
     ⊢ (dst ⇒ addr ∧
        src ⇒ v ∧
        ▷ ⟦addr <- v⟧ wp Q f pc') ->
@@ -81,7 +81,7 @@ Section RTLWP.
   Qed.
 
   Lemma wp_cond Q f pc : ∀ cond ifso ifnot v,
-    f@pc is <{ if cond then goto ifso else goto ifnot }> ->
+    f@pc is <<{ if cond then goto ifso else goto ifnot }>> ->
     ⊢ (cond ⇒ v ∧
        if (v =? 0)%Z
        then ▷ wp Q f ifso
@@ -119,7 +119,7 @@ Section RTLWP.
   Qed.
 
   Lemma wp_call f pc Q : ∀ dst name args pc' vals fn Pre Post,
-    f@pc is <{ dst := @call name args -> pc' }> ->
+    f@pc is <<{ dst := @call name args -> pc' }>> ->
     ⊢ (args ⇒ vals ∧
        ⌜find_fun P name = Some fn⌝ ∧
        ⌜length (fn_regs fn) = length args⌝ ∧

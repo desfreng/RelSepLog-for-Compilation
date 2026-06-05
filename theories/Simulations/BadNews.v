@@ -43,13 +43,13 @@ Section FTest.
         | j t i i' s s' Hs ? IHs
         | j t i s Hprogress IHt
         | j j' t i i' s Hprogress ? Hgfp ]; intros Hj.
-      - destruct Hfinal as (? & ? & ? & ? & ?). mixin.
-      - inv Hloop. mixin.
+      - langmixin.
+      - inv Hloop. langmixin.
       - apply IHs.
         + assumption.
         + inv Hloop as [Hprogress Hloop']. now apply Hloop'.
         + assumption.
-      - mixin.
+      - langmixin.
       - subst. inv Hprogress.
     }
     assert (Htrue: ~fsim true t true s).
@@ -65,8 +65,8 @@ Section FTest.
         | j t i i' s s' Hs ? IHs
         | j t i s Hprogress IHt
         | j j' t i i' s Hltj Hlti Hgfp ]; intros Hj.
-      - destruct Hfinal as (? & ? & ? & ? & ?). mixin.
-      - inv Hloop. mixin.
+      - langmixin.
+      - inv Hloop. langmixin.
       - apply IHs.
         + assumption.
         + inv Hloop as [Hprogress Hloop']. now apply Hloop'.
@@ -78,7 +78,7 @@ Section FTest.
           * apply fsim_roll.
             eapply FSourceSteps; eassumption.
         + assumption.
-      - mixin.
+      - langmixin.
       - inv Hltj. inv Hlti. now apply Hfalse.
     }
     specialize (Hcoind t s). tauto.

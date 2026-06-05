@@ -2,16 +2,14 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
-
 Section ISimDef.
   Context {Λₜ Λₛ: lang}.
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
   Inductive isim_lfp'
     (gfp: state Λₜ -> state Λₛ -> Prop) : state Λₜ -> state Λₛ-> Prop :=
-  | IBothFinal : ∀ t s,
-    are_final Φ t s -> isim_lfp' gfp t s
+  | IRelated : ∀ t s,
+    both_final Φ t s -> isim_lfp' gfp t s
 
   | ISourceStuck : ∀ t s,
     stuck Pₛ s -> isim_lfp' gfp t s

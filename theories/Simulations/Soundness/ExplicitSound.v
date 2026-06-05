@@ -3,7 +3,6 @@ From RSL Require Import Prelude.
 From Stdlib Require Import Classical.
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
 From RSL Require Import Simulations.Behaviors.
 From RSL Require Import Simulations.ExplicitSim.
 
@@ -55,9 +54,9 @@ Section ESimSound.
         exists b. split; auto.
         eapply IsSteping; now eauto.
       + (* Target Steps -> contradiction *)
-        mixin.
+        langmixin.
       + (* Both Steps -> contradiction *)
-        mixin.
+        langmixin.
     - (* t steps *)
       (* Induction on the stuttering index *)
       induction i as [i IHi] using (well_founded_induction wf).
@@ -70,7 +69,7 @@ Section ESimSound.
                         | i t s Hprogress IH
                         | i t s Hprogress IH ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & ? & ? & ? & ?). mixin.
+        langmixin.
       + (* Source Stuck *)
         exists Undef. split; now constructor.
       + (* Source Steps, use IH on stuttering index *)
@@ -105,9 +104,8 @@ Section ESimSound.
                       | i t s Hprogress IHt
                       | i t s Hprogress IHt ].
     - (* Both Final: Contradiction *)
-      destruct Hfinal as (vₜ & vₛ & Ht_fin & Hs_fin & HPhi).
       apply diverges_unroll in Hdiv. destruct Hdiv as (t' & Ht_step & _).
-      mixin.
+      langmixin.
     - (* Source Stuck *)
       left. exact Hstuck.
     - (* Source Steps *)
@@ -178,17 +176,16 @@ Section ESimSound.
                         | i t s Hprogress _
                         | i t s Hprogress _ ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & vₛ & Ht & ? & ?).
-        mixin.
+        langmixin.
       + (* Source Stuck -> trivial *)
         now constructor.
       + (* Source Steps, use IH on progress index *)
         eapply IsSteping; eauto.
         eapply IHi; now eauto.
       + (* Target Steps -> contradiction *)
-        mixin.
+        langmixin.
       + (* Both Steps -> contradiction *)
-        mixin.
+        langmixin.
     - (* t steps *)
       (* Induction on the stuttering index *)
       induction i as [i IHi] using (well_founded_induction wf).
@@ -201,7 +198,7 @@ Section ESimSound.
                         | i t s Hprogress Ht
                         | i t s Hprogress Ht ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & ? & ? & ? & ?). mixin.
+        langmixin.
       + (* Source Stuck -> trivial *)
         now constructor.
       + (* Source Steps, use IH on progress index *)

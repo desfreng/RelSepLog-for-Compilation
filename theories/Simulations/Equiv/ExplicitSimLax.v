@@ -2,16 +2,14 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
-
 Section ESimLaxDef.
   Context {Λₜ Λₛ: lang}.
   Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
 
   Inductive esim_lax_lfp' (gfp: W -> state Λₜ -> state Λₛ -> Prop)
     : W -> state Λₜ -> state Λₛ -> Prop :=
-  | ELaxBothFinal : ∀ i t s,
-    are_final Φ t s ->
+  | ELaxRelated : ∀ i t s,
+    both_final Φ t s ->
     esim_lax_lfp' gfp i t s
 
   | ELaxSourceStuck : ∀ i t s,
@@ -39,7 +37,7 @@ Section ESimLaxDef.
   Next Obligation.
     intros gfp gfp' Hgfp i t s Hsim.
     inv Hsim as [ | | | ? ? ? Hprogress Ht |  ? ? ? Hprogress Hboth].
-    - eapply ELaxBothFinal; eassumption.
+    - eapply ELaxRelated; eassumption.
     - eapply ELaxSourceStuck; eassumption.
     - eapply ELaxSourceSteps; eauto.
       now apply Hgfp.

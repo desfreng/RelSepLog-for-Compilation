@@ -50,9 +50,9 @@ Section ISimSound.
         exists b. split; auto.
         eapply IsSteping; now eauto.
       + (* Target Steps -> contradiction *)
-        mixin.
+        langmixin.
       + (* Both Steps -> contradiction *)
-        mixin.
+        langmixin.
     - (* t steps *)
       apply isim_unroll in Hsim.
       induction Hsim as [ t s Hfinal
@@ -61,7 +61,7 @@ Section ISimSound.
                         | t s Hprogress Hsim
                         | t s Hprogress Hgfp ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & ? & ? & ? & ?). mixin.
+        langmixin.
       + (* Source Stuck *)
         exists Undef. split; now constructor.
       + (* Source Steps, use IH on s *)
@@ -93,9 +93,8 @@ Section ISimSound.
                       | t s Hprog Hsteps IH
                       | t s Hprog Hsteps ].
     - (* BothFinal: Contradiction *)
-      destruct Hfin as (vₜ & vₛ & Ht_fin & Hs_fin & HPhi).
       apply diverges_unroll in Hdiv. destruct Hdiv as (t' & Ht_step & _).
-      mixin.
+      langmixin.
     - (* SourceStuck *)
       left. exact Hstuck.
     - (* Source Steps *)
@@ -164,15 +163,16 @@ Section ISimSound.
                         | t s Hprogress _
                         | t s Hprogress _ ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & vₛ & Ht & ? & ?).
-        mixin.
+        langmixin.
       + (* Source Stuck -> trivial *)
         now constructor.
       + (* Target Stutter, use IH on s *)
         eapply IsSteping; eauto.
         now apply IHs.
-      + (* Source Stutter -> contradiction *) mixin.
-      + (* Both Steps -> contradiction *) mixin.
+      + (* Source Stutter -> contradiction *)
+        langmixin.
+      + (* Both Steps -> contradiction *)
+        langmixin.
     - (* t steps *)
       apply isim_unroll in Hsim.
       induction Hsim as [ t s Hfinal
@@ -181,7 +181,7 @@ Section ISimSound.
                         | t s Hprogress Hsim
                         | t s Hprogress Hgfp ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & ? & ? & ? & ?). mixin.
+        langmixin.
       + (* Source Stuck -> trivial *)
         now constructor.
       + (* Target Stutter, use IH on s *)

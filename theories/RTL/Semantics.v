@@ -32,43 +32,43 @@ Definition rtl_state : Type := list stackframe * pcstate * memory.
 
 Inductive rtl_step (P: program) : rtl_state -> rtl_state -> Prop :=
 | exec_Inop: ∀ σ m ρ f pc pc',
-  f@pc is <{ nop -> pc' }> ->
+  f@pc is <<{ nop -> pc' }>> ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
 
 | exec_Iret: forall σ m ρ f pc r v,
-  f@pc is <{ ret r }> ->
+  f@pc is <<{ ret r }>> ->
   get_reg ρ r = v ->
   rtl_step P (σ, State f pc ρ, m) (σ, ReturnState v, m)
 
 | exec_Iop: forall σ m ρ f pc op args dst pc' ρ' v vals,
-  f@pc is <{ dst := @op args -> pc' }> ->
+  f@pc is <<{ dst := @op args -> pc' }>> ->
   map (get_reg ρ) args = vals ->
   eval_op op vals = Some v ->
   set_reg dst v ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
 | exec_Iload: forall σ m ρ f pc dst src pc' ρ' addr v,
-  f@pc is <{ dst := !src -> pc' }> ->
+  f@pc is <<{ dst := !src -> pc' }>> ->
   get_reg ρ src = addr ->
   get_at addr m = Some v ->
   set_reg dst v ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
 | exec_Istore: forall σ m ρ f pc dst src pc' m' addr v,
-  f@pc is <{ !dst := src -> pc' }> ->
+  f@pc is <<{ !dst := src -> pc' }>> ->
   get_reg ρ dst = addr ->
   get_reg ρ src = v ->
   set_at addr v m = Some m' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m')
 
 | exec_Icond: forall  σ m ρ f pc cond ifso ifnot v pc',
-  f@pc is <{ if cond then goto ifso else goto ifnot }> ->
+  f@pc is <<{ if cond then goto ifso else goto ifnot }>> ->
   get_reg ρ cond = v ->
   pc' = (if Z.eqb v 0 then ifso else ifnot) ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
 
 | exec_Icall: forall σ m ρ f pc dst sig args pc' σ' fn vals,
-  f@pc is <{ dst := @call sig args -> pc' }> ->
+  f@pc is <<{ dst := @call sig args -> pc' }>> ->
   find_fun P sig = Some fn ->
   map (get_reg ρ) args = vals ->
   Stackframe dst f pc' ρ :: σ = σ' ->

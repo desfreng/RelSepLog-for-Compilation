@@ -3,7 +3,6 @@ From RSL Require Import Prelude.
 From Stdlib Require Import Classical.
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
 From RSL Require Import Simulations.Behaviors.
 From RSL Require Import Simulations.FreeSim.
 
@@ -23,7 +22,7 @@ Section FSimSound.
     (fsim J I Pₜ Pₛ Φ j t i s)
       (at level 0, i at level 0, j at level 0, no associativity).
 
-  Lemma terminating_fsim Φ : ∀ t j s i vₜ,
+  Lemma terminating_fsim Φ: ∀ t j s i vₜ,
     ⟨t, j⟩ ≲ ⟨s, i⟩ {{ Φ }} ->
     Terminating vₜ ∈ t ->
     ∃ b, b ∈ s ∧ Terminating vₜ ⊑{Φ} b.
@@ -57,7 +56,7 @@ Section FSimSound.
         exists b. split; auto.
         eapply IsSteping; now eauto.
       + (* Target Steps -> contradiction *)
-        mixin.
+        langmixin.
       + (* Coind -> use IH on progress index *)
         eapply IHi; now eauto.
     - (* t steps *)
@@ -72,7 +71,7 @@ Section FSimSound.
                         | j t i s Hprogress IHt
                         | j j' t i i' s Hprogress ? Hgfp ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & ? & ? & ? & ?). mixin.
+        langmixin.
       + (* Source Stuck *)
         exists Undef. split; now constructor.
       + (* Source Steps, use IH on s *)
@@ -110,9 +109,8 @@ Section FSimSound.
                       | j t i s Hprogress IHt
                       | j j' t i i' s Hprogress ? Hgfp ].
     - (* BothFinal: Contradiction *)
-      destruct Hfinal as (vₜ & vₛ & Ht_fin & Hs_fin & HPhi).
       apply diverges_unroll in Hdiv. destruct Hdiv as (t' & Hstep & _).
-      mixin.
+      langmixin.
     - (* SourceStuck *)
       left. exact Hstuck.
     - (* Source Steps *)
@@ -187,15 +185,14 @@ Section FSimSound.
                         | j t i s Hprogress IHt
                         | j j' t i i' s Hprogress ? Hgfp ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & vₛ & Ht & ? & ?).
-        mixin.
+        langmixin.
       + (* Source Stuck -> trivial *)
         now constructor.
       + (* Source Steps, use IH on s *)
         eapply IsSteping; eauto.
         now apply IHs.
       + (* Target Steps -> contradiction *)
-        mixin.
+        langmixin.
       + (* Coinductive case, use IH on progress index *)
         eapply IHi; now eauto.
     - (* t steps *)
@@ -210,7 +207,7 @@ Section FSimSound.
                         | j t i s Hprogress IHt
                         | j j' t i i' s Hprogress ? Hgfp ].
       + (* Both Final -> contradiction *)
-        destruct Hfinal as (? & ? & ? & ? & ?). mixin.
+        langmixin.
       + (* Source Stuck -> trivial *)
         now constructor.
       + (* Source Steps, use IH on s *)

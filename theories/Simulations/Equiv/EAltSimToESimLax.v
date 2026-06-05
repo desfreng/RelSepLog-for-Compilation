@@ -2,7 +2,6 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
 From RSL Require Import Simulations.Equiv.ExplicitSimLax.
 From RSL Require Import Simulations.Equiv.EAltSim.
 

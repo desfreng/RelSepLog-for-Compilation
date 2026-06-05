@@ -28,7 +28,7 @@ Section Play.
       fn_name := "test"%string;
       fn_regs := [];
       fn_entrypoint := 0;
-      fn_code := <{{
+      fn_code := <<{{
             0: x := #0 -> 1;
             1: one := #1 -> 2;
             2: ten := #10 -> 3;
@@ -36,7 +36,7 @@ Section Play.
             4: if diff then goto 6 else goto 5;
             5: x := x + one -> 3;
             6: ret x;
-        }}>;
+        }}>>;
       fn_regs_no_dup := eq_refl;
     |}.
 

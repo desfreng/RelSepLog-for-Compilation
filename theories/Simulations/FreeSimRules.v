@@ -2,7 +2,6 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Commons.
 From RSL Require Import Simulations.FreeSim.
 From RSL Require Import Simulations.Equiv.
 
@@ -28,7 +27,7 @@ Section FSimRules.
 
   Lemma final (C: Chain fsim_lfp) Φ:
     ∀ j t i s,
-    are_final Φ t s ->
+    both_final Φ t s ->
     fsim_lfp (elem C) Φ j t i s.
   Proof using Type.
     apply tower.
