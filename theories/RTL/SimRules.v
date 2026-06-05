@@ -48,6 +48,11 @@ Section Rules.
     (hoare C Γ P%rlogic ft pct j i fs pcs Q%rlogic)
       (at level 1, ft at level 0, fs at level 0, no associativity).
 
+  Notation
+    "C '|' Γ '⊢' '{{' '}}' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" :=
+    (hoare C Γ emp%rlogic ft pct j i fs pcs Q%rlogic)
+      (at level 1, ft at level 0, fs at level 0, no associativity).
+
   Lemma both_ret C Γ (Φ: post)  fₜ pcₜ j i fₛ pcₛ :
     ∀ rₜ vₜ rₛ vₛ,
     fₜ@pcₜ is <<{ ret rₜ }>> ->
@@ -90,8 +95,8 @@ Section Rules.
   Lemma source_nop C Γ Φ j fₜ pcₜ i fₛ pcₛ :
     ∀ pc,
     fₛ@pcₛ is <<{ nop -> pc }>> ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Φ }} ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
+    C | Γ ⊢ {{ }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Φ }} ->
+    C | Γ ⊢ {{ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
   Proof using Type.
     intros pc Hpc H.
     intros Ψ mt1 ms1 ? ? Hpre mt2 ms2 ? ? Hpost.
@@ -107,8 +112,8 @@ Section Rules.
   Lemma target_nop C Γ Φ j fₜ pcₜ i fₛ pcₛ :
     ∀ pc,
     fₜ@pcₜ is <<{ nop -> pc }>> ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Φ }} ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
+    C | Γ ⊢ {{ }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Φ }} ->
+    C | Γ ⊢ {{ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
   Proof using Type.
     intros pc Hpc H.
     intros Ψ mt1 ms1 ? ? Hpre mt2 ms2 ? ? Hpost.
@@ -127,8 +132,8 @@ Section Rules.
     fₛ@pcₛ is <<{ dst := @op regs -> pc }>> ->
     eval_op op args = Some v ->
     Γ @ regs ⇒ₛ args ->
-    C | ⟦ dst ⇐ₛ v ⟧Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Φ }} ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
+    C | ⟦ dst ⇐ₛ v ⟧Γ ⊢ {{ }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Φ }} ->
+    C | Γ ⊢ {{  }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
   Proof using Type.
     intros pc dst op regs args v Hpc Hv Hargs H.
     intros Ψ mt1 ms1 ? ? Hpre mt2 ms2 ? ? Hpost.
@@ -146,8 +151,8 @@ Section Rules.
     fₜ@pcₜ is <<{ dst := @op regs -> pc }>> ->
     eval_op op args = Some v ->
     Γ @ regs ⇒ₜ args ->
-    C | ⟦ dst ⇐ₜ v ⟧Γ ⊢ {{ ⌜⌝ }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Φ }} ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
+    C | ⟦ dst ⇐ₜ v ⟧Γ ⊢ {{ }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Φ }} ->
+    C | Γ ⊢ {{ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
   Proof using Type.
     intros pc dst op regs args v Hpc Hv Hargs H.
     intros Ψ mt1 ms1 ? ? Hpre mt2 ms2 ? ? Hpost.
@@ -288,8 +293,8 @@ Section Rules.
     fₛ@pcₛ is <<{ if reg then goto pc_true else goto pc_false }>> ->
     Γ @ reg ⇒ₛ v ->
     (if (v =? 0)%Z then pc_true else pc_false) = pc ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Φ }} ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
+    C | Γ ⊢ {{ }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Φ }} ->
+    C | Γ ⊢ {{ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
   Proof using Type.
     intros pc_true pc_false reg v pc Hpc Hv Hnext_pc H.
     intros Ψ ? ? ? ? Hpre ? ? ? ? Hpost. simp.
@@ -307,8 +312,8 @@ Section Rules.
     fₜ@pcₜ is <<{ if reg then goto pc_true else goto pc_false }>> ->
     Γ @ reg ⇒ₜ v ->
     (if (v =? 0)%Z then pc_true else pc_false) = pc ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pc <{j, i}= fₛ @ pcₛ {{ Φ }} ->
-    C | Γ ⊢ {{ ⌜⌝ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
+    C | Γ ⊢ {{ }} fₜ @ pc <{j, i}= fₛ @ pcₛ {{ Φ }} ->
+    C | Γ ⊢ {{ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Φ }}.
   Proof using Type.
     intros pc_true pc_false reg v pc Hpc Hv Hnext_pc H.
     intros Ψ ? ? ? ? Hpre ? ? ? ? Hpost. simp.
