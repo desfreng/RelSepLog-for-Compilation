@@ -13,50 +13,81 @@ Definition get_reg (ρ: regbank) (r: reg) : val :=
   | None => 0%Z (* Default val *)
   end.
 
-Definition update_reg (ρ: regbank) (r: reg) (f: val -> val) : regbank :=
-  let old := get_reg ρ r in <[r := f old]>ρ.
+Definition set_reg (ρ: regbank) (r: reg) (v: val) : regbank :=
+  <[r := v]>ρ.
 
-Canonical Structure regbank_ctx : LEnv :=
-  {|
-    get_data ρ r := Some $ get_reg ρ r;
-    update_data ρ r f := Some $ update_reg ρ r f;
-  |}.
+(** ** Logical Connectives  *)
 
-Definition set_reg (r: reg) (v: val) (ρ: regbank) : regbank :=
-  update_reg ρ r (fun _ => v).
+Class LogicRegisterAssert (R V : Type) :=
+  regbank_assert : regbank -> R -> V -> Prop.
 
-(* Fixpoint init_regs (vl: list val) (rl: list reg) : regbank := *)
-(*   match rl, vl with *)
-(*   | r :: rs, v :: vs => <[r := v]>(init_regs vs rs) *)
-(*   | _, _ => ∅ *)
-(*   end. *)
+Instance regbank_assert_single : LogicRegisterAssert reg val :=
+  fun ρ key val => get_reg ρ key = val.
 
-(* Lemma get_regs_insert : ∀ regs r v ρ, *)
-(*   r ∉ regs -> *)
-(*   Forall (fun reg => get_reg (<[r := v]> ρ) reg = get_reg ρ reg) regs. *)
-(* Proof using Type. *)
-(*   intros regs r v ρ. *)
-(*   intros Hnotin. *)
-(*   induction regs as [ | r' regs IH]; constructor. *)
-(*   - unfold get_reg. rewrite (lookup_insert_ne ρ). *)
-(*     + reflexivity. *)
-(*     + intros ->. apply Hnotin. left. *)
-(*   - apply IH. intros Hin. apply Hnotin. now right. *)
-(* Qed. *)
+Instance regbank_assert_list : LogicRegisterAssert (list reg) (list val) :=
+  fun ρ keys vals => map (get_reg ρ) keys = vals.
 
-(* Lemma get_regs_init_regs : ∀ regs args, *)
-(*   NoDup regs -> *)
-(*   length args = length regs -> *)
-(*   get_regs (init_regs args regs) regs = args. *)
-(* Proof using Type. *)
-(*   intros regs args Hnodup. *)
-(*   revert args. *)
-(*   induction Hnodup as [|r regs Hnotin Hnodup IH]; intros args Hlen. *)
-(*   - destruct args; [reflexivity | discriminate Hlen]. *)
-(*   - destruct args as [|v args]; [discriminate Hlen |]. *)
-(*     simpl in Hlen. injection Hlen as Hlen'. *)
-(*     simpl. f_equal. *)
-(*     + unfold get_reg. now rewrite (lookup_insert_eq (init_regs args regs)). *)
-(*     + rewrite get_regs_insert by exact Hnotin. *)
-(*       apply IH. exact Hlen'. *)
-(* Qed. *)
+Notation "ρ @ r '⇒' v" :=
+  (regbank_assert ρ r%nat v%Z)
+    (at level 60, no associativity).
+
+Definition regbank_same (ρ1: regbank) (r1: reg) (ρ2: regbank) (r2: reg) : Prop :=
+  ∃ v, ρ1 @ r1 ⇒ v ∧ ρ2 @ r2 ⇒ v.
+
+Notation "ρ1 @ r1 '<=>' ρ2 @ r2" :=
+  (regbank_same ρ1 r1%nat ρ2 r2%nat)
+    (at level 60, ρ2 at next level, no associativity).
+
+Notation "'⟦' r '⇐' v '⟧' ρ" :=
+  (set_reg ρ r%nat v%Z)
+    (at level 20, ρ at level 20, right associativity).
+
+Lemma regbank_assert_unfold ρ :
+  ∀ r v tl tv,
+  ρ @ r ⇒ v ->
+  ρ @ tl ⇒ tv ->
+  ρ @ (r :: tl) ⇒ (v :: tv).
+Proof.
+  intros r v tl tv.
+  unfold regbank_assert, regbank_assert_single, regbank_assert_list.
+  intros Hv Htl. simpl.
+  f_equal.
+  - assumption.
+  - eassumption.
+Qed.
+
+Lemma regbank_assert_nil ρ :
+  ρ @ [] ⇒ [].
+Proof. now unfold regbank_assert, regbank_assert_list. Qed.
+
+Lemma regbank_set_discard ρ :
+  ∀ r1 r2 v1 v2,
+  r2 ≠ r1 ->
+  ρ @ r1 ⇒ v1 ->
+  ⟦r2 ⇐ v2⟧ρ @ r1 ⇒ v1.
+Proof.
+  intros r1 r2 v1 v2 Hneq.
+  unfold regbank_assert, regbank_assert_single, set_reg, get_reg.
+  intros Hr.
+  unfold regbank in *.
+  now rewrite lookup_insert_ne.
+Qed.
+
+Lemma regbank_set_use ρ :
+  ∀ r v,
+  ⟦r ⇐ v⟧ρ @ r ⇒ v.
+Proof.
+  intros r v.
+  unfold regbank_assert, regbank_assert_single, set_reg, get_reg.
+  unfold regbank in *.
+  now rewrite lookup_insert_eq.
+Qed.
+
+Lemma regbank_never_empty ρ:
+  ∀ r : reg,
+  ∃ v, ρ @ r ⇒ v.
+Proof.
+  intros r.
+  unfold regbank_assert, regbank_assert_single, get_reg.
+  destruct (ρ !! r); now eexists.
+Qed.

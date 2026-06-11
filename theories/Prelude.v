@@ -1,7 +1,6 @@
 From stdpp Require Export prelude.
 
 From RSL Require Export Prelude.Language.
-From RSL Require Export Prelude.LogicEnv.
 From RSL Require Export Prelude.Memory.
 From RSL Require Export Prelude.Utils.
 From RSL Require Export Prelude.NoDup.

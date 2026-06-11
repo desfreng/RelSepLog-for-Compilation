@@ -112,6 +112,8 @@ Section FSimDef.
 
   Definition fsim_lfp := {| body := fsim_lfp' |}.
 
+  Definition fsim := (gfp fsim_lfp).
+
   Lemma fsim_unroll Φ j t i s :
     gfp fsim_lfp Φ j t i s -> fsim_lfp' (gfp fsim_lfp) Φ j t i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
@@ -119,8 +121,6 @@ Section FSimDef.
   Lemma fsim_roll Φ j t i s :
     fsim_lfp' (gfp fsim_lfp) Φ j t i s -> gfp fsim_lfp Φ j t i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
-
-  Definition fsim := gfp fsim_lfp.
 
   Lemma idx_mono (R: Chain fsim_lfp) Φ:
     ∀ j i t s,

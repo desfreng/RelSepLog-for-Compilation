@@ -96,7 +96,7 @@ Definition logic_assert_mem (addr: val) (v: val) : logic :=
   fun _ m _ => get_at addr m = Some v.
 
 Definition logic_set_reg (r : reg) (v : val) (P : logic) : logic :=
-  fun ρ m n => P (set_reg r v ρ) m n.
+  fun ρ m n => P (set_reg ρ r v) m n.
 
 Notation "'⟦' l '<-' v '⟧' P" :=
   (logic_set_mem l%positive v%Z P)

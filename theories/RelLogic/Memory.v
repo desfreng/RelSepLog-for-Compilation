@@ -1,76 +1,48 @@
 From RSL Require Import Prelude.
+From RSL Require Import RelLogic.Logic.
 
-From stdpp Require Import gmap.
-From RSL Require Import Commons.RegisterBank.
+(** ** Memory Connectives *)
 
-Definition rbank : Type := regbank * regbank.
+Section MemoryOp.
+  Definition rlogic_mem_t_assert addr v : rlogic :=
+    fun mt _ =>
+      ∃ loc, val_to_loc addr = Some loc ∧ mt = {[loc := v]}.
 
-Class RLogicTargetAssert (R V : Type) :=
-  rbank_assert_t : rbank -> R -> V -> Prop.
+  Definition rlogic_mem_s_assert addr v : rlogic :=
+    fun _ ms =>
+      ∃ loc, val_to_loc addr = Some loc ∧ ms = {[loc := v]}.
 
-Instance rbank_assert_t_single : RLogicTargetAssert _ _ :=
-  fun '(ρₜ, _) key val => get_reg ρₜ key = val.
+  Definition rlogic_mem_same_at P addrt addrs : rlogic :=
+    fun mt ms =>
+      ∃ loct locs vt vs,
+        val_to_loc addrt = Some loct ∧
+        val_to_loc addrs = Some locs ∧
+        mt = {[loct := vt]} ∧
+        ms = {[locs := vs]} ∧
+        P vt vs.
 
-Instance rbank_assert_t_list : RLogicTargetAssert (list _) (list _) :=
-  fun '(ρₜ, _) keys vals => map (get_reg ρₜ) keys = vals.
+End MemoryOp.
 
-Definition rbank_update_t '((ρₜ, ρₛ) : rbank) key f : rbank :=
-  (update_reg ρₜ key f, ρₛ).
+Notation "l '→ₜ' v" :=
+  (rlogic_mem_t_assert l%positive v%Z)
+    (at level 70, no associativity, format "l →ₜ v") : rlogic_scope.
 
-Definition rbank_set_t Γ key val : rbank :=
-  rbank_update_t Γ key (fun _ => val).
+Notation "l '→ₛ' v" :=
+  (rlogic_mem_s_assert l%positive v%Z)
+    (at level 70, no associativity, format "l →ₛ v") : rlogic_scope.
 
-Class RLogicSourceAssert (R V : Type) :=
-  rbank_assert_s : rbank -> R -> V -> Prop.
+Notation "addrt 'ₜ⟨' P '⟩ₛ' addrs" :=
+  (rlogic_mem_same_at P addrt%positive addrs%positive)
+    (at level 70, no associativity) : rlogic_scope.
 
-Instance rbank_assert_s_single : RLogicSourceAssert _ _ :=
-  fun '(_, ρₛ) key val => get_reg ρₛ key = val.
+Notation "addrs 'ₛ⟨' P '⟩ₜ' addrt" :=
+  (rlogic_mem_same_at P addrt%positive addrs%positive)
+    (at level 70, no associativity) : rlogic_scope.
 
-Instance rbank_assert_s_list : RLogicSourceAssert (list _) (list _) :=
-  fun '(_, ρₛ) keys vals => map (get_reg ρₛ) keys = vals.
+Notation "addrt 'ₜ~ₛ' addrs" :=
+  (rlogic_mem_same_at eq addrt%positive addrs%positive)
+    (at level 70, no associativity) : rlogic_scope.
 
-Definition rbank_update_s '((ρₜ, ρₛ) : rbank) key f : rbank :=
-  (ρₜ, update_reg ρₛ key f).
-
-Definition rbank_set_s Γ key val : rbank :=
-  rbank_update_s Γ key (fun _ => val).
-
-Notation "Γ @ r '⇒ₜ' v" :=
-  (rbank_assert_t Γ r%nat v%Z)
-    (at level 60, no associativity).
-
-Notation "Γ @ r '⇒ₛ' v" :=
-  (rbank_assert_s Γ r%nat v%Z)
-    (at level 60, no associativity).
-
-Notation "'⟦' r '⇐ₜ' v '⟧' Γ" :=
-  (rbank_set_t Γ r%nat v%Z)
-    (at level 20, Γ at level 20, right associativity).
-
-Notation "'⟦' r '⇐ₛ' v '⟧' Γ" :=
-  (rbank_set_s Γ r%nat v%Z)
-    (at level 20, Γ at level 20, right associativity).
-
-Notation "'⟦' r '⇐ₜ' 'λ' v '.' f '⟧' Γ" :=
-  (rbank_update_t Γ r%nat (fun v => f))
-    (at level 20, v binder, Γ at level 20, right associativity).
-
-Notation "'⟦' r '⇐ₛ' 'λ' v '.' f '⟧' Γ" :=
-  (rbank_update_s Γ r%nat (fun v => f))
-    (at level 20, v binder, Γ at level 20, right associativity).
-
-Notation "'⟦' r '⇐ₜ' 'fun' v '.' f '⟧' Γ" :=
-  (rbank_update_t Γ r%nat (fun v => f))
-    (at level 20, v binder, Γ at level 20, right associativity).
-
-Notation "'⟦' r '⇐ₛ' 'fun' v '.' f '⟧' Γ" :=
-  (rbank_update_s Γ r%nat (fun v => f))
-    (at level 20, v binder, Γ at level 20, right associativity).
-
-Notation "'⟦' rt '⇐ₜ' vt ',' rs '⇐ₛ' vs '⟧' Γ" :=
-  (rbank_update_t (rbank_update_s Γ rs%nat vs%Z) rt%nat vt%Z)
-    (at level 20, Γ at level 20, right associativity).
-
-Notation "'⟦' rs '⇐ₛ' vs ',' rt '⇐ₜ' vt '⟧' Γ" :=
-  (rbank_update_t (rbank_update_s Γ rs%nat vs%Z) rt%nat vt%Z)
-    (at level 20, Γ at level 20, right associativity).
+Notation "addrs 'ₛ~ₜ' addrt" :=
+  (rlogic_mem_same_at eq addrt%positive addrs%positive)
+    (at level 70, no associativity) : rlogic_scope.

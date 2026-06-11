@@ -44,14 +44,14 @@ Inductive rtl_step (P: program) : rtl_state -> rtl_state -> Prop :=
   f@pc is <<{ dst := @op args -> pc' }>> ->
   map (get_reg ρ) args = vals ->
   eval_op op vals = Some v ->
-  set_reg dst v ρ = ρ' ->
+  set_reg ρ dst v = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
 | exec_Iload: forall σ m ρ f pc dst src pc' ρ' addr v,
   f@pc is <<{ dst := !src -> pc' }>> ->
   get_reg ρ src = addr ->
   get_at addr m = Some v ->
-  set_reg dst v ρ = ρ' ->
+  set_reg ρ dst v = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
 | exec_Istore: forall σ m ρ f pc dst src pc' m' addr v,
@@ -80,7 +80,7 @@ Inductive rtl_step (P: program) : rtl_state -> rtl_state -> Prop :=
   rtl_step P (σ, CallState f args, m) (σ, State f (fn_entrypoint f) ρ, m)
 
 | exec_return: forall σ m ρ f pc dst v ρ',
-  set_reg dst v ρ = ρ' ->
+  set_reg ρ dst v = ρ' ->
   rtl_step P (Stackframe dst f pc ρ :: σ, ReturnState v, m) (σ, State f pc ρ', m)
 .
 
@@ -173,7 +173,7 @@ Section SemProp.
       (∃ m1 m2 v m'',
           n = 1 + m1 + m2
           ∧ P ⊨ ([], CallState fn args, m) -{m1}> ([], ReturnState v, m'')
-          ∧ P ⊨ ([], State f pc (set_reg res v ρ), m'') -{m2}> (σ, t, m')
+          ∧ P ⊨ ([], State f pc (set_reg ρ res v), m'') -{m2}> (σ, t, m')
       ).
   Proof using Type.
     intros n.

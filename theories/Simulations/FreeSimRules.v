@@ -13,10 +13,12 @@ Section FSimRules.
   Abbreviation fsim := (fsim J I Pₜ Pₛ).
   Abbreviation fsim_lfp := (fsim_lfp J I Pₜ Pₛ).
 
-  Lemma fsim_in_chain Φ:
+  Implicit Types (C: Chain fsim_lfp).
+
+  Lemma fsim_in_chain Post:
     ∀ j t i s,
-    (∀ R : Chain fsim_lfp, fsim_lfp (elem R) Φ j t i s) ->
-    fsim Φ j t i s.
+    (∀ C, fsim_lfp (elem C) Post j t i s) ->
+    fsim Post j t i s.
   Proof using Type.
     intros j t i s Hr.
     unfold fsim.
@@ -25,42 +27,42 @@ Section FSimRules.
     apply (b_chain C), Hr.
   Qed.
 
-  Lemma final (C: Chain fsim_lfp) Φ:
+  Lemma final C Post:
     ∀ j t i s,
-    both_final Φ t s ->
-    fsim_lfp (elem C) Φ j t i s.
+    both_final Post t s ->
+    elem C Post j t i s.
   Proof using Type.
     apply tower.
     { intros P Hp j t i s H Q Hq. eapply Hp; now eauto. }
     intros C' CIH j t i s H. econstructor; now eauto.
   Qed.
 
-  Lemma stuck (C: Chain fsim_lfp) Φ:
+  Lemma stuck C Post:
     ∀ j t i s,
     stuck Pₛ s ->
-    fsim_lfp (elem C) Φ j t i s.
+    elem C Post j t i s.
   Proof using Type.
     apply tower.
     { intros P Hp j t i s H Q Hq. eapply Hp; now eauto. }
     intros C' CIH j t i s H. econstructor; now eauto.
   Qed.
 
-  Lemma source_step (C: Chain fsim_lfp) Φ:
+  Lemma source_step C Post:
     ∀ j t i i' s s',
     Pₛ ⊨ s ->> s' ->
-    fsim_lfp (elem C) Φ j t i' s' ->
-    fsim_lfp (elem C) Φ j t i s.
+    elem C Post j t i' s' ->
+    elem C Post j t i s.
   Proof using Type.
     apply tower.
     { intros P Hp j t i i' s s' Hstep H Q Hq. eapply Hp; now eauto. }
     intros C' CIH j t i i' s s' Hstep H. econstructor; now eauto.
   Qed.
 
-  Lemma target_step (C: Chain fsim_lfp) Φ:
+  Lemma target_step C Post:
     ∀ j t i s,
     can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j', fsim_lfp (elem C) Φ j' t' i s) ->
-    fsim_lfp (elem C) Φ j t i s.
+    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j', elem C Post j' t' i s) ->
+    elem C Post j t i s.
   Proof using Type.
     apply tower.
     { intros P Hp j t i s Hprogesss H Q Hq.
@@ -70,12 +72,12 @@ Section FSimRules.
     intros C' CIH j t i s Hprogress Ht. econstructor; now eauto.
   Qed.
 
-  Lemma progress_step (C: Chain fsim_lfp) Φ:
+  Lemma progress_step C Post:
     ∀ j j' t i i' s,
     j' ⊏ j ->
     i' ⊏ i ->
-    fsim_lfp (elem C) Φ j' t i' s ->
-    fsim_lfp (elem C) Φ j t i s.
+    elem C Post j' t i' s ->
+    elem C Post j t i s.
   Proof using Type.
     apply tower.
     { intros P Hp j j' t i i' s Ht Hs H Q Hq.
@@ -85,22 +87,82 @@ Section FSimRules.
     now apply (b_chain C').
   Qed.
 
-  Lemma coind (C: Chain fsim_lfp) Φ:
-    ∀ t s,
-    (∀ C': Chain fsim_lfp,
-       ∀ j i,
-       (∀ i' j', i ⊏ i' -> j ⊏ j' -> fsim_lfp (elem C') Φ j' t i' s) ->
-       fsim_lfp (elem C') Φ j t i s) ->
-    ∀ j i, fsim_lfp (elem C) Φ j t i s.
+  Lemma coind_weak C Post:
+    ∀ j t i s,
+    (∀ C,
+       (∀ j' i', j ⊏ j' -> i ⊏ i' -> fsim_lfp (elem C) Post j' t i' s) ->
+       fsim_lfp (elem C) Post j t i s) ->
+    elem C Post j t i s.
   Proof using Type.
-    intros t s RIH.
+    intros j t i s RIH.
     apply tower.
-    { intros P Hp j i Q Hq. eapply Hp; now eauto. }
-    intros C' CIH j i.
-    eapply fsim_lfp'_mono with (x := elem C').
-    - intros Ψ i' l' j' r' Hsim. assumption.
-    - eapply RIH.
-      intros i' j' Hi Hj.
+    { intros P Hp Q Hq. eapply Hp; now eauto. }
+    intros C' CIH.
+    apply RIH. intros j' i' Hj Hi.
+    eapply FProgress; now eauto.
+  Qed.
+
+  Lemma coind_strong C Post P:
+    (∀ C j t i s,
+       (∀ j' t i' s,
+          P Post j t i s ->
+          j ⊏ j' ->
+          i ⊏ i' ->
+          fsim_lfp (elem C) Post j' t i' s) ->
+       P Post j t i s ->
+       fsim_lfp (elem C) Post j t i s) ->
+    ∀ j t i s,
+    P Post j t i s ->
+    elem C Post j t i s.
+  Proof using Type.
+    intros RIH.
+    apply tower.
+    { intros Z Hz j t i s HP Q Hq. eapply Hz; now eauto. }
+    intros C' CIH j t i s HP.
+    apply RIH.
+    - intros j' t' i' s' HP' Hj Hi.
       eapply FProgress; now eauto.
+    - assumption.
+  Qed.
+
+  Lemma coind_weak_open Post:
+    ∀ j t i s,
+    (∀ R,
+       (∀ j' i',
+          j ⊏ j' ->
+          i ⊏ i' ->
+          fsim_lfp R Post j' t i' s) ->
+       fsim_lfp R Post j t i s) ->
+    fsim_lfp fsim Post j t i s.
+  Proof using Type.
+    intros j t i s RIH.
+    apply fsim_unroll.
+    coinduction C CIH.
+    apply RIH. intros j' i' Hj Hi.
+    eapply FProgress; now eauto.
+  Qed.
+
+  Lemma coind_strong_open Post P:
+    (∀ R j t i s,
+       (∀ j' t i' s,
+          P Post j t i s ->
+          j ⊏ j' ->
+          i ⊏ i' ->
+          fsim_lfp R Post j' t i' s) ->
+       P Post j t i s ->
+       fsim_lfp R Post j t i s) ->
+    ∀ j t i s,
+    P Post j t i s ->
+    fsim_lfp fsim Post j t i s.
+  Proof using Type.
+    intros RIH j t i s HP.
+    apply fsim_unroll.
+    revert j t i s HP.
+    coinduction C CIH.
+    intros j t i s HP.
+    apply RIH.
+    - intros j' t' i' s' Hj Hi HP'.
+      eapply FProgress; now eauto.
+    - assumption.
   Qed.
 End FSimRules.
