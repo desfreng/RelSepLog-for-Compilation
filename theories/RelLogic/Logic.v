@@ -147,6 +147,7 @@ Proof.
   intros mt ms HP.
   destruct HP as (mtP & msP & ? & ? & ? & ? & <- & <- & HP & Hemp).
   destruct Hemp as [-> ->].
+  unfold memory in *.
   rewrite !(map_union_empty _).
   assumption.
 Qed.
@@ -174,6 +175,42 @@ Proof.
   - assumption.
 Qed.
 
+Lemma sep_assoc_1 P Q R :
+  P ∗ (Q ∗ R) ⊩ (P ∗ Q) ∗ R.
+Proof.
+  intros mt ms HPQR.
+  destruct HPQR as (mtP & msP & mtQR & msQR & Ht & Hs & Hcupt & Hcups & HP & HQR).
+  destruct HQR as (mtQ & msQ & mtR & msR & Ht' & Hs' & Hcupt' & Hcups' & HQ & HR).
+  subst.
+  decompose_map_disjoint.
+  rewrite !(map_union_assoc _).
+  do 4 eexists.
+  repeat split.
+  - solve_map_disjoint.
+  - solve_map_disjoint.
+  - do 4 eexists.
+    repeat split; assumption.
+  - assumption.
+Qed.
+
+Lemma sep_assoc_2 P Q R :
+  (P ∗ Q) ∗ R ⊩ P ∗ (Q ∗ R).
+Proof.
+  intros mt ms HPQR.
+  destruct HPQR as (mtPQ & msPQ & mtR & msR & Ht & Hs & Hcupt & Hcups & HPQ & HR).
+  destruct HPQ as (mtP & msP & mtQ & msQ & Ht' & Hs' & Hcupt' & Hcups' & HP & HQ).
+  subst.
+  decompose_map_disjoint.
+  rewrite <- !(map_union_assoc _).
+  do 4 eexists.
+  repeat split.
+  - solve_map_disjoint.
+  - solve_map_disjoint.
+  - assumption.
+  - do 4 eexists.
+    repeat split; assumption.
+Qed.
+
 Lemma sep_pure_left P Q :
   P -> Q ⊩ ⌜P⌝ ∗ Q.
 Proof.
@@ -185,4 +222,33 @@ Proof.
   - apply map_empty_union.
   - assumption.
   - assumption.
+Qed.
+
+Lemma entails_frame_l P Q R :
+  (Q ⊩ R) ->
+  P ∗ Q ⊩ P ∗ R.
+Proof.
+  intros H mt ms (mtP & msP & mtQ & msQ & Ht & Hs & Hcupt & Hcups & HP & HQ).
+  exists mtP, msP, mtQ, msQ. repeat split; try assumption.
+  now apply H.
+Qed.
+
+Lemma entails_frame_r P Q R :
+  (Q ⊩ R) ->
+  Q ∗ P ⊩ R ∗ P.
+Proof.
+  intros H mt ms (mtQ & msQ & mtP & msP & Ht & Hs & Hcupt & Hcups & HQ & HP).
+  exists mtQ, msQ, mtP, msP. repeat split; try assumption.
+  now apply H.
+Qed.
+
+Lemma entails_transitive P Q R :
+  (P ⊩ Q) ->
+  (Q ⊩ R) ->
+  (P ⊩ R).
+Proof.
+  intros HPQ HQR mt ms HP.
+  apply HQR.
+  apply HPQ.
+  assumption.
 Qed.

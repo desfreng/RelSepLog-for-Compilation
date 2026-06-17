@@ -97,6 +97,31 @@ Module RTLNotations.
           src2 custom rtl_reg at level 1,
           next constr at level 0).
 
+  (* Div *)
+  Notation "dst ':=' src1 '/' src2 '->' next" :=
+    (Iop Div [src1; src2] dst next)
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          src1 custom rtl_reg at level 1,
+          src2 custom rtl_reg at level 1,
+          next constr at level 0).
+
+  (* Incr *)
+  Notation "dst ':=' src '++' '->' next" :=
+    (Iop Incr [src] dst next)
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          src custom rtl_reg at level 1,
+          next constr at level 0).
+
+  (* Decr *)
+  Notation "dst ':=' src '--' '->' next" :=
+    (Iop Decr [src] dst next)
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          src custom rtl_reg at level 1,
+          next constr at level 0).
+
   (* Load *)
   Notation "dst ':=' '!' addr '->' next" :=
     (Iload addr dst next)

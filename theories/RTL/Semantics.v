@@ -37,50 +37,50 @@ Inductive rtl_step (P: program) : rtl_state -> rtl_state -> Prop :=
 
 | exec_Iret: forall σ m ρ f pc r v,
   f@pc is <<{ ret r }>> ->
-  get_reg ρ r = v ->
+  ρ@r ⇒ v ->
   rtl_step P (σ, State f pc ρ, m) (σ, ReturnState v, m)
 
 | exec_Iop: forall σ m ρ f pc op args dst pc' ρ' v vals,
   f@pc is <<{ dst := @op args -> pc' }>> ->
-  map (get_reg ρ) args = vals ->
+  ρ@args ⇒ vals ->
   eval_op op vals = Some v ->
-  set_reg ρ dst v = ρ' ->
+  ⟦dst ⇐ v⟧ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
 | exec_Iload: forall σ m ρ f pc dst src pc' ρ' addr v,
   f@pc is <<{ dst := !src -> pc' }>> ->
-  get_reg ρ src = addr ->
+  ρ@src ⇒ addr ->
   get_at addr m = Some v ->
-  set_reg ρ dst v = ρ' ->
+  ⟦dst ⇐ v⟧ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
 | exec_Istore: forall σ m ρ f pc dst src pc' m' addr v,
   f@pc is <<{ !dst := src -> pc' }>> ->
-  get_reg ρ dst = addr ->
-  get_reg ρ src = v ->
+  ρ@dst ⇒ addr ->
+  ρ@src ⇒ v ->
   set_at addr v m = Some m' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m')
 
 | exec_Icond: forall  σ m ρ f pc cond ifso ifnot v pc',
   f@pc is <<{ if cond then goto ifso else goto ifnot }>> ->
-  get_reg ρ cond = v ->
+  ρ@cond ⇒ v ->
   pc' = (if Z.eqb v 0 then ifso else ifnot) ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
 
 | exec_Icall: forall σ m ρ f pc dst sig args pc' σ' fn vals,
   f@pc is <<{ dst := @call sig args -> pc' }>> ->
   find_fun P sig = Some fn ->
-  map (get_reg ρ) args = vals ->
+  ρ@args ⇒ vals ->
   Stackframe dst f pc' ρ :: σ = σ' ->
   rtl_step P (σ, State f pc ρ, m) (σ', CallState fn vals, m)
 
 | exec_function: forall σ m ρ f args,
   length args = length (fn_regs f) ->
-  map (get_reg ρ) (fn_regs f) = args ->
+  ρ@(fn_regs f) ⇒ args ->
   rtl_step P (σ, CallState f args, m) (σ, State f (fn_entrypoint f) ρ, m)
 
 | exec_return: forall σ m ρ f pc dst v ρ',
-  set_reg ρ dst v = ρ' ->
+  ⟦dst ⇐ v⟧ρ = ρ' ->
   rtl_step P (Stackframe dst f pc ρ :: σ, ReturnState v, m) (σ, State f pc ρ', m)
 .
 
@@ -164,21 +164,21 @@ Section SemProp.
       + eauto.
   Qed.
 
-  Lemma unfold_call fn : ∀ n res f pc ρ args m σ t m',
-    P ⊨ ([Stackframe res f pc ρ], CallState fn args, m) -{n}> (σ, t, m') ->
+  Lemma unfold_call fn : ∀ n dst f pc ρ args m σ t m',
+    P ⊨ ([Stackframe dst f pc ρ], CallState fn args, m) -{n}> (σ, t, m') ->
     (∃ σ',
-        σ = σ' ++ [Stackframe res f pc ρ]
+        σ = σ' ++ [Stackframe dst f pc ρ]
         ∧ P ⊨ ([], CallState fn args, m) -{n}> (σ', t, m'))
     ∨
       (∃ m1 m2 v m'',
           n = 1 + m1 + m2
           ∧ P ⊨ ([], CallState fn args, m) -{m1}> ([], ReturnState v, m'')
-          ∧ P ⊨ ([], State f pc (set_reg ρ res v), m'') -{m2}> (σ, t, m')
+          ∧ P ⊨ ([], State f pc (⟦dst ⇐ v⟧ρ), m'') -{m2}> (σ, t, m')
       ).
   Proof using Type.
     intros n.
     induction n as [ | n IH ];
-      intros res f pc ρ args m σ t m' Hrtc.
+      intros dst f pc ρ args m σ t m' Hrtc.
     - inv Hrtc. left. exists []. split; auto. constructor.
     - apply nsteps_inv_r in Hrtc. destruct Hrtc as ([[] ?] & Hrtc & Hstep).
       apply IH in Hrtc.

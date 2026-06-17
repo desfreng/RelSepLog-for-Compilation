@@ -4,44 +4,42 @@ From RSL Require Import Commons.RegisterBank.
 Definition postcondition : Type := val -> memory -> Prop.
 Definition precondition : Type := list val -> memory -> Prop.
 
-Definition logic : Type := regbank -> memory -> nat -> Prop.
+Definition logic : Type := nat -> memory -> Prop.
 
 Declare Scope logic_scope.
 Delimit Scope logic_scope with logic.
 Bind Scope logic_scope with logic.
 
 Definition logic_and (P Q: logic) : logic :=
-  fun ρ m n => P ρ m n ∧ Q ρ m n.
+  fun n m => P n m ∧ Q n m.
 Definition logic_or (P Q: logic) : logic :=
-  fun ρ m n => P ρ m n ∨ Q ρ m n.
+  fun n m => P n m ∨ Q n m.
 Definition logic_impl (P Q: logic) : logic :=
-  fun ρ m n => P ρ m n -> Q ρ m n.
+  fun n m => P n m -> Q n m.
 Definition logic_not (P: logic) : logic :=
-  fun ρ m n => ~ P ρ m n.
+  fun n m => ~ P n m.
 Definition logic_exists {X: Type} (f: X -> logic) : logic :=
-  fun ρ m n => ∃ x, f x ρ m n.
+  fun n m => ∃ x, f x n m.
 Definition logic_forall {X: Type} (f: X -> logic) : logic :=
-  fun ρ m n => ∀ x, f x ρ m n.
+  fun n m => ∀ x, f x n m.
 
-Definition logic_empty_entails (P: logic) : Prop :=
-  ∀ ρ m n, P ρ m n.
+Definition logic_entails (P Q: logic) : Prop :=
+  ∀ n m, (logic_impl P Q) n m.
 Definition logic_pure (P: Prop) : logic :=
-  fun _ _ _ => P.
+  fun _ _ => P.
 Definition logic_memory_pure (P: memory -> Prop) : logic :=
-  fun _ m _ => P m.
+  fun _ m => P m.
 Definition logic_later (P: logic) : logic :=
-  fun ρ m n =>
+  fun n m =>
     match n with
     | O => True
-    | S n => P ρ m n
+    | S n => P n m
     end.
 
 Definition logic_always (P: logic) : logic :=
-  fun ρ m _ => ∀ n, P ρ m n.
-Definition logic_memory_entails (P: logic) : logic :=
-  fun ρ _ n => ∀ m, P ρ m n.
-Definition logic_register_entails (P: logic) : logic :=
-  fun _ m n => ∀ ρ, P ρ m n.
+  fun _ m => ∀ n, P n m.
+Definition logic_memory_entails (P Q: logic) : logic :=
+  fun n _ => ∀ m, (logic_impl P Q) n m.
 
 Notation "P ∧ Q" :=
   (logic_and P Q) : logic_scope.
@@ -56,8 +54,8 @@ Notation "'∃' x .. y , p" :=
 Notation "'∀' x .. y , p" :=
   (logic_forall (fun x => .. (logic_forall (fun y => p)) ..)) : logic_scope.
 
-Notation "⊢ P" :=
-  (logic_empty_entails P%logic)
+Notation "P ⊩ Q" :=
+  (logic_entails P%logic Q%logic)
     (at level 99, right associativity).
 Notation "⌜ P ⌝" :=
   (logic_pure P)
@@ -71,32 +69,19 @@ Notation "▷ P" :=
 Notation "□ P" :=
   (logic_always P)
     (at level 20, right associativity, format "□ P") : logic_scope.
-Notation "'⊢ₘ' P" :=
-  (logic_memory_entails P)
+Notation "P '⊩ₘ' Q" :=
+  (logic_memory_entails P Q)
     (at level 99, right associativity) : logic_scope.
-Notation "'⊢ᵨ' P" :=
-  (logic_register_entails P)
-    (at level 99, right associativity) : logic_scope.
+
+Notation "⌜⌝" := (logic_pure True) (at level 0).
 
 Notation "⦇ P ⦈" := (P)%logic (at level 0, P at level 200, format "⦇ P ⦈").
 
-Global Instance top_logic : Top logic := fun _ _ _ => True.
-Global Instance bot_logic : Bottom logic := fun _ _ _ => False.
-
-(* Definition logic_entails `{Logic L} (P Q : L) : Prop := *)
-(*   logic_empty_entails (logic_impl P Q). *)
-(* Notation "P ⊢ Q" := *)
-(*   (logic_entails P%logic Q%logic) *)
-(*     (at level 99, right associativity). *)
-
 Definition logic_set_mem (addr: val) (v: val) (P: logic) : logic :=
-  fun ρ m n => ∃ m', set_at addr v m = Some m' ∧ P ρ m' n.
+  fun n m => ∃ m', set_at addr v m = Some m' ∧ P n m'.
 
 Definition logic_assert_mem (addr: val) (v: val) : logic :=
-  fun _ m _ => get_at addr m = Some v.
-
-Definition logic_set_reg (r : reg) (v : val) (P : logic) : logic :=
-  fun ρ m n => P (set_reg ρ r v) m n.
+  fun _ m => get_at addr m = Some v.
 
 Notation "'⟦' l '<-' v '⟧' P" :=
   (logic_set_mem l%positive v%Z P)
@@ -106,23 +91,6 @@ Notation "'⟦' l '<-' v '⟧' P" :=
 Notation "l '↦' v" :=
   (logic_assert_mem l%positive v%Z)
     (at level 70, no associativity, format "l ↦ v") : logic_scope.
-
-Notation "'⟦' dst '⇐' v '⟧' P" :=
-  (logic_set_reg dst%nat v%Z P)
-    (at level 20, P at level 20, right associativity,
-       format "⟦ dst ⇐ v ⟧  P") : logic_scope.
-
-Class LogicAssertReg (R V : Type) := logic_assert_reg : R -> V -> logic.
-
-Notation "r '⇒' v" :=
-  (logic_assert_reg r%nat v%Z)
-    (at level 70, no associativity, format "r ⇒ v").
-
-Instance assert_reg_single : LogicAssertReg reg val :=
-  fun (r: reg) (v: val) ρ _ _ => get_reg ρ r = v.
-
-Instance assert_reg_list : LogicAssertReg (list reg) (list val) :=
-  fun (r: list reg) (v: list val) ρ _ _ => map (get_reg ρ) r = v.
 
 Create HintDb custom_anyProp discriminated.
 
@@ -134,25 +102,15 @@ Hint Unfold
   logic_not
   logic_exists
   logic_forall
-  (* logic_entails *)
-  logic_empty_entails
+  logic_entails
   logic_pure
   logic_memory_pure
   logic_later
   logic_always
   logic_memory_entails
-  logic_register_entails
 
   logic_set_mem
   logic_assert_mem
-
-  logic_set_reg
-  logic_assert_reg
-
-  logic_assert_reg
-  assert_reg_single
-  assert_reg_list
-
 : custom_anyProp.
 
 Ltac unfold_Prop :=
@@ -161,16 +119,15 @@ Ltac unfold_Prop :=
   simpl in *.
 
 Lemma löb_weak P :
-  (⊢ ▷ P -> P) -> ⊢ P.
+  (▷ P ⊩ P) -> ⌜⌝ ⊩ P.
 Proof.
-  intros H ρ m n.
+  intros H n m _.
   induction n as [|n IH]; now apply H.
 Qed.
 
 Lemma löb P :
-  (⊢ ▷ (⊢ᵨ ⊢ₘ P) -> P) -> ⊢ P.
+  (▷ (⌜⌝ ⊩ₘ P) ⊩ P) -> ⌜⌝ ⊩ P.
 Proof.
-  intros H ρ m n.
-  revert ρ m.
-  induction n as [|n IH]; intros ρ m; now apply H.
+  intros H n.
+  induction n as [|n IH]; intros m _; now apply H.
 Qed.

@@ -12,8 +12,11 @@ Inductive op : Type :=
 | Add
 | Sub
 | Mul
+| Div
 | Move
-| LoadI (v: val).
+| LoadI (v: val)
+| Incr
+| Decr.
 
 Inductive instr : Type :=
 | Inop: node -> instr
@@ -70,7 +73,13 @@ Definition eval_op (op: op) (args: list val) : option val :=
   | Add, [v1; v2] => Some (v1 + v2)%Z
   | Sub, [v1; v2] => Some (v1 - v2)%Z
   | Mul, [v1; v2] => Some (v1 * v2)%Z
+  | Div, [v1; v2] =>
+      if (v2 =? 0)%Z
+      then None
+      else Some (v1 / v2)%Z
   | Move, [v] => Some v
   | LoadI v, [] => Some v
+  | Incr, [v] => Some (v + 1)%Z
+  | Decr, [v] => Some (v - 1)%Z
   | _, _ => None
   end.

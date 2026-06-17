@@ -83,3 +83,11 @@ Proof.
   destruct (rtc_nsteps_1 _ _ Hrtc) as [n Hnsteps].
   exists n. exists y. now split.
 Qed.
+
+Lemma inj_some {T: Type} : ∀ x y : T,
+  Some x = Some y <-> x = y.
+Proof.
+  intros x y. split.
+  - now injection 1.
+  - now intros ->.
+Qed.
