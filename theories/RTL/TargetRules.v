@@ -1,4 +1,4 @@
-From RSL Require Import RelLogic Prelude.
+From RSL Require Import RLogic Prelude.
 
 From Coinduction Require Import all.
 
@@ -23,12 +23,12 @@ Section TargetRulesDef.
 
   Notation
     "'[' C ']' ρ '⊢' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" :=
-    (sim Pₜ Pₛ C ρ ft pct j i fs pcs Q%rlogic)
+    (sim Pₜ Pₛ C ρ ft pct j i fs pcs Q)
       (at level 0, ft at level 0, fs at level 0, no associativity).
 
   Notation
     "'[' C ']' ρ '⊢' '{{' P '}}' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" :=
-    (hoare Pₜ Pₛ C ρ P%rlogic ft pct j i fs pcs Q%rlogic)
+    (hoare Pₜ Pₛ C ρ P ft pct j i fs pcs Q)
       (at level 0, ft at level 0, fs at level 0, no associativity).
 
   Lemma target_nop C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q :

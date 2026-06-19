@@ -15,7 +15,7 @@ Local Definition rprop_entails_def (P Q: rprop) : Prop :=
 
 Local Definition rprop_entails_aux : seal (@rprop_entails_def).
 Proof. by eexists. Qed.
-Definition rprop_entails := rprop_entails_aux.(unseal).
+Definition rprop_entails := unseal rprop_entails_aux.
 Local Lemma rprop_entails_unseal : @rprop_entails = @rprop_entails_def.
 Proof. exact: seal_eq. Qed.
 
@@ -29,7 +29,7 @@ Local Definition rprop_empty_def : rprop :=
 
 Local Definition rprop_empty_aux : seal (@rprop_empty_def).
 Proof. by eexists. Qed.
-Definition rprop_empty := rprop_empty_aux.(unseal).
+Definition rprop_empty := unseal rprop_empty_aux.
 Local Lemma rprop_empty_unseal : @rprop_empty = @rprop_empty_def.
 Proof. exact: seal_eq. Qed.
 
@@ -40,7 +40,7 @@ Local Definition rprop_pure_def (P: Prop) : rprop :=
 
 Local Definition rprop_pure_aux : seal (@rprop_pure_def).
 Proof. by eexists. Qed.
-Definition rprop_pure := rprop_pure_aux.(unseal).
+Definition rprop_pure := unseal rprop_pure_aux.
 Local Lemma rprop_pure_unseal : @rprop_pure = @rprop_pure_def.
 Proof. exact: seal_eq. Qed.
 
@@ -53,7 +53,7 @@ Local Definition rprop_and_def (P Q: rprop) : rprop :=
 
 Local Definition rprop_and_aux : seal (@rprop_and_def).
 Proof. by eexists. Qed.
-Definition rprop_and := rprop_and_aux.(unseal).
+Definition rprop_and := unseal rprop_and_aux.
 Local Lemma rprop_and_unseal : @rprop_and = @rprop_and_def.
 Proof. exact: seal_eq. Qed.
 
@@ -64,7 +64,7 @@ Local Definition rprop_or_def (P Q: rprop) : rprop :=
 
 Local Definition rprop_or_aux : seal (@rprop_or_def).
 Proof. by eexists. Qed.
-Definition rprop_or := rprop_or_aux.(unseal).
+Definition rprop_or := unseal rprop_or_aux.
 Local Lemma rprop_or_unseal : @rprop_or = @rprop_or_def.
 Proof. exact: seal_eq. Qed.
 
@@ -75,7 +75,7 @@ Local Definition rprop_impl_def (P Q: rprop) : rprop :=
 
 Local Definition rprop_impl_aux : seal (@rprop_impl_def).
 Proof. by eexists. Qed.
-Definition rprop_impl := rprop_impl_aux.(unseal).
+Definition rprop_impl := unseal rprop_impl_aux.
 Local Lemma rprop_impl_unseal : @rprop_impl = @rprop_impl_def.
 Proof. exact: seal_eq. Qed.
 
@@ -86,7 +86,7 @@ Local Definition rprop_forall_def : ∀ X (f: X -> rprop), rprop :=
 
 Local Definition rprop_forall_aux : seal (@rprop_forall_def).
 Proof. by eexists. Qed.
-Definition rprop_forall := rprop_forall_aux.(unseal).
+Definition rprop_forall := unseal rprop_forall_aux.
 Local Lemma rprop_forall_unseal : @rprop_forall = @rprop_forall_def.
 Proof. exact: seal_eq. Qed.
 
@@ -97,7 +97,7 @@ Local Definition rprop_exist_def : ∀ X (f: X -> rprop), rprop :=
 
 Local Definition rprop_exist_aux : seal (@rprop_exist_def).
 Proof. by eexists. Qed.
-Definition rprop_exist := rprop_exist_aux.(unseal).
+Definition rprop_exist := unseal rprop_exist_aux.
 Local Lemma rprop_exist_unseal : @rprop_exist = @rprop_exist_def.
 Proof. exact: seal_eq. Qed.
 
@@ -115,7 +115,7 @@ Local Definition rprop_sep_def (P Q: rprop) : rprop :=
 
 Local Definition rprop_sep_aux : seal (@rprop_sep_def).
 Proof. by eexists. Qed.
-Definition rprop_sep := rprop_sep_aux.(unseal).
+Definition rprop_sep := unseal rprop_sep_aux.
 Local Lemma rprop_sep_unseal : @rprop_sep = @rprop_sep_def.
 Proof. exact: seal_eq. Qed.
 
@@ -131,7 +131,7 @@ Local Definition rprop_wand_def (P Q: rprop) : rprop :=
 
 Local Definition rprop_wand_aux : seal (@rprop_wand_def).
 Proof. by eexists. Qed.
-Definition rprop_wand := rprop_wand_aux.(unseal).
+Definition rprop_wand := unseal rprop_wand_aux.
 Local Lemma rprop_wand_unseal : @rprop_wand = @rprop_wand_def.
 Proof. exact: seal_eq. Qed.
 
@@ -142,7 +142,7 @@ Local Definition rprop_persistently_def (P: rprop) : rprop :=
 
 Local Definition rprop_persistently_aux : seal (@rprop_persistently_def).
 Proof. by eexists. Qed.
-Definition rprop_persistently := rprop_persistently_aux.(unseal).
+Definition rprop_persistently := unseal rprop_persistently_aux.
 Local Lemma rprop_persistently_unseal : @rprop_persistently = @rprop_persistently_def.
 Proof. exact: seal_eq. Qed.
 
@@ -152,7 +152,7 @@ Local Definition rprop_later_def (P: rprop) : rprop := P.
 
 Local Definition rprop_later_aux : seal (@rprop_later_def).
 Proof. by eexists. Qed.
-Definition rprop_later := rprop_later_aux.(unseal).
+Definition rprop_later := unseal rprop_later_aux.
 Local Lemma rprop_later_unseal : @rprop_later = @rprop_later_def.
 Proof. exact: seal_eq. Qed.
 

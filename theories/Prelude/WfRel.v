@@ -23,6 +23,8 @@ Definition le {W: WfRel} : relation W := fun x y => x ⊏ y ∨ x = y.
 
 Notation "x ⊑ y" := (le x y) (at level 70).
 
+Global Instance WfRel_SqSubsetEq {W: WfRel} : SqSubsetEq W := le.
+
 Global Instance lt_trans {W: WfRel} : Transitive (@lt W).
 Proof. apply trans. Qed.
 
@@ -47,6 +49,14 @@ Qed.
 
 Global Instance le_pre_order {W: WfRel} : PreOrder (@le W)
   := Build_PreOrder _ _ _.
+
+Lemma lt_from_le_lt {W:WfRel} (x y z : W) :
+  x ⊑ y -> y ⊏ z -> x ⊏ z.
+Proof. intros [Hxy| ->] Hyz; auto. now transitivity y. Qed.
+
+Lemma lt_from_lt_le {W:WfRel} (x y z : W) :
+  x ⊏ y -> y ⊑ z -> x ⊏ z.
+Proof. intros Hxy [Hyz| ->]; auto. now transitivity y. Qed.
 
 Class NoIsolatedElements (W: WfRel) := {
   no_isolated : ∀ x : W, ∃ y, x ⊏ y ∨ y ⊏ x

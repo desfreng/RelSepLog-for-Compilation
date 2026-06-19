@@ -1,4 +1,4 @@
-From RSL Require Import RelLogic Prelude.
+From RSL Require Import Prelude RLogic.
 
 From Coinduction Require Import all.
 
@@ -137,58 +137,58 @@ Section RulesDef.
   (*       apply Hpost. *)
   (* Qed. *)
 
-  Lemma coind ρₜ ρₛ Inv fₜ pcₜ j i fₛ pcₛ Q :
-    (∀ R ρₜ ρₛ,
-       (∀ ρₜ ρₛ j' i',
-          i < i' ->
-          j < j' ->
-          [R] (ρₜ, ρₛ) ⊢ {{ Inv ρₜ ρₛ }} fₜ @ pcₜ <{j', i'}= fₛ @ pcₛ {{ Q }}) ->
-       [R] (ρₜ, ρₛ) ⊢ {{ Inv ρₜ ρₛ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}
-    ) ->
-    [fsim] (ρₜ, ρₛ) ⊢ {{ Inv ρₜ ρₛ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}.
-  Proof using Type.
-    intros RIH.
-    rewrite <- rewrite_hoare.
-    intros Ψ mtP msP mtQ msQ Φ H.
-    apply fsim_unroll.
-    revert ρₜ ρₛ Ψ mtP msP mtQ msQ Φ H.
-    coinduction C CIH.
-    intros ρₜ ρₛ Ψ mtP msP mtQ msQ Φ (HΦ & Ht & Hs & Hpre & Hpost).
-    rewrite <- (map_union_empty mtP).
-    rewrite <- (map_union_empty msP).
-    apply RIH.
-    - intros ρₜ' ρₛ' j' i' Hi Hj.
-      rewrite <- rewrite_hoare.
-      repeat intro.
-      eapply FProgress.
-      { eassumption. }
-      { eassumption. }
-      eapply CIH. eassumption.
-    - now split.
-    - solve_map_disjoint.
-    - solve_map_disjoint.
-    - assumption.
-    - solve_map_disjoint.
-    - solve_map_disjoint.
-    - intros vₜ vₛ mt ms. apply Hpost.
-  Qed.
+  (* Lemma coind ρₜ ρₛ Inv fₜ pcₜ j i fₛ pcₛ Q : *)
+  (*   (∀ R ρₜ ρₛ, *)
+  (*      (∀ ρₜ ρₛ j' i', *)
+  (*         i < i' -> *)
+  (*         j < j' -> *)
+  (*         [R] (ρₜ, ρₛ) ⊢ {{ Inv ρₜ ρₛ }} fₜ @ pcₜ <{j', i'}= fₛ @ pcₛ {{ Q }}) -> *)
+  (*      [R] (ρₜ, ρₛ) ⊢ {{ Inv ρₜ ρₛ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }} *)
+  (*   ) -> *)
+  (*   [fsim] (ρₜ, ρₛ) ⊢ {{ Inv ρₜ ρₛ }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}. *)
+  (* Proof using Type. *)
+  (*   intros RIH. *)
+  (*   rewrite <- rewrite_hoare. *)
+  (*   intros Ψ mtP msP mtQ msQ Φ H. *)
+  (*   apply fsim_unroll. *)
+  (*   revert ρₜ ρₛ Ψ mtP msP mtQ msQ Φ H. *)
+  (*   coinduction C CIH. *)
+  (*   intros ρₜ ρₛ Ψ mtP msP mtQ msQ Φ (HΦ & Ht & Hs & Hpre & Hpost). *)
+  (*   rewrite <- (map_union_empty mtP). *)
+  (*   rewrite <- (map_union_empty msP). *)
+  (*   apply RIH. *)
+  (*   - intros ρₜ' ρₛ' j' i' Hi Hj. *)
+  (*     rewrite <- rewrite_hoare. *)
+  (*     repeat intro. *)
+  (*     eapply FProgress. *)
+  (*     { eassumption. } *)
+  (*     { eassumption. } *)
+  (*     eapply CIH. eassumption. *)
+  (*   - now split. *)
+  (*   - solve_map_disjoint. *)
+  (*   - solve_map_disjoint. *)
+  (*   - assumption. *)
+  (*   - solve_map_disjoint. *)
+  (*   - solve_map_disjoint. *)
+  (*   - intros vₜ vₛ mt ms. apply Hpost. *)
+  (* Qed. *)
 
-  Lemma fsim_mono ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q :
-    ∀ j' i',
-    (j' <= j)%nat ->
-    (i' <= i)%nat ->
-    [fsim] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j', i'}= fₛ @ pcₛ {{ Q }} ->
-    [fsim] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}.
-  Proof using Type.
-    intros i' j' Hi Hj H.
-    intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost.
-    apply (gfp_fp fsim_lfp).
-    eapply idx_mono.
-    - apply (gfp_chain (chain_gfp fsim_lfp)).
-      apply (gfp_fp fsim_lfp).
-      now apply H.
-    - unfold "⊑". simpl. lia.
-    - unfold "⊑". simpl. lia.
-  Qed.
+  (* Lemma fsim_mono ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q : *)
+  (*   ∀ j' i', *)
+  (*   (j' <= j)%nat -> *)
+  (*   (i' <= i)%nat -> *)
+  (*   [fsim] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j', i'}= fₛ @ pcₛ {{ Q }} -> *)
+  (*   [fsim] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}. *)
+  (* Proof using Type. *)
+  (*   intros i' j' Hi Hj H. *)
+  (*   intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost. *)
+  (*   apply (gfp_fp fsim_lfp). *)
+  (*   eapply idx_mono. *)
+  (*   - apply (gfp_chain (chain_gfp fsim_lfp)). *)
+  (*     apply (gfp_fp fsim_lfp). *)
+  (*     now apply H. *)
+  (*   - unfold "⊑". simpl. lia. *)
+  (*   - unfold "⊑". simpl. lia. *)
+  (* Qed. *)
 
 End RulesDef.
