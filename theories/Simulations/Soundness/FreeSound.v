@@ -3,7 +3,7 @@ From RSL Require Import Prelude.
 From Stdlib Require Import Classical.
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Behaviors.
+From RSL Require Import Commons.Behaviors.
 From RSL Require Import Simulations.FreeSim.
 
 Section FSimSound.
@@ -18,12 +18,12 @@ Section FSimSound.
     (behavior_order Φ a b)
       (at level 70, format "a  '⊑{' Φ '}'  b", no associativity).
 
-  Notation "'⟨' t ',' j '⟩' '≲' '⟨' s ',' i '⟩' '{{' Φ '}}'" :=
-    (fsim J I Pₜ Pₛ Φ j t i s)
-      (at level 0, i at level 0, j at level 0, no associativity).
+  Notation " t '<{' j ',' i '}=' s '{{' Φ '}}'" :=
+    (fsim J I Pₜ Pₛ Φ t j i s)
+      (at level 1, i at level 0, j at level 0, no associativity).
 
   Lemma terminating_fsim Φ: ∀ t j s i vₜ,
-    ⟨t, j⟩ ≲ ⟨s, i⟩ {{ Φ }} ->
+    t <{ j, i }= s {{ Φ }} ->
     Terminating vₜ ∈ t ->
     ∃ b, b ∈ s ∧ Terminating vₜ ⊑{Φ} b.
   Proof using Type.
@@ -39,11 +39,11 @@ Section FSimSound.
       intros s i Hsim.
       (* Induction on the least-fixpoint of the relation *)
       apply fsim_unroll in Hsim.
-      induction Hsim as [ j t i s Hfinal
-                        | j t i s Hstuck
-                        | j t i i' s s' Hs ? IHs
-                        | j t i s Hprogress IHt
-                        | j j' t i i' s Hprogress ? Hgfp ].
+      induction Hsim as [ t j i s Hfinal
+                        | t j i s Hstuck
+                        | t j i i' s s' Hs ? IHs
+                        | t j i s Hprogress IHt
+                        | t j j' i i' s Hprogress ? Hgfp ].
       + (* Both Final *)
         destruct Hfinal as (? & vₛ & Ht & ? & ?).
         (* s is final too *)
@@ -65,11 +65,11 @@ Section FSimSound.
       intros s i Hsim.
       (* Induction on the least-fixpoint of the relation *)
       apply fsim_unroll in Hsim.
-      induction Hsim as [ j t i s Hfinal
-                        | j t i s Hstuck
-                        | j t i i' s s' Hs ? IHs
-                        | j t i s Hprogress IHt
-                        | j j' t i i' s Hprogress ? Hgfp ].
+      induction Hsim as [ t j i s Hfinal
+                        | t j i s Hstuck
+                        | t j i i' s s' Hs ? IHs
+                        | t j i s Hprogress IHt
+                        | t j j' i i' s Hprogress ? Hgfp ].
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck *)
@@ -88,13 +88,13 @@ Section FSimSound.
   Qed.
 
   Lemma fsim_lfp_progress Φ : ∀ t j s i,
-    ⟨t, j⟩ ≲ ⟨s, i⟩ {{ Φ }} ->
+    t <{ j, i }= s {{ Φ }} ->
     diverges Pₜ t ->
     stuck Pₛ s ∨
       ∃ t' j' s' i',
         Pₛ ⊨ s ->> s' ∧
         diverges Pₜ t' ∧
-        ⟨t', j'⟩ ≲ ⟨s', i'⟩ {{ Φ }}.
+        t' <{ j', i' }= s' {{ Φ }}.
   Proof using Type.
     intros t j s i.
     (* Induction on the progress index of s *)
@@ -103,11 +103,11 @@ Section FSimSound.
     intros t j Hsim Hdiv.
     (* Induction on the least-fixpoint of the relation *)
     apply fsim_unroll in Hsim.
-    induction Hsim as [ j t i s Hfinal
-                      | j t i s Hstuck
-                      | j t i i' s s' Hs Hsim IHs
-                      | j t i s Hprogress IHt
-                      | j j' t i i' s Hprogress ? Hgfp ].
+    induction Hsim as [ t j i s Hfinal
+                      | t j i s Hstuck
+                      | t j i i' s s' Hs Hsim IHs
+                      | t j i s Hprogress IHt
+                      | t j j' i i' s Hprogress ? Hgfp ].
     - (* BothFinal: Contradiction *)
       apply diverges_unroll in Hdiv. destruct Hdiv as (t' & Hstep & _).
       langmixin.
@@ -133,7 +133,7 @@ Section FSimSound.
   Qed.
 
   Lemma diverging_fsim Φ : ∀ t j s i,
-    ⟨t, j⟩ ≲ ⟨s, i⟩ {{ Φ }} ->
+    t <{ j, i }= s {{ Φ }} ->
     Diverging ∈ t ->
     ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
   Proof using Type.
@@ -163,7 +163,7 @@ Section FSimSound.
   Qed.
 
   Lemma undef_fsim Φ : ∀ t j s i,
-    ⟨t, j⟩ ≲ ⟨s, i⟩ {{ Φ }} ->
+    t <{ j, i }= s {{ Φ }} ->
     Undef ∈ t ->
     Undef ∈ s.
   Proof using Type.
@@ -179,11 +179,11 @@ Section FSimSound.
       intros s i Hsim.
       (* Induction on the least-fixpoint of the relation *)
       apply fsim_unroll in Hsim.
-      induction Hsim as [ j t i s Hfinal
-                        | j t i s Hsstuck
-                        | j t i i' s s' Hs ? IHs
-                        | j t i s Hprogress IHt
-                        | j j' t i i' s Hprogress ? Hgfp ].
+      induction Hsim as [ t j i s Hfinal
+                        | t j i s Hsstuck
+                        | t j i i' s s' Hs ? IHs
+                        | t j i s Hprogress IHt
+                        | t j j' i i' s Hprogress ? Hgfp ].
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck -> trivial *)
@@ -201,11 +201,11 @@ Section FSimSound.
       intros s i Hsim.
       (* Induction on the least-fixpoint of the relation *)
       apply fsim_unroll in Hsim.
-      induction Hsim as [ j t i s Hfinal
-                        | j t i s Hsstuck
-                        | j t i i' s s' Hs ? IHs
-                        | j t i s Hprogress IHt
-                        | j j' t i i' s Hprogress ? Hgfp ].
+      induction Hsim as [ t j i s Hfinal
+                        | t j i s Hsstuck
+                        | t j i i' s s' Hs ? IHs
+                        | t j i s Hprogress IHt
+                        | t j j' i i' s Hprogress ? Hgfp ].
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck -> trivial *)
@@ -223,7 +223,8 @@ Section FSimSound.
   Qed.
 
   Theorem fsim_sound Φ : ∀ t j s i,
-    ⟨t, j⟩ ≲ ⟨s, i⟩ {{ Φ }} -> refines Pₜ Pₛ Φ t s.
+    t <{ j, i }= s {{ Φ }} ->
+    refines Pₜ Pₛ Φ t s.
   Proof using Type.
     intros t j s i Hsim [] Hb.
     - eapply terminating_fsim; now eauto.

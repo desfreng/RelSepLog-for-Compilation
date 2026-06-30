@@ -91,3 +91,15 @@ Proof.
   - now injection 1.
   - now intros ->.
 Qed.
+
+Definition curry5 {A B C D E F: Type} (f : A * B * C * D * E -> F) :=
+  fun x1 x2 x3 x4 x5 => f (x1, x2, x3, x4, x5).
+
+Definition uncurry5 {A B C D E F: Type} (f : A -> B -> C -> D -> E -> F) :=
+  fun '(x1, x2, x3, x4, x5) => f x1 x2 x3 x4 x5.
+
+Definition curry6 {A B C D E F G: Type} (f : A * B * C * D * E * F -> G) :=
+  fun x1 x2 x3 x4 x5 x6 => f (x1, x2, x3, x4, x5, x6).
+
+Definition uncurry6 {A B C D E F G: Type} (f : A -> B -> C -> D -> E -> F -> G) :=
+  fun '(x1, x2, x3, x4, x5, x6) => f x1 x2 x3 x4 x5 x6.

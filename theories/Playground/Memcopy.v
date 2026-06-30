@@ -1,4 +1,4 @@
-From RSL Require Import RelLogic Prelude.
+From RSL Require Import Prelude.
 
 From stdpp Require Import strings.
 From stdpp Require Import gmap.

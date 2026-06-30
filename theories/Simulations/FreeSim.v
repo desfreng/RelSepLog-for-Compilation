@@ -12,76 +12,76 @@ Section FSimDef.
   Unset Elimination Schemes.
 
   Inductive fsim_lfp'
-    (gfp: post -> J -> state Λₜ -> I -> state Λₛ -> Prop)
-    (Φ : post) : J -> state Λₜ -> I -> state Λₛ -> Prop :=
-  | FRelated : ∀ j t i s,
-    both_final Φ t s -> fsim_lfp' gfp Φ j t i s
+    (gfp: post -> state Λₜ -> J -> I -> state Λₛ -> Prop)
+    (ϕ : post) : state Λₜ -> J -> I -> state Λₛ -> Prop :=
+  | FRelated : ∀ t j i s,
+    both_final ϕ t s -> fsim_lfp' gfp ϕ t j i s
 
-  | FSourceStuck : ∀ j t i s,
-    stuck Pₛ s -> fsim_lfp' gfp Φ j t i s
+  | FSourceStuck : ∀ t j i s,
+    stuck Pₛ s -> fsim_lfp' gfp ϕ t j i s
 
-  | FSourceSteps : ∀ j t i i' s s',
+  | FSourceSteps : ∀ t j i i' s s',
     Pₛ ⊨ s ->> s' ->
-    fsim_lfp' gfp Φ j t i' s' ->
-    fsim_lfp' gfp Φ j t i s
+    fsim_lfp' gfp ϕ t j i' s' ->
+    fsim_lfp' gfp ϕ t j i s
 
-  | FTargetSteps : ∀ j t i s,
+  | FTargetSteps : ∀ t j i s,
     can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j', fsim_lfp' gfp Φ j' t' i s) ->
-    fsim_lfp' gfp Φ j t i s
+    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j', fsim_lfp' gfp ϕ t' j' i s) ->
+    fsim_lfp' gfp ϕ t j i s
 
-  | FProgress : ∀ j j' t i i' s,
+  | FProgress : ∀ t j j' i i' s,
     j' ⊏ j ->
     i' ⊏ i ->
-    gfp Φ j' t i' s ->
-    fsim_lfp' gfp Φ j t i s.
+    gfp ϕ t j' i' s ->
+    fsim_lfp' gfp ϕ t j i s.
 
   Set Elimination Schemes.
 
   Section FSimInd.
-    Variable gfp : post -> J -> state Λₜ -> I -> state Λₛ -> Prop.
-    Variable Φ : post.
-    Variable P : J -> state Λₜ -> I -> state Λₛ -> Prop.
+    Variable gfp : post -> state Λₜ -> J -> I -> state Λₛ -> Prop.
+    Variable ϕ : post.
+    Variable P : state Λₜ -> J -> I -> state Λₛ -> Prop.
 
     Hypothesis HFinal:
-      ∀ j t i s, both_final Φ t s -> P j t i s.
+      ∀ t j i s, both_final ϕ t s -> P t j i s.
 
     Hypothesis HStuck:
-      ∀ j t i s, stuck Pₛ s -> P j t i s.
+      ∀ t j i s, stuck Pₛ s -> P t j i s.
 
     Hypothesis HSourceSteps:
-      ∀ j t i i' s s',
+      ∀ t j i i' s s',
       Pₛ ⊨ s ->> s' ->
-      fsim_lfp' gfp Φ j t i' s' ->
-      P j t i' s' ->
-      P j t i s.
+      fsim_lfp' gfp ϕ t j i' s' ->
+      P t j i' s' ->
+      P t j i s.
 
     Hypothesis HTargetSteps:
-      ∀ j t i s,
+      ∀ t j i s,
       can_progress Pₜ t ->
       (∀ t', Pₜ ⊨ t ->> t' ->
              ∃ j',
-               fsim_lfp' gfp Φ j' t' i s ∧
-               P j' t' i s) ->
-      P j t i s.
+               fsim_lfp' gfp ϕ t' j' i s ∧
+               P t' j' i s) ->
+      P t j i s.
 
     Hypothesis HProgress:
-      ∀ j j' t i i' s,
+      ∀ t j j' i i' s,
       j' ⊏ j ->
       i' ⊏ i ->
-      gfp Φ j' t i' s ->
-      P j t i s.
+      gfp ϕ t j' i' s ->
+      P t j i s.
 
-    Lemma fsim_lfp'_ind: ∀ j t i s,
-      fsim_lfp' gfp Φ j t i s -> P j t i s.
+    Lemma fsim_lfp'_ind: ∀ t j i s,
+      fsim_lfp' gfp ϕ t j i s -> P t j i s.
     Proof using HFinal HProgress HSourceSteps HStuck HTargetSteps.
-      fix IH 5. intros j t i s Hsim.
+      fix IH 5. intros t j i s Hsim.
       destruct Hsim as
-        [ j t i s Hfin
-        | j t i s Hstuck
-        | j t i' i s s' Hstep Hsim
-        | j t i s Hprogress Ht
-        | j j' t i i' s Ht Hs Hgfp ].
+        [ t j i s Hfin
+        | t j i s Hstuck
+        | t j i' i s s' Hstep Hsim
+        | t j i s Hprogress Ht
+        | t j j' i i' s Ht Hs Hgfp ].
       - apply HFinal. assumption.
       - apply HStuck. assumption.
       - eapply HSourceSteps; now eauto.
@@ -98,7 +98,7 @@ Section FSimDef.
 
   Instance fsim_lfp'_mono : Proper (leq ==> leq) fsim_lfp'.
   Proof using Type.
-    intros gfp gfp' Hgfp Φ j t i s Hsim.
+    intros gfp gfp' Hgfp ϕ t j i s Hsim.
     induction Hsim as [ | | | ? ? ? ? Hprogress Ht |  ? ? ? Hprogress Hboth].
     - econstructor; eassumption.
     - econstructor; eassumption.
@@ -114,73 +114,71 @@ Section FSimDef.
 
   Definition fsim := (gfp fsim_lfp).
 
-  Lemma fsim_unroll Φ j t i s :
-    gfp fsim_lfp Φ j t i s -> fsim_lfp' (gfp fsim_lfp) Φ j t i s.
+  Lemma fsim_unroll ϕ t j i s :
+    gfp fsim_lfp ϕ t j i s -> fsim_lfp' (gfp fsim_lfp) ϕ t j i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
-  Lemma fsim_roll Φ j t i s :
-    fsim_lfp' (gfp fsim_lfp) Φ j t i s -> gfp fsim_lfp Φ j t i s.
+  Lemma fsim_roll ϕ t j i s :
+    fsim_lfp' (gfp fsim_lfp) ϕ t j i s -> gfp fsim_lfp ϕ t j i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
-  Lemma idx_mono (R: Chain fsim_lfp) Φ:
-    ∀ j i t s,
-    (elem R) Φ j t i s ->
-    ∀ j' i',
+  Lemma idx_mono (R: Chain fsim_lfp) ϕ t j i s:
+    ∀ ϕ' j' i',
+    (∀ vt vs, ϕ vt vs -> ϕ' vt vs) ->
     j ⊑ j' ->
     i ⊑ i' ->
-    (elem R) Φ j' t i' s.
+    (elem R) ϕ t j i s ->
+    (elem R) ϕ' t j' i' s.
   Proof using Type.
+    revert ϕ t j i s.
     apply tower.
     - intros P Hp.
-      intros j i t s Hinf j' i' Ht Hs.
+      intros ϕ t j i s ϕ' j' i' Hϕ Hj Hi Hinf.
       intros Q Hq.
       eapply (Hp _ Hq).
-      + now apply Hinf.
-      + assumption.
-      + assumption.
-    - intros C CIH j t i s Hsim.
+      4: now apply Hinf. all: easy.
+    - intros C CIH ϕ t j i s ϕ' j' i' Hϕ Hj Hi Hsim.
+      revert ϕ' j' i' Hϕ Hj Hi.
       induction Hsim as [ ? t ? s Hfin
                         | ? t ? s Hstuck
                         | ? t ? ? s s' Hstep Hsim IH
                         | ? t ? s Hprog IH
                         | ? ? t  ? ? s Htt Hss Hsim ];
-        intros ? ? Ht Hs.
-      + now constructor.
+        intros ? ? ? Hϕ Hj Hi.
+      + constructor.
+        destruct Hfin as (vt & vs & Hfint & Hfins & Hfin).
+        exists vt, vs; now auto.
       + now constructor.
       + eapply FSourceSteps.
         { eassumption. }
-        apply IH; assumption || reflexivity.
+        apply IH; now auto.
       + apply FTargetSteps.
         { assumption. }
         intros t' Hstep.
         destruct (IH _ Hstep) as (? & Hsim & IHt).
         eexists. apply IHt; assumption || reflexivity.
-      + destruct Hs as [ Hs | -> ]; destruct Ht as [ Ht | -> ];
+      + destruct Hj as [ Hj | -> ]; destruct Hi as [ Hi | -> ];
           eapply FProgress; try eassumption;
-          eapply CIH; eassumption || now constructor.
+          eapply (CIH _ _ _ _ _ _ _ _ _ _ _ Hsim).
+        Unshelve.
+        all: easy || now left.
   Qed.
 
-  Lemma fsim_mono Φ:
-    ∀ j i t s,
-    fsim Φ j t i s ->
-    ∀ j' i',
+  Lemma fsim_mono ϕ t j i s:
+    ∀ ϕ' j' i',
+    (∀ vt vs, ϕ vt vs -> ϕ' vt vs) ->
     j ⊑ j' ->
     i ⊑ i' ->
-    fsim Φ j' t i' s.
-  Proof using Type.
-    intros j t i s Hsim.
-    now apply idx_mono.
-  Qed.
+    fsim ϕ t j i s ->
+    fsim ϕ' t j' i' s.
+  Proof using Type. by apply idx_mono. Qed.
 
-  Lemma fsim_lfp_mono (R: Chain fsim_lfp) Φ:
-    ∀ j i t s,
-    fsim_lfp (elem R) Φ j t i s ->
-    ∀ j' i',
+  Lemma fsim_lfp_mono (R: Chain fsim_lfp) ϕ t j i s:
+    ∀ ϕ' j' i',
+    (∀ vt vs, ϕ vt vs -> ϕ' vt vs) ->
     j ⊑ j' ->
     i ⊑ i' ->
-    fsim_lfp (elem R) Φ j' t i' s.
-  Proof using Type.
-    intros j t i s Hsim.
-    now apply idx_mono.
-  Qed.
+    fsim_lfp (elem R) ϕ t j i s ->
+    fsim_lfp (elem R) ϕ' t j' i' s.
+  Proof using Type. by apply idx_mono. Qed.
 End FSimDef.

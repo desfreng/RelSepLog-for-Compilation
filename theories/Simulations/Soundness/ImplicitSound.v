@@ -3,7 +3,7 @@ From RSL Require Import Prelude.
 From Stdlib Require Import Classical.
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.Behaviors.
+From RSL Require Import Commons.Behaviors.
 From RSL Require Import Simulations.ImplicitSim.
 
 Section ISimSound.

@@ -160,11 +160,13 @@ Section Refinement.
   Instance behₜ_elem : ElemOf behavior (state Λₜ) := beh Pₜ.
   Instance behₛ_elem : ElemOf behavior (state Λₛ) := beh Pₛ.
 
-  Inductive behavior_order Φ : @behavior Λₜ -> @behavior Λₛ -> Prop :=
-  | TerminatingOrder : ∀ (vₜ: value Λₜ) (vₛ: value Λₛ),
-    Φ vₜ vₛ -> behavior_order Φ (Terminating vₜ) (Terminating vₛ)
-  | DivergingOrder : behavior_order Φ Diverging Diverging
-  | UndefOrder : ∀ s, behavior_order Φ s Undef.
+  Variant behavior_order Φ : @behavior Λₜ -> @behavior Λₛ -> Prop :=
+  | BehOrderTerm vt vs :
+      Φ vt vs -> behavior_order Φ (Terminating vt) (Terminating vs)
+  | BehOrderDiv :
+      behavior_order Φ Diverging Diverging
+  | BehOrderUndef bt :
+      behavior_order Φ bt Undef.
 
   Notation "a '⊑{' Φ '}' b" :=
     (behavior_order Φ a b)
@@ -176,6 +178,7 @@ Section Refinement.
   (*    - if the target diverges, *)
   (*    the source must either diverges or be stuck. *)
   (*    - if the target is stuck, the source should also be stuck. *)
-  Definition refines Φ (t: state Λₜ) (s: state Λₛ) :=
+  Definition refines Φ (t: state Λₜ) (s: state Λₛ) : Prop :=
     ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ⊑{Φ} b'.
+
 End Refinement.

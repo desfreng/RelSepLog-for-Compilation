@@ -1,4 +1,4 @@
-From RSL Require Import RLogic Prelude.
+From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
@@ -22,23 +22,19 @@ Section TargetRulesDef.
   Abbreviation fsim := (fsim WfNat WfNat Pₜ Pₛ).
 
   Notation
-    "'[' C ']' ρ '⊢' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" :=
-    (sim Pₜ Pₛ C ρ ft pct j i fs pcs Q)
-      (at level 0, ft at level 0, fs at level 0, no associativity).
+    "'[' C ']' st '<{' j ',' i '}=' ss '{{' Q '}}'" :=
+    (sim Pₜ Pₛ C st j i ss Q%I)
+      (at level 0, no associativity).
 
-  Notation
-    "'[' C ']' ρ '⊢' '{{' P '}}' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" :=
-    (hoare Pₜ Pₛ C ρ P ft pct j i fs pcs Q)
-      (at level 0, ft at level 0, fs at level 0, no associativity).
-
-  Lemma target_nop C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q :
+  Lemma target_nop C fₜ pcₜ ρₜ j i ss Q :
     ∀ pc,
     fₜ@pcₜ is <<{ nop -> pc }>> ->
-    [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Q }} ->
-    [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}.
+    ⊢ [C] State fₜ pc ρₜ <{1+j, i}= ss {{ Q }} -∗
+      [C] State fₜ pcₜ ρₜ <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros pc Hpc H.
-    intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost.
+    intros pc Hpc.
+    unseal. intros ? ? [-> ->] mt ms _ _ H.
+    rewrite !(map_empty_union _).
 
     eapply FTargetSteps.
     - eexists. econstructor; eassumption.
@@ -46,16 +42,17 @@ Section TargetRulesDef.
       eexists. now apply H.
   Qed.
 
-  Lemma target_op C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q :
+  Lemma target_op C fₜ pcₜ ρₜ j i ss Q :
     ∀ pc dst op regs args v,
     fₜ@pcₜ is <<{ dst := @op regs -> pc }>> ->
     ρₜ @ regs ⇒ args ->
     eval_op op args = Some v ->
-    [C] (⟦dst ⇐ v⟧ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Q }} ->
-    [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}.
+    ⊢ [C] State fₜ pc (⟦dst ⇐ v⟧ρₜ) <{1+j, i}= ss {{ Q }} -∗
+      [C] State fₜ pcₜ ρₜ <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros pc dst op regs args v Hpc Hargs Hv H.
-    intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost.
+    intros pc dst op regs args v Hpc Hargs Hv.
+    unseal. intros ? ? [-> ->] mt ms _ _ H.
+    rewrite !(map_empty_union _).
 
     eapply FTargetSteps.
     - eexists. econstructor; eassumption || reflexivity.
@@ -63,18 +60,18 @@ Section TargetRulesDef.
       eexists. now apply H.
   Qed.
 
-  Lemma target_load C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q :
+  Lemma target_load C fₜ pcₜ ρₜ j i ss Q :
     ∀ pc dst src addr v,
     fₜ@pcₜ is <<{ dst := !src -> pc }>> ->
     ρₜ @ src ⇒ addr ->
-    [C] (⟦dst ⇐ v⟧ρₜ, ρₛ) ⊢ {{ addr →ₜ v ∗ P }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Q }} ->
-    [C] (ρₜ, ρₛ) ⊢ {{ addr →ₜ v ∗ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}.
+    ⊢ addr →ₜ v -∗
+      (addr →ₜ v -∗
+       [C] State fₜ pc (⟦dst ⇐ v⟧ρₜ) <{1+j, i}= ss {{ Q }}) -∗
+      [C] State fₜ pcₜ ρₜ <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros pc dst src addr v Hpc Haddr H.
-    intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost.
-
-    destruct Hpre as (mtAddr & msAddr & mtP & msP & ? & ? & ? & ? & Hm & HP).
-    destruct Hm as ((l & Hl & Ht) & Hs).
+    intros pc dst src addr v Hpc Haddr.
+    unseal. intros ? ? [-> ->] ? ? _ _ [(l & Hloc & ->) ->].
+    rewrite !(map_empty_union _). intros mt ms ? ? H.
 
     eapply FTargetSteps.
     - eexists. eapply exec_Iload; try eassumption.
@@ -84,57 +81,61 @@ Section TargetRulesDef.
       intros t Hstep.
       inv Hstep. simregs. simget. subst.
 
-      eexists. apply H; try solve_map_disjoint.
-      eexists _, ∅, mtP, msP. repeat split; eauto.
-      exists l. now split.
+      eexists.
+      rewrite <- (map_union_comm mt) by solve_map_disjoint.
+      rewrite <- (map_union_comm ms) by solve_map_disjoint.
+
+      eapply H; auto; try solve_map_disjoint.
+      repeat split.
+      eexists. split; eassumption || reflexivity.
   Qed.
 
-  Lemma target_store C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q :
+  Lemma target_store C fₜ pcₜ ρₜ j i ss Q :
     ∀ pc dst src addr v old,
     fₜ@pcₜ is <<{ !dst := src -> pc }>> ->
     ρₜ @ dst ⇒ addr ->
     ρₜ @ src ⇒ v ->
-    [C] (ρₜ, ρₛ) ⊢ {{ addr →ₜ v ∗ P }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Q }} ->
-    [C] (ρₜ, ρₛ) ⊢ {{ addr →ₜ old ∗ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}.
+    ⊢ addr →ₜ old -∗
+      (addr →ₜ v -∗
+       [C] State fₜ pc ρₜ <{1+j, i}= ss {{ Q }}) -∗
+      [C] State fₜ pcₜ ρₜ <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros pc dst src addr v old Hpc Haddr Hv H.
-    intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost.
-
-    destruct Hpre as (mtAddr & msAddr & mtP & msP & ? & ? & ? & ? & Hm & HP).
-    destruct Hm as ((l & Hl & Ht) & Hs).
+    intros pc dst src addr v old Hpc Haddr Hv.
+    unseal. intros ? ? [-> ->] ? ? _ _ [(l & Hloc & ->) ->].
+    rewrite !(map_empty_union _). intros mt ms ? ? H.
 
     eapply FTargetSteps.
     - eexists. eapply exec_Istore; try eassumption.
       subst.
-      erewrite (set_at_some  _ _ _ _ _ Hl) by simget.
-      rewrite !alter_union_right, !alter_union_left, alter_singleton by solve_map_disjoint.
-      reflexivity.
-    - intros t Hstep.
-      inv Hstep.
-      simregs.
-      erewrite (set_at_some  _ _ _ _ _ Hl) in * by simget.
-      rewrite !alter_union_right, !alter_union_left, alter_singleton
-                in * by solve_map_disjoint.
-      rewrite inj_some in *.
+      erewrite (set_at_some  _ _ _ _ _ Hloc) by simget.
+      erewrite alter_union_left by solve_map_disjoint.
+      now rewrite alter_singleton.
+    - intros t Hstep. inv Hstep. simregs.
+      erewrite (set_at_some  _ _ _ _ _ Hloc) in * by simget.
+      erewrite alter_union_left in * by solve_map_disjoint.
+      erewrite alter_singleton in *.
+      erewrite inj_some in *.
+      subst.
 
-      subst. decompose_map_disjoint.
-      eexists. apply H; try solve_map_disjoint.
-      eexists _, ∅, mtP, msP. repeat split; eauto.
-      + solve_map_disjoint.
-      + solve_map_disjoint.
-      + exists l. now split.
+      eexists.
+      rewrite <- (map_union_comm mt) by solve_map_disjoint.
+      rewrite <- (map_union_comm ms) by solve_map_disjoint.
+      eapply H; auto; try solve_map_disjoint.
+      repeat split.
+      eexists. split; eassumption || reflexivity.
   Qed.
 
-  Lemma target_if C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q :
+  Lemma target_if C fₜ pcₜ ρₜ j i ss Q :
     ∀ pc_true pc_false reg v pc,
     fₜ@pcₜ is <<{ if reg then goto pc_true else goto pc_false }>> ->
     ρₜ @ reg ⇒ v ->
     (if (v =? 0)%Z then pc_true else pc_false) = pc ->
-    [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pc <{1+j, i}= fₛ @ pcₛ {{ Q }} ->
-    [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}.
+    ⊢ [C] State fₜ pc ρₜ <{1+j, i}= ss {{ Q }} -∗
+      [C] State fₜ pcₜ ρₜ <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros pc_true pc_false reg v pc Hpc Hv Hnext_pc H.
-    intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost.
+    intros pc_true pc_false reg v pc Hpc Hv Hnext_pc.
+    unseal. intros ? ? [-> ->] mt ms _ _ H.
+    rewrite !(map_empty_union _).
 
     eapply FTargetSteps.
     - eexists. econstructor; eassumption || reflexivity.

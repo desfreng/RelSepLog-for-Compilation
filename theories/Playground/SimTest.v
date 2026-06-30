@@ -1,4 +1,4 @@
-From RSL Require Import RelLogic Prelude.
+From RSL Require Import Prelude.
 
 From stdpp Require Import strings.
 From stdpp Require Import gmap.
@@ -66,107 +66,35 @@ Section T.
     |}.
 
   Notation
-    "'[' C ']' ρ '⊢' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" :=
-    (sim Pₜ Pₛ C ρ ft pct j i fs pcs Q%rlogic)
-      (at level 0, ft at level 0, fs at level 0, no associativity).
+    "'[' C ']' st '<{' j ',' i '}=' ss '{{' Q '}}'" :=
+    (sim Pₜ Pₛ C st j i ss Q%I)
+      (at level 0, no associativity).
 
   Notation
-    "'[' C ']' ρ '⊢' '{{' P '}}' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" :=
-    (hoare Pₜ Pₛ C ρ P%rlogic ft pct j i fs pcs Q%rlogic)
-      (at level 0, ft at level 0, fs at level 0, no associativity).
+    "'[' C ']' '{{' P '}}' st  '<{' j ',' i '}=' ss '{{' Q '}}'" :=
+    (hoare Pₜ Pₛ C P%I st j i ss Q%I)
+      (at level 0, no associativity).
 
-  Lemma inv_proof ρₜ ρₛ P : ∀ l v,
-    [fsim] (ρₜ, ρₛ) ⊢
-    {{ (fun ρₜ ρₛ =>
-          ⌜∀ r, ~In r [reg_one; reg_addr] -> ρₜ @ r <=> ρₛ @ r⌝ ∗
-          ⌜ρₜ @ reg_one ⇒ v⌝ ∗
-          ⌜ρₛ @ reg_addr ⇒ l⌝ ∗
-          l →ₛ v ∗ P
-       ) ρₜ ρₛ
-    }}
-      fact_good @ 3 <{0, 0}= fact_bad @ 2
-    {{ fun vₜ vₛ =>
-         ⌜vₜ = vₛ⌝ ∗
-         l →ₛ v ∗
-         P
-    }}.
-  Proof using Type.
-    intros l v.
-    apply coind.
-    clear.
-    intros R ρₜ ρₛ CIH.
-    apply ipure. intros Hsame.
-    apply ipure. intros Hone.
-    apply ipure. intros Haddr.
+  Local Definition inv l v ψ st ss : rlogic :=
+    ∃ ρₜ ρₛ,
+      ⌜st = State fact_good 3 ρₜ⌟ ∗
+      ⌜ss = State fact_bad 2 ρₛ⌟ ∗
+      (∀ vt vs : val, ⌜vt = vs⌝ ∗ l ₛ~ₜ l -∗ ψ vt vs) ∗
+      ⌜∀ r, ~In r [reg_one; reg_addr] -> ρₜ @ r <=> ρₛ @ r⌟ ∗
+      ⌜ρₜ @ reg_one ⇒ v⌟ ∗
+      ⌜ρₛ @ reg_addr ⇒ l⌟ ∗
+      l →ₛ v ∗
+      l →ₜ v.
 
-    destruct (Hsame reg_n) as (n & Htn & Hsn). 1: (cbv; lia).
-    destruct (Hsame reg_res) as (r & Htr & Hsr).  1: (cbv; lia).
-
-    eapply source_if; [ reflexivity | simregs | reflexivity |].
-    eapply target_if; [ reflexivity | simregs | reflexivity |].
-
-    destruct (n =? 0)%Z.
-    {
-      intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost.
-
-      destruct Hpre as (mtv & msv & mtP & msP & ? & ? & ? & ? & Hs & HP).
-      destruct Hs as (Ht & (l' & Hl & Hs)).
-      destruct Hemp as (-> & ->).
-
-      eapply both_ret.
-      - reflexivity.
-      - reflexivity.
-      - simregs.
-      - simregs.
-      - rewrite (map_union_comm mtPost) by solve_map_disjoint.
-        rewrite (map_union_comm msPost) by solve_map_disjoint.
-        apply Hpost; try solve_map_disjoint.
-        eexists ∅, ∅, mtP, (msv ∪ msP). repeat split.
-        + solve_map_disjoint.
-        + solve_map_disjoint.
-        + subst. now rewrite !map_union_empty, !map_empty_union.
-        + subst. now rewrite !map_union_empty, !map_empty_union.
-        + exists ∅, msv, mtP, msP. repeat split.
-          * solve_map_disjoint.
-          * solve_map_disjoint.
-          * apply map_empty_union.
-          * now exists l'.
-          * assumption.
-    }
-    eapply source_op; [ reflexivity | simregs | simpl eval_op; intros ? Hv; inv Hv ].
-
-    eapply target_op; [ reflexivity | simregs | reflexivity | ].
-    eapply target_op; [ reflexivity | simregs | reflexivity | ].
-
-    eapply source_load; [reflexivity | simregs | ].
-    eapply source_op; [ reflexivity | simregs | simpl eval_op; intros ? Hv; inv Hv ].
-
-    eapply consequence.
-    3:{ apply CIH; lia. }
-    - intros mt ms H.
-      apply sep_pure_left.
-      {
-        intros r' Hr.
-        destruct (Hsame r' Hr) as (? & ? & ?).
-        rewrite !not_in_cons in Hr.
-        destruct Hr as (? & ? & _).
-
-        destruct (in_dec Nat.eq_dec r' [reg_n; reg_res])
-          as [[<- | [<- | ?]] | Hr].
-        - eexists. split; simregs.
-        - eexists. split; simregs.
-        - contradiction.
-        - rewrite !not_in_cons in Hr.
-          destruct Hr as (? & ? & _).
-          eexists. split; simregs.
-      }
-      apply sep_pure_left.
-      { simregs. }
-      apply sep_pure_left.
-      { simregs. }
-      easy.
-    - now simpl.
-  Qed.
+  Ltac close_hyp :=
+    match goal with
+    | [ |- ?f @ ?pc is _] => reflexivity
+    | [ |- ?ρ @ ?l ⇒ _ ] => simregs
+    | [ |- eval_op ?op ?vals = Some _ ] => reflexivity
+    | [ |- (if _ then _ else _) = _ ] => reflexivity
+    | [ |- context [(_ →ₜ _)%I] ] => try iAssumption
+    | [ |- ?goal ] => idtac goal
+    end.
 
   Lemma fact_same ρₜ ρₛ:
     ∀ addr,
@@ -174,62 +102,96 @@ Section T.
     (∀ r, ρₜ @ r <=> ρₛ @ r) ->
     ρₛ @ reg_addr ⇒ addr ->
 
-    [fsim] (ρₜ, ρₛ) ⊢
-    {{
-        addr ₛ~ₜ addr
-    }}
-      fact_good @ 0 <{0, 0}= fact_bad @ 0
-    {{ fun vₜ vₛ =>
-         ⌜vₜ = vₛ⌝ ∗
-         addr ₛ~ₜ addr
-    }}.
+    ⊢
+      [fsim] {{ addr ₛ~ₜ addr }}
+      State fact_good 0 ρₜ <{0, 0}= State fact_bad 0 ρₛ
+      {{ fun vₜ vₛ =>
+           ⌜vₜ = vₛ⌝ ∗
+           addr ₛ~ₜ addr
+      }}.
   Proof using Type.
     intros addr Hsame Haddrs'.
-    eapply iex. intros v.
+    iIntros "!>" (ψ) "(%v & Ht & Hs) Hpost".
 
-    eapply source_op; [ reflexivity | simregs | intros ? Hv; inv Hv ].
-    eapply target_op; [ reflexivity | simregs | reflexivity | ].
+    iApply (source_op). all: close_hyp.
+    iIntros (? Hv); inv Hv.
+    iApply (target_op). all: close_hyp.
 
     destruct (Hsame reg_addr) as (? & Haddrs & Haddrt). simregs.
 
-    eapply consequence.
-    { apply sep_comm. }
-    { intros. apply entails_refl. }
+    iApply (source_store with "Hs"). all: close_hyp.
+    iIntros "Hs".
+    iApply (target_store with "Ht"). all: close_hyp.
+    iIntros "Ht".
 
-    eapply source_store; [ reflexivity | simregs | simregs | ].
+    iApply (target_op). all: close_hyp.
+    iApply (coind Pₜ Pₛ (inv addr 1)).
+    {
+      clear. iIntros "!>" (R st i j ss) "#CIH".
+      iIntros "(%ρₜ & %ρₛ & -> & -> & Hpost & %Hsame & %Hone & %Haddr & Hs & Ht)".
 
-    eapply consequence.
-    { apply sep_comm. }
-    { intros. apply entails_refl. }
+      destruct (Hsame reg_n) as (n & Htn & Hsn). 1: (cbv; lia).
+      destruct (Hsame reg_res) as (r & Htr & Hsr).  1: (cbv; lia).
 
-    eapply target_store; [ reflexivity | simregs | simregs | ].
-    eapply target_op; [ reflexivity | simregs | reflexivity | ].
+      iApply (source_if). all: close_hyp.
+      iApply (target_if). all: close_hyp.
 
-    eapply consequence.
-    3: eapply fsim_mono; try apply inv_proof; lia.
-    - intros mt ms H.
-      apply sep_pure_left.
+      destruct (n =? 0)%Z.
       {
-        intros r Hr.
+        iApply (both_ret). all: close_hyp.
+        iApply ("Hpost"). now iFrame.
+      }
+
+      iApply (source_op). all: close_hyp.
+      iIntros (? Hv); inv Hv.
+      iApply (target_op). all: close_hyp.
+
+      iApply (source_load with "Hs"). all: close_hyp.
+      iIntros "Hs".
+
+      iApply (source_op). all: close_hyp.
+      iIntros (? Hv); inv Hv.
+
+      iApply (target_op). all: close_hyp.
+
+      iApply "CIH"; try (iPureIntro; by lia).
+      iExists _, _. iFrame. iPureIntro.
+      split. { reflexivity. }
+      split. { reflexivity. }
+      repeat split.
+      - intros r' Hr.
+        destruct (Hsame r' Hr) as (? & ? & ?).
         rewrite !not_in_cons in Hr.
         destruct Hr as (? & ? & _).
 
-        destruct (in_dec Nat.eq_dec r [reg_res])
-          as [[-> | ?] | Hr].
-        - eexists. split; simregs.
-        - contradiction.
-        - rewrite !not_in_cons in Hr.
-          destruct Hr as (? & _).
-          destruct (Hsame r) as (? & ? & ?).
+        destruct (in_dec Nat.eq_dec r' [reg_n; reg_res])
+          as [[<- | [<- | ?]] | Hr].
+        + eexists. split; simregs.
+        + eexists. split; simregs.
+        + contradiction.
+        + rewrite !not_in_cons in Hr.
+          destruct Hr as (? & ? & _).
           eexists. split; simregs.
-      }
-      apply sep_pure_left. 1: simregs.
-      apply sep_pure_left. 1: simregs.
-      apply sep_comm. apply H.
-    - intros vₜ vₛ. simpl.
-      eapply entails_frame_l.
-      intros mt ms H. eexists.
-      apply sep_comm. apply H.
+      - simregs.
+      - simregs.
+    }
+    iExists _, _. iFrame. iPureIntro.
+    split. { reflexivity. }
+    split. { reflexivity. }
+    repeat split.
+    - intros r Hr.
+      rewrite !not_in_cons in Hr.
+      destruct Hr as (? & ? & _).
+      destruct (in_dec Nat.eq_dec r [reg_res])
+        as [[-> | ?] | Hr].
+      + eexists. split; simregs.
+      + contradiction.
+      + rewrite !not_in_cons in Hr.
+        destruct Hr as (? & _).
+        destruct (Hsame r) as (? & ? & ?).
+        eexists. split; simregs.
+    - simregs.
+    - simregs.
   Qed.
 
 End T.

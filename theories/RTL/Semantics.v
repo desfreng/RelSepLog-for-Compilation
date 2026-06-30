@@ -143,7 +143,7 @@ Section SemProp.
     P ⊨ (σ, s, m) ->> (σ', t, m').
   Proof using Type.
     intros ? ? ? ? ? ? ? H; inv H;
-      rewrite ? app_comm_cons in *;
+      erewrite ?app_comm_cons in *;
       eassert _ by (eapply app_inv_tail; eassumption);
       subst; econstructor; now eauto.
   Qed.

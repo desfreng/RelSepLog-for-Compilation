@@ -33,7 +33,7 @@ Section GSimDef.
   | GProgress : ∀ j j' b t i i' a s,
     j' ⊏ j ->
     i' ⊏ i ->
-    fsim J I Pₜ Pₛ Φ j' t i' s ->
+    fsim J I Pₜ Pₛ Φ t j' i' s ->
     gsim j b t i a s.
 
   Set Elimination Schemes.
@@ -69,7 +69,7 @@ Section GSimDef.
       ∀ j j' b t i i' a s,
       j' ⊏ j ->
       i' ⊏ i ->
-      fsim J I Pₜ Pₛ Φ j' t i' s ->
+      fsim J I Pₜ Pₛ Φ t j' i' s ->
       P j b t i a s.
 
     Lemma gsim_ind: ∀ j b t i a s,

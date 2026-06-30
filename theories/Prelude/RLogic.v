@@ -1,12 +1,15 @@
-From RSL Require Import Prelude.
+From iris.bi Require Export bi.
+From iris.proofmode Require Export proofmode.
 
-From iris.bi Require Import bi.
-From iris.proofmode Require Import proofmode.
+From RSL Require Import Prelude.Memory.
 
 (** * Logic Definition *)
 
 Definition rprop : Type :=
   memory -> memory -> Prop.
+
+Definition as_rprop (P: memory -> memory -> Prop) : rprop.
+Proof. exact P. Qed.
 
 (** ** Entailement *)
 
@@ -124,10 +127,10 @@ Proof. exact: seal_eq. Qed.
 Local Definition rprop_wand_def (P Q: rprop) : rprop :=
   fun mt ms =>
     ∀ mtP msP,
-  mt ##ₘ mtP ->
-  ms ##ₘ msP ->
-  P mtP msP ->
-  Q (mt ∪ mtP) (ms ∪ msP).
+      mt ##ₘ mtP ->
+      ms ##ₘ msP ->
+      P mtP msP ->
+      Q (mt ∪ mtP) (ms ∪ msP).
 
 Local Definition rprop_wand_aux : seal (@rprop_wand_def).
 Proof. by eexists. Qed.
@@ -158,8 +161,27 @@ Proof. exact: seal_eq. Qed.
 
 (** ** Unfold tactic  *)
 
-Local Ltac unseal :=
-  unfold equiv, rprop_equiv;
+Ltac unseal :=
+  repeat (
+  try unfold equiv,
+    ofe_equiv,
+    bi_equiv,
+    rprop_equiv,
+    bi_entails,
+    bi_emp,
+    bi_pure,
+    bi_and,
+    bi_or,
+    bi_impl,
+    bi_forall,
+    bi_exist,
+    bi_sep,
+    bi_wand,
+    bi_persistently,
+    bi_later,
+    bi_emp_valid,
+    bi_affinely,
+    bi_intuitionistically;
   rewrite
     ?rprop_entails_unseal
     ?rprop_empty_unseal
@@ -174,7 +196,21 @@ Local Ltac unseal :=
     ?rprop_empty_unseal
     ?rprop_persistently_unseal
     ?rprop_later_unseal;
-  simpl.
+  try unfold
+    rprop_entails_def,
+    rprop_empty_def,
+    rprop_pure_def,
+    rprop_and_def,
+    rprop_or_def,
+    rprop_impl_def,
+    rprop_forall_def,
+    rprop_exist_def,
+    rprop_sep_def,
+    rprop_wand_def,
+    rprop_empty_def,
+    rprop_persistently_def,
+    rprop_later_def;
+  simpl).
 
 (** * Properties *)
 
@@ -398,8 +434,7 @@ Local Lemma rprop_wand_elim P Q R :
 Proof.
   unseal.
   intros H mt ms (mtP & msP & mtQ & msQ & ? & ? & <- & <- & HP & HQ).
-  apply H in HP.
-  apply HP in HQ; easy.
+  apply H; easy.
 Qed.
 
 (** ** BI Mixin *)
@@ -526,6 +561,10 @@ Canonical Structure rlogic : bi :=
     bi_bi_later_mixin := rprop_bi_later_mixin;
   |}.
 
+Notation "'⌜' P '⌟'" :=
+  (bi_affinely (bi_pure P%type%stdpp))
+    (at level 0, P at level 200) : bi_scope.
+
 (** ** Memory Connectives *)
 
 Local Definition mem_assert addr x (m: memory) : Prop :=
@@ -560,3 +599,19 @@ Notation "addrt 'ₜ~ₛ' addrs" :=
 Notation "addrs 'ₛ~ₜ' addrt" :=
   (∃ v, addrt →ₜ v ∗ addrs →ₛ v)%I
     (at level 70, no associativity) : bi_scope.
+
+From Coinduction Require Import all.
+
+Lemma rprop_coinduction {T: Type} (b: mon (T -> Prop)) (P: T -> rlogic):
+  (∀ C: Chain b,
+     (∀ x, P x ⊢ ⌜elem C x⌝) ->
+     ∀ x, P x ⊢ ⌜b (elem C) x⌝
+  ) ->
+  ∀ x, P x ⊢ ⌜gfp b x⌝.
+Proof.
+  unfold bi_entails, bi_wand, bi_pure; repeat unseal.
+  unfold rprop_entails_def, rprop_pure_def. simpl.
+  intros RIH.
+  coinduction R CIH.
+  now apply RIH.
+Qed.

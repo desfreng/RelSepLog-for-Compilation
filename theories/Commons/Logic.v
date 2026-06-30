@@ -65,10 +65,10 @@ Notation "⌜ P ⌝ₘ" :=
     (at level 0, format "⌜ P ⌝ₘ") : logic_scope.
 Notation "▷ P" :=
   (logic_later P)
-    (at level 20, right associativity, format "▷ P") : logic_scope.
+    (at level 20, right associativity) : logic_scope.
 Notation "□ P" :=
   (logic_always P)
-    (at level 20, right associativity, format "□ P") : logic_scope.
+    (at level 20, right associativity) : logic_scope.
 Notation "P '⊩ₘ' Q" :=
   (logic_memory_entails P Q)
     (at level 99, right associativity) : logic_scope.
