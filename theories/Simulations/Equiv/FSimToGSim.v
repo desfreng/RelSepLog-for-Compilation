@@ -10,22 +10,23 @@ From RSL Require Import Simulations.Equiv.GSim.
 Section PROOF.
   Context {Λₜ Λₛ: lang}.
   Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Definition StatePair := (state Λₜ * state Λₛ)%type.
 
   Lemma fsim_implies_gsim: ∀ j t i s,
-    fsim J I Pₜ Pₛ Φ j t i s ->
+    fsim J I Pₜ Pₛ Φ t j i s ->
     ∃ b a,
       gsim J I (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s.
   Proof using Type.
-    intros j t i s Hsim.
+    intros t j i s Hsim.
     apply fsim_unroll in Hsim.
-    induction Hsim as [ j t i s Hfinal
-                      | j t i s Hstuck
-                      | j t i i' s s' Hs Hsim IHs
-                      | j t i s Hprogress IHt
-                      | j j' t i i' s Hprogress1 Hprogress2 Hasim ].
+    induction Hsim as [ t j i s Hfinal
+                      | t j i s Hstuck
+                      | t j i i' s s' Hs Hsim IHs
+                      | t j i s Hprogress IHt
+                      | t j j' i i' s Hprogress1 Hprogress2 Hasim ].
     - exists (ord_tree_base StatePair), (ord_tree_base StatePair).
       now econstructor.
     - exists (ord_tree_base StatePair), (ord_tree_base StatePair).

@@ -1,6 +1,6 @@
 From RSL Require Import Prelude.
 
-From RSL Require Export Commons.RegisterBank.
+From RSL.Commons Require Export Memory RegisterBank NoDup.
 
 From stdpp Require Import strings.
 

@@ -7,7 +7,8 @@ From RSL Require Import Simulations.Equiv.ExplicitSimLax.
 
 Section PROOF.
   Context {Λₜ Λₛ: lang}.
-  Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Definition Wnew : WfRel := WfLexProd W WfNat.
 

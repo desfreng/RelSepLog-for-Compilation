@@ -8,6 +8,8 @@ Definition loc : Type := positive.
 (* [memory] is a mapping from location to a value *)
 Definition memory := (gmap loc val).
 
+Instance memory_inhabited : Inhabited memory := populate ∅.
+
 Definition loc_to_val (l: loc) : val := Zpos l.
 
 Definition val_to_loc (v: val) : option loc :=

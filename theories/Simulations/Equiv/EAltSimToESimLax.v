@@ -8,7 +8,8 @@ From RSL Require Import Simulations.Equiv.EAltSim.
 Section PROOF.
   Context {Λₜ Λₛ: lang}.
   Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Lemma ealt_sim_implies_esim_lax: ∀ b t a s,
     ealt_sim J I Pₜ Pₛ Φ b t a s ->

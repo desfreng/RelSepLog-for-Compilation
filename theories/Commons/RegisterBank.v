@@ -1,5 +1,7 @@
 From RSL Require Import Prelude.
 
+From RSL.Commons Require Import Language.
+
 From stdpp Require Import gmap.
 
 Definition reg := nat.

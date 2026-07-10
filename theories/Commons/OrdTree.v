@@ -1,5 +1,7 @@
 From RSL Require Import Prelude.
 
+From RSL.Commons Require Import WfRel.
+
 From Stdlib Require Import Classical.
 From Stdlib Require Import ClassicalChoice.
 
@@ -21,7 +23,7 @@ Section Def.
   Qed.
 
   Program Canonical Structure WfOrdTree : WfRel :=
-    {| element := ord_tree; lt := tc ord_tree_lt |}.
+    {| element := ord_tree; WfRel.lt := tc ord_tree_lt |}.
   Next Obligation.
     apply Inclusion.wf_incl with (Relation_Operators.clos_trans _ ord_tree_lt).
     - intros x y H. induction H as [ | ? ? ? H Ht IH ].

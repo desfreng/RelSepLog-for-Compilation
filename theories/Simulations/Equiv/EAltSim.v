@@ -1,11 +1,14 @@
 From RSL Require Import Prelude.
 
+From RSL.Commons Require Export Language WfRel.
+
 From Coinduction Require Import all.
 
 Section EAltSimDef.
   Context {Λₜ Λₛ: lang}.
   Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Variant ealt_sim_lfp' (gfp: J -> state Λₜ -> I -> state Λₛ -> Prop)
     : J -> state Λₜ -> I -> state Λₛ -> Prop :=

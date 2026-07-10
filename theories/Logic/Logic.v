@@ -1,5 +1,7 @@
 From RSL Require Import Prelude.
 
+From RSL.Commons Require Export Language.
+
 From stdpp Require Export fin_maps fin_map_dom.
 
 (** ** Logic Definition  *)

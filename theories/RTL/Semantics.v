@@ -1,9 +1,9 @@
 From RSL Require Import Prelude.
+From RSL.Commons Require Import Language.
 
 From stdpp Require Import gmap.
 
-From RSL Require Import RTL.RTL.
-From RSL Require Import RTL.Notations.
+From RSL.RTL Require Import RTL Notations.
 
 Import RTLNotations.
 
@@ -28,9 +28,9 @@ Inductive pcstate : Type :=
 | ReturnState
     (v: val). (* return value for the call *)
 
-Definition rtl_state : Type := list stackframe * pcstate * memory.
+Definition rtl_state : Type := list stackframe * pcstate.
 
-Inductive rtl_step (P: program) : rtl_state -> rtl_state -> Prop :=
+Inductive rtl_step (P: program) : rtl_state * memory -> rtl_state * memory -> Prop :=
 | exec_Inop: ∀ σ m ρ f pc pc',
   f@pc is <<{ nop -> pc' }>> ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
@@ -84,7 +84,7 @@ Inductive rtl_step (P: program) : rtl_state -> rtl_state -> Prop :=
   rtl_step P (Stackframe dst f pc ρ :: σ, ReturnState v, m) (σ, State f pc ρ', m)
 .
 
-Definition is_final (s: rtl_state) : option (val * memory) :=
+Definition is_final (s: rtl_state * memory) : option (val * memory) :=
   match s with
   | ([], ReturnState v, m) => Some (v, m)
   | _ => None
@@ -92,7 +92,7 @@ Definition is_final (s: rtl_state) : option (val * memory) :=
 
 Lemma rtl_mixin_lang : LangMixin rtl_step is_final.
 Proof.
-  constructor. intros ? [[[] []] ?] ? ? H Hstep; inv H. inv Hstep.
+  constructor. intros [[[] []] ?] ? ? H ? ? Hstep; inv H. inv Hstep.
 Qed.
 
 Definition rtl_lang : lang := Lang _ _ _ _ _ rtl_mixin_lang.
@@ -102,17 +102,19 @@ Section SemProp.
   Context (P: prog Λ).
 
   (** Lemmas on the step relation  *)
-  Lemma is_final_struct : ∀ v m s,
+  Lemma is_final_struct s v m :
     is_final s = Some (v, m) ->
     s = ([], ReturnState v, m).
-  Proof using Type. intros v m [[[] []] ?] H; now inv H. Qed.
+  Proof using Type.
+    intros H. destruct s as [[[] []] ?]; now inv H.
+  Qed.
 
-  Lemma ret_no_nsteps : ∀ n v m s t,
+  Lemma ret_no_nsteps s v m : ∀ n t,
     is_final s = Some (v, m) ->
     P ⊨ s -{ n }> t ->
     t = ([], ReturnState v, m) ∧ n = 0.
   Proof using Type.
-    intros n v m s t Hfin H.
+    intros n t Hfin H.
     apply is_final_struct in Hfin. subst.
     destruct n.
     - now inv H.
@@ -120,12 +122,12 @@ Section SemProp.
       inv Hstep.
   Qed.
 
-  Lemma ret_no_step : ∀ v m s t,
+  Lemma ret_no_step s v m: ∀ t,
     is_final s = Some (v, m) ->
     P ⊨ s ->>* t ->
     t = ([], ReturnState v, m).
   Proof using Type.
-    intros v m s t Hfin H.
+    intros t Hfin H.
     destruct (rtc_nsteps_1 _ _ H) as [].
     eapply ret_no_nsteps; eassumption.
   Qed.

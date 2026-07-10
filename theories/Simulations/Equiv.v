@@ -13,7 +13,8 @@ From RSL Require Import Simulations.Equiv.ESimLaxToESim.
 
 Section SimEquiv.
   Context {Λₜ Λₛ: lang}.
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ → value Λₛ → Prop).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Abbreviation isim := (isim Pₜ Pₛ Φ).
   Abbreviation esim := (esim _ Pₜ Pₛ Φ).
@@ -25,7 +26,7 @@ Section SimEquiv.
     ∀ (j Tj: J) (i Ti: I),
     j ⊏ Tj ->
     i ⊏ Ti ->
-    fsim j t i s.
+    fsim t j i s.
   Proof using Type.
     unfold fsim, FreeSim.fsim.
     coinduction R cih.
@@ -102,7 +103,7 @@ Section SimEquiv.
 
   Lemma fsim_to_esim {J I: WfRel}:
     ∀ (j: J) t (i: I) s,
-    fsim j t i s ->
+    fsim t j i s ->
     ∃ (W: WfRel) (i: W), esim i t s.
   Proof using Type.
     intros j t i s Hsim.
@@ -120,9 +121,9 @@ Section SimEquiv.
   Lemma index_irrel
     {J J' I I': WfRel} `{NoIsolatedElements J'} `{NoIsolatedElements I'}:
     ∀ (j: J) t (i: I) s,
-    fsim j t i s ->
+    fsim t j i s ->
     ∀ (j': J') (i': I'),
-    fsim j' t i' s.
+    fsim t j' i' s.
   Proof using Type.
     intros j t i s Hsim.
     apply fsim_to_esim in Hsim.
@@ -132,8 +133,8 @@ Section SimEquiv.
     intros j' i'.
     destruct (no_isolated j') as [jj [ Hltj | Hgtj ]];
       destruct (no_isolated i') as [ii [ Hlti | Hlti ]];
-      eapply fsim_mono;
-      (eapply isim_to_fsim; eassumption) || reflexivity || (left; eassumption).
+      (eapply fsim_mono;
+       [ firstorder | | | eapply isim_to_fsim; eassumption ]; easy || now left).
   Qed.
 
   Theorem fsim_same_as_bool:
@@ -143,9 +144,9 @@ Section SimEquiv.
     NoIsolatedElements J ->
     NoIsolatedElements I ->
     ∀ t s,
-    (∃ (j: J) (i: I), fsim j t i s)
+    (∃ (j: J) (i: I), fsim t j i s)
     <->
-      (∃ j i : bool, fsim j t i s).
+      (∃ j i : bool, fsim t j i s).
   Proof using Type.
     intros J I HInJ HInI HIsoJ HIsoI t s.
     split; intros (j & i & Hsim).

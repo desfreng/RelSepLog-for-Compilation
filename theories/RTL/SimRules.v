@@ -1,4 +1,4 @@
-From RSL Require Import RelLogic Prelude.
+From RSL Require Import Logic Prelude.
 
 From Coinduction Require Import all.
 
@@ -20,14 +20,13 @@ Section RulesDef.
   Abbreviation post := (val -> val -> rlogic).
 
   Definition sim C ρ fₜ pcₜ j i fₛ pcₛ (Q: post) : rlogic :=
-    let Φ : value Λₜ -> value Λₛ -> Prop :=
+    let Φ : value Λₜ * memory -> value Λₛ * memory -> Prop :=
       fun '(vₜ, mₜ) '(vₛ, mₛ) => Q vₜ vₛ mₜ mₛ
     in
     let '(ρₜ, ρₛ) := ρ in
     fun mₜ mₛ =>
       fsim_lfp C Φ
-        j ([], State fₜ pcₜ ρₜ, mₜ)
-        i ([], State fₛ pcₛ ρₛ, mₛ).
+        ([], State fₜ pcₜ ρₜ, mₜ) j i ([], State fₛ pcₛ ρₛ, mₛ).
 
   Definition hoare C ρ P fₜ pcₜ j i fₛ pcₛ Q : Prop :=
     let '(ρₜ, ρₛ) := ρ in
@@ -124,7 +123,7 @@ Section RulesDef.
 
   Local Lemma rewrite_hoare C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q :
     (
-      ∀ (Ψ: value Λₜ → value Λₛ → Prop) (mtP msP mtQ msQ : memory),
+      ∀ (Ψ: value Λₜ * memory → value Λₛ * memory → Prop) (mtP msP mtQ msQ : memory),
         ∀ Φ,
         (∀ vₜ vₛ mₜ mₛ, Φ vₜ vₛ mₜ mₛ <-> Ψ (vₜ, mₜ) (vₛ, mₛ)) ∧
         mtP ##ₘ mtQ ∧
@@ -137,8 +136,7 @@ Section RulesDef.
            Φ vₜ vₛ (mt ∪ mtQ) (ms ∪ msQ)
         ) ->
         fsim_lfp C (fun '(vₜ, mₜ) '(vₛ, mₛ) => Φ vₜ vₛ mₜ mₛ)
-          j ([], State fₜ pcₜ ρₜ, mtQ ∪ mtP)
-          i ([], State fₛ pcₛ ρₛ, msQ ∪ msP)
+          ([], State fₜ pcₜ ρₜ, mtQ ∪ mtP) j i ([], State fₛ pcₛ ρₛ, msQ ∪ msP)
     ) <->
       [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}.
   Proof using Type.
@@ -257,9 +255,12 @@ Section RulesDef.
     intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost.
     apply (gfp_fp fsim_lfp).
     eapply idx_mono.
-    - apply (gfp_chain (chain_gfp fsim_lfp)).
+    4:{
+      apply (gfp_chain (chain_gfp fsim_lfp)).
       apply (gfp_fp fsim_lfp).
       now apply H.
+    }
+    - by intros [] [].
     - unfold "⊑". simpl. lia.
     - unfold "⊑". simpl. lia.
   Qed.

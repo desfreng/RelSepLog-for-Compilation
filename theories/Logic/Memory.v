@@ -1,5 +1,5 @@
 From RSL Require Import Prelude.
-From RSL Require Import RelLogic.Logic.
+From RSL Require Import Logic.Logic.
 
 (** ** Memory Connectives *)
 

@@ -1,10 +1,13 @@
 From RSL Require Import Prelude.
 
+From RSL.Commons Require Export Language WfRel.
+
 From Coinduction Require Import all.
 
 Section ISimDef.
   Context {Λₜ Λₛ: lang}.
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Inductive isim_lfp'
     (gfp: state Λₜ -> state Λₛ -> Prop) : state Λₜ -> state Λₛ-> Prop :=
