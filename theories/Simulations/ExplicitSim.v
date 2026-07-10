@@ -1,10 +1,13 @@
 From RSL Require Import Prelude.
 
+From RSL.Commons Require Export Language WfRel.
+
 From Coinduction Require Import all.
 
 Section ESimDef.
   Context {Λₜ Λₛ: lang}.
-  Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Variant esim_lfp' (gfp: W -> state Λₜ -> state Λₛ -> Prop)
     : W -> state Λₜ -> state Λₛ -> Prop :=

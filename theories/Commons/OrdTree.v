@@ -1,5 +1,7 @@
 From RSL Require Import Prelude.
 
+From RSL.Commons Require Import WfRel.
+
 From Stdlib Require Import Classical.
 From Stdlib Require Import ClassicalChoice.
 

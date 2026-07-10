@@ -22,12 +22,13 @@ Section FSimSound.
     (fsim J I Pₜ Pₛ Φ t j i s)
       (at level 1, i at level 0, j at level 0, no associativity).
 
-  Lemma terminating_fsim Φ: ∀ t j s i vₜ,
+  Lemma terminating_fsim Φ t j i s:
     t <{ j, i }= s {{ Φ }} ->
-    Terminating vₜ ∈ t ->
-    ∃ b, b ∈ s ∧ Terminating vₜ ⊑{Φ} b.
+    ∀ vt mt,
+    Terminating vt mt ∈ t ->
+    ∃ b, b ∈ s ∧ Terminating vt mt ⊑{Φ} b.
   Proof using Type.
-    intros t j s i vₜ Hsim Hb.
+    intros Hsim vt mt Hb.
     (* t Terminates -> it reduces to a final state *)
     apply has_terminating_behavior in Hb. destruct Hb as (t' & Hrtc & Hfin).
     (* Induction on the reduction *)
@@ -45,9 +46,9 @@ Section FSimSound.
                         | t j i s Hprogress IHt
                         | t j j' i i' s Hprogress ? Hgfp ].
       + (* Both Final *)
-        destruct Hfinal as (? & vₛ & Ht & ? & ?).
+        destruct Hfinal as (? & [vs ms] & Ht & ? & ?).
         (* s is final too *)
-        inv Ht. exists (Terminating vₛ). now do 2 constructor.
+        inv Ht. exists (Terminating vs ms). now do 2 constructor.
       + (* Source Stuck *)
         exists Undef. split; now constructor.
       + (* Source Steps, use IH on s *)
@@ -87,7 +88,7 @@ Section FSimSound.
         edestruct IHi as (b & Hbeh & Horder); now eauto.
   Qed.
 
-  Lemma fsim_lfp_progress Φ : ∀ t j s i,
+  Lemma fsim_lfp_progress Φ t j s i:
     t <{ j, i }= s {{ Φ }} ->
     diverges Pₜ t ->
     stuck Pₛ s ∨
@@ -96,7 +97,6 @@ Section FSimSound.
         diverges Pₜ t' ∧
         t' <{ j', i' }= s' {{ Φ }}.
   Proof using Type.
-    intros t j s i.
     (* Induction on the progress index of s *)
     revert t j.
     induction i as [i IHi] using (well_founded_induction wf).
@@ -132,12 +132,12 @@ Section FSimSound.
       + right. repeat econstructor; now eauto.
   Qed.
 
-  Lemma diverging_fsim Φ : ∀ t j s i,
+  Lemma diverging_fsim Φ t j s i:
     t <{ j, i }= s {{ Φ }} ->
     Diverging ∈ t ->
     ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
   Proof using Type.
-    intros t j s i Hsim Hdiv.
+    intros Hsim Hdiv.
     (* We see in the future: can s be stuck ? *)
     destruct (classic (∃ s', Pₛ ⊨ s ->>* s' ∧ stuck Pₛ s')) as [Hstuck | Hnstuck].
     - (* s can be stuck -> s has Undef behavior *)
@@ -162,12 +162,12 @@ Section FSimSound.
         econstructor; now eauto.
   Qed.
 
-  Lemma undef_fsim Φ : ∀ t j s i,
+  Lemma undef_fsim Φ t j s i:
     t <{ j, i }= s {{ Φ }} ->
     Undef ∈ t ->
     Undef ∈ s.
   Proof using Type.
-    intros t j s i Hsim Hb.
+    intros Hsim Hb.
     (* t reach a stuck state. *)
     apply has_undef_behavior in Hb. destruct Hb as (t' & Hrtc & Hstuck).
     (* Induction on the reduction *)
@@ -222,11 +222,11 @@ Section FSimSound.
         eapply IHi; now eauto.
   Qed.
 
-  Theorem fsim_sound Φ : ∀ t j s i,
+  Theorem fsim_sound Φ t j s i:
     t <{ j, i }= s {{ Φ }} ->
     refines Pₜ Pₛ Φ t s.
   Proof using Type.
-    intros t j s i Hsim [] Hb.
+    intros Hsim [] Hb.
     - eapply terminating_fsim; now eauto.
     - eapply diverging_fsim; now eauto.
     - exists Undef. split.

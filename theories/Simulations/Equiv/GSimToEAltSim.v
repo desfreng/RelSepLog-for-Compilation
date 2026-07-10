@@ -13,7 +13,8 @@ From RSL Require Import Simulations.Equiv.FSimToGSim.
 Section PROOF.
   Context {Λₜ Λₛ: lang}.
   Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Definition StatePair := (state Λₜ * state Λₛ)%type.
 

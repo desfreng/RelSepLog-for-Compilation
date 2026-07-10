@@ -1,5 +1,7 @@
 From RSL Require Import Prelude.
 
+From RSL.Commons Require Export Language WfRel.
+
 From Coinduction Require Import all.
 
 Section FSimDef.
@@ -7,7 +9,7 @@ Section FSimDef.
   Context (J I: WfRel).
   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
 
-  Abbreviation post := (value Λₜ -> value Λₛ -> Prop).
+  Abbreviation post := (value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Unset Elimination Schemes.
 

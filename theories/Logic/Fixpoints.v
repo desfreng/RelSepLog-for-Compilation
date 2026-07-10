@@ -1,4 +1,4 @@
-From iris.bi Require Import bi.
+From iris.bi Require Export bi.
 From iris.proofmode Require Import proofmode.
 
 (** Least and greatest fixpoint of a monotone function, *)

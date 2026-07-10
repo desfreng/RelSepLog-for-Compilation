@@ -7,7 +7,8 @@ From RSL Require Import Simulations.FreeSim.
 Section GSimDef.
   Context {Λₜ Λₛ: lang}.
   Context (J I W: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ -> value Λₛ -> Prop).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Unset Elimination Schemes.
 

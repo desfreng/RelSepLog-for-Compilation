@@ -13,7 +13,8 @@ From RSL Require Import Simulations.Equiv.ESimLaxToESim.
 
 Section SimEquiv.
   Context {Λₜ Λₛ: lang}.
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ) (Φ: value Λₜ → value Λₛ → Prop).
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
 
   Abbreviation isim := (isim Pₜ Pₛ Φ).
   Abbreviation esim := (esim _ Pₜ Pₛ Φ).

@@ -21,12 +21,13 @@ Section ESimSound.
     (esim W Pₜ Pₛ Φ i t s)
       (at level 1, no associativity).
 
-  Lemma terminating_esim Φ : ∀ i t s vₜ,
+  Lemma terminating_esim Φ i t s:
     t ≲[i] s {{ Φ }} ->
-    Terminating vₜ ∈ t ->
-    ∃ b, b ∈ s ∧ Terminating vₜ ⊑{Φ} b.
+    ∀ vt mt,
+    Terminating vt mt ∈ t ->
+    ∃ b, b ∈ s ∧ Terminating vt mt ⊑{Φ} b.
   Proof using Type.
-    intros i t s vₜ Hsim Hb.
+    intros Hsim vt mt Hb.
     (* t Terminates -> it reduces to a final state *)
     apply has_terminating_behavior in Hb. destruct Hb as (t' & Hrtc & Hfin).
     revert i s Hsim.
@@ -44,9 +45,9 @@ Section ESimSound.
                         | i t s Hprogress Ht
                         | i t s Hprogress Ht ].
       + (* Both Final *)
-        destruct Hfinal as (? & vₛ & Ht & ? & ?).
+        destruct Hfinal as (? & [vs ms] & Ht & ? & ?).
         (* s is final too *)
-        inv Ht. exists (Terminating vₛ). now do 2 constructor.
+        inv Ht. exists (Terminating vs ms). now do 2 constructor.
       + (* Source Stuck *)
         exists Undef. split; now constructor.
       + (* Source Steps, use IH on stuttering index *)
@@ -86,13 +87,13 @@ Section ESimSound.
         eapply IsSteping; now eauto.
   Qed.
 
-  Lemma esim_lfp_progress Φ : ∀ i t s,
+  Lemma esim_lfp_progress Φ i t s:
     t ≲[i] s {{ Φ }} ->
     diverges Pₜ t ->
     stuck Pₛ s ∨
       ∃ i' t' s', Pₛ ⊨ s ->> s' ∧ t' ≲[i'] s' {{ Φ }} ∧ diverges Pₜ t'.
   Proof using Type.
-    intros i.
+    revert t s.
     (* Induction on the progress index *)
     induction i as [i IHi] using (well_founded_induction wf).
     intros t s Hsim Hdiv.
@@ -124,12 +125,12 @@ Section ESimSound.
       right. exists i', t', s'. now auto.
   Qed.
 
-  Lemma diverging_esim Φ : ∀ i t s,
+  Lemma diverging_esim Φ i t s:
     t ≲[i] s {{ Φ }} ->
     Diverging ∈ t ->
     ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
   Proof using Type.
-    intros i t s Hsim Hdiv.
+    intros Hsim Hdiv.
     (* We see in the future: can s be stuck ? *)
     destruct (classic (∃ s', Pₛ ⊨ s ->>* s' ∧ stuck Pₛ s')) as [Hstuck | Hnstuck].
     - (* s can be stuck -> s has Undef behavior *)
@@ -153,12 +154,12 @@ Section ESimSound.
         econstructor; now eauto.
   Qed.
 
-  Lemma undef_esim Φ : ∀ i t s,
+  Lemma undef_esim Φ i t s:
     t ≲[i] s {{ Φ }} ->
     Undef ∈ t ->
     Undef ∈ s.
   Proof using Type.
-    intros i t s Hsim Hb.
+    intros Hsim Hb.
     (* t reach a stuck state. *)
     apply has_undef_behavior in Hb. destruct Hb as (t' & Hrtc & Hstuck).
     revert i s Hsim.
@@ -213,10 +214,10 @@ Section ESimSound.
         eapply IsSteping; now eauto.
   Qed.
 
-  Theorem esim_sound Φ : ∀ i t s,
+  Theorem esim_sound Φ i t s:
     t ≲[i] s {{ Φ }} -> refines Pₜ Pₛ Φ t s.
   Proof using Type.
-    intros i t s Hsim [] Hb.
+    intros Hsim [] Hb.
     - eapply terminating_esim; now eauto.
     - eapply diverging_esim; now eauto.
     - exists Undef. split.
