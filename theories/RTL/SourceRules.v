@@ -1,135 +1,308 @@
-(* From RSL Require Import Logic Prelude. *)
+From RSL Require Import Prelude.
 
-(* From Coinduction Require Import all. *)
+From RSL.Logic Require Export Logic.
+From RSL.Simulations Require Export FreeSimRules.
+From RSL.RTL Require Export RTL Semantics Notations.
 
-(* From RSL Require Import Simulations.FreeSim. *)
-(* From RSL Require Import Simulations.FreeSimRules. *)
+Import RTLNotations.
 
-(* From RSL Require Import RTL.RTL. *)
-(* From RSL Require Import RTL.Semantics. *)
-(* From RSL Require Import RTL.Notations. *)
-(* From RSL Require Import RTL.SimRules. *)
+Section SourceRulesDef.
+  Let Λₜ : lang := rtl_lang.
+  Let Λₛ : lang := rtl_lang.
+  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
 
-(* Import RTLNotations. *)
+  Abbreviation sim_lfp := (sim_lfp Pₜ Pₛ).
 
-(* Section SourceRulesDef. *)
-(*   Let Λₜ : lang := rtl_lang. *)
-(*   Let Λₛ : lang := rtl_lang. *)
-(*   Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ). *)
+  Notation
+    "'[' C ']' st '<{' j ',' i '}=' ss '{{' Q '}}'" :=
+    (sim_lfp C st j i ss Q%I)
+      (at level 0,
+       st at level 99,
+       ss at level 99,
+       Q at level 200,
+       no associativity).
 
-(*   Abbreviation fsim := (fsim WfNat WfNat Pₜ Pₛ). *)
+  Ltac source_does_UB :=
+    hnf;
+    match goal with
+    | |- fsim_lfp' _ _ _ _ _ _ ?t ?i ?j (?cs, ?ss, ?ms) =>
+        let Hpreg := fresh "Hprog" in
+        by apply FSourceStuck;
+        split;
+        [ destruct cs
+        |  intros Hprog; apply can_progress_must_step in Hprog;
+          destruct Hprog as [? Hprog]; inv Hprog; simregs]
+    | _ => fail "Not a fsim goal"
+    end.
 
-(*   Notation *)
-(*     "'[' C ']' ρ '⊢' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" := *)
-(*     (sim Pₜ Pₛ C ρ ft pct j i fs pcs Q%rlogic) *)
-(*       (at level 0, ft at level 0, fs at level 0, no associativity). *)
+  Ltac smap :=
+    rewrite ?map_union_empty ?map_empty_union ?map_union_assoc;
+    try done.
 
-(*   Notation *)
-(*     "'[' C ']' ρ '⊢' '{{' P '}}' ft '@' pct  '<{' j ',' i '}=' fs '@' pcs '{{' Q '}}'" := *)
-(*     (hoare Pₜ Pₛ C ρ P%rlogic ft pct j i fs pcs Q%rlogic) *)
-(*       (at level 0, ft at level 0, fs at level 0, no associativity). *)
+  Lemma source_nop C st j i cs fs pcs ρs Q :
+    ∀ pc,
+    fs@pcs is <<{ nop -> pc }>> ->
+    [C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }} -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros pc Hpc.
+    unseal. intros ? ? [-> ->] ? ? _ _ Hsim.
+    smap.
 
-(*   Lemma source_nop C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q : *)
-(*     ∀ pc, *)
-(*     fₛ@pcₛ is <<{ nop -> pc }>> -> *)
-(*     [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Q }} -> *)
-(*     [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}. *)
-(*   Proof using Type. *)
-(*     intros pc Hpc H. *)
-(*     intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost. *)
+    eapply FSourceSteps.
+    - by econstructor.
+    - by apply Hsim.
+  Qed.
 
-(*     eapply FSourceSteps. *)
-(*     - econstructor; eassumption. *)
-(*     - now apply H. *)
-(*   Qed. *)
+  Lemma source_ret C st j i cs fs pcs ρs Q :
+    ∀ r v,
+    fs@pcs is <<{ ret r }>> ->
+    ρs@r ⇒ v ->
+    [C] st <{j, 1+i}= (cs, ReturnState v) {{ Q }} -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros r v Hpc Hr.
+    unseal. intros ? ? [-> ->] ? ? _ _ Hsim.
+    smap.
 
-(*   Lemma source_op C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q : *)
-(*     ∀ pc dst op regs args, *)
-(*     fₛ@pcₛ is <<{ dst := @op regs -> pc }>> -> *)
-(*     ρₛ @ regs ⇒ args -> *)
-(*     (∀ v, eval_op op args = Some v -> *)
-(*      [C] (ρₜ, ⟦dst ⇐ v⟧ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Q }}) -> *)
-(*     [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}. *)
-(*   Proof using Type. *)
-(*     intros pc dst op regs args Hpc Hargs H. *)
-(*     intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost. *)
+    eapply FSourceSteps.
+    - by econstructor.
+    - by apply Hsim.
+  Qed.
 
-(*     destruct (eval_op op args) as [v|] eqn:Hv. *)
-(*     - eapply FSourceSteps. *)
-(*       + econstructor; eassumption || reflexivity. *)
-(*       + now eapply H. *)
-(*     - apply FSourceStuck. *)
-(*       split. *)
-(*       { reflexivity. } *)
-(*       intros Hprog. apply can_progress_must_step in Hprog. *)
-(*       destruct Hprog as [? Hprog]. *)
-(*       inv Hprog. simregs. *)
-(*   Qed. *)
+  Lemma source_op C st j i cs fs pcs ρs Q :
+    ∀ pc dst op regs args,
+    fs@pcs is <<{ dst := @op regs -> pc }>> ->
+    ρs @ regs ⇒ args ->
+    (∀ v,
+       ⌜eval_op op args = Some v⌟ -∗
+       [C] st <{j, 1+i}= (cs, State fs pc (⟦dst ⇐ v⟧ρs)) {{ Q }}) -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros pc dst op regs args Hpc Hargs.
+    unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
 
-(*   Lemma source_load C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q : *)
-(*     ∀ pc dst src addr v, *)
-(*     fₛ@pcₛ is <<{ dst := !src -> pc }>> -> *)
-(*     ρₛ @ src ⇒ addr -> *)
-(*     [C] (ρₜ, ⟦dst ⇐ v⟧ρₛ) ⊢ {{ addr →ₛ v ∗ P }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Q }} -> *)
-(*     [C] (ρₜ, ρₛ) ⊢ {{ addr →ₛ v ∗ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}. *)
-(*   Proof using Type. *)
-(*     intros pc dst src addr v Hpc Haddr H. *)
-(*     intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost. *)
+    destruct (eval_op op args) as [v|] eqn:Hv; try source_does_UB.
+    eapply FSourceSteps.
+    - by econstructor.
+    - replace mtP with (mtP ∪ ∅) by smap.
+      replace msP with (msP ∪ ∅) by smap.
+      apply Hsim.
+      + apply map_disjoint_empty_l.
+      + apply map_disjoint_empty_l.
+      + by split.
+  Qed.
 
-(*     destruct Hpre as (mtAddr & msAddr & mtP & msP & ? & ? & ? & ? & Hm & HP). *)
-(*     destruct Hm as (Ht & (l & Hl & Hs)). *)
+  Lemma source_load C st j i cs fs pcs ρs Q :
+    ∀ pc dst src l vs,
+    fs@pcs is <<{ dst := !src -> pc }>> ->
+    ρs @ src ⇒ VPtr l ->
+    (l →ₛ vs -∗
+     [C] st <{j, i}= (cs, State fs pc (⟦dst ⇐ vs⟧ρs)) {{ Q }}) -∗
+    l →ₛ vs -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros pc dst src l vs Hpc Haddr.
+    unseal.
+    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros ? ? _ Hdij [-> ->].
+    decompose_map_disjoint.
 
-(*     eapply FSourceSteps. *)
-(*     - eapply exec_Iload with (v := v); try eassumption. *)
-(*       + subst. now simget. *)
-(*       + reflexivity. *)
-(*     - apply H; auto. *)
-(*       eexists mtAddr, msAddr, mtP, msP. *)
-(*       repeat split; auto. *)
-(*       eexists. split; eassumption. *)
-(*   Qed. *)
+    eapply FSourceSteps.
+    {
+      eapply exec_Iload with (v := vs); try done.
+      rewrite get_at_union_right; auto.
+      rewrite get_at_singl; auto.
+    }
 
-(*   Lemma source_store C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q : *)
-(*     ∀ pc dst src addr v old, *)
-(*     fₛ@pcₛ is <<{ !dst := src -> pc }>> -> *)
-(*     ρₛ @ dst ⇒ addr -> *)
-(*     ρₛ @ src ⇒ v -> *)
-(*     [C] (ρₜ, ρₛ) ⊢ {{ addr →ₛ v ∗ P }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Q }} -> *)
-(*     [C] (ρₜ, ρₛ) ⊢ {{ addr →ₛ old ∗ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}. *)
-(*   Proof using Type. *)
-(*     intros pc dst src addr v old Hpc Haddr Hv H. *)
-(*     intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost. *)
+    eapply Hsim; smap; by solve_map_disjoint.
+  Qed.
 
-(*     destruct Hpre as (mtAddr & msAddr & mtP & msP & ? & ? & ? & ? & Hm & HP). *)
-(*     destruct Hm as (Ht & (l & Hl & Hs)). *)
+  Lemma source_load_exploit I E C st j i cs fs pcs ρs Q :
+    ∀ pc dst src addr valt,
+    fs@pcs is <<{ dst := !src -> pc }>> ->
+    ρs @ src ⇒ addr ->
+    same_val I valt addr ->
+    (∀ lt, addr = VPtr lt -> E !! lt = None) ->
+    (∀ lt ls vt vs,
+       ⌜addr = VPtr ls⌟ -∗
+       ⌜valt = VPtr lt⌟ -∗
+       lt →ₜ vt -∗
+       ls →ₛ vs -∗
+       ⌜same_val I vt vs⌟ -∗
+       mem_inj I (<[ls := lt]>E) -∗
+       [C] st <{j, 1+i}= (cs, State fs pc (⟦dst ⇐ vs⟧ρs)) {{ Q }}) -∗
+    mem_inj I E -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros pc dst src addr valt Hpc Haddr Hrel HnE.
+    unseal.
+    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros mtI msI HtI HsI Hinj.
+    destruct addr as [ | | ls | ]; try source_does_UB.
+    destruct valt as [ | | lt | ]; try contradiction.
 
-(*     eapply FSourceSteps. *)
-(*     - eapply exec_Istore; try eassumption. *)
-(*       subst. erewrite (set_at_some  _ _ _ _ _ Hl) by now simget. *)
-(*       rewrite !alter_union_right by solve_map_disjoint. *)
-(*       rewrite !alter_union_left by solve_map_disjoint. *)
-(*       rewrite !alter_singleton. *)
-(*       reflexivity. *)
-(*     - subst. apply H; try solve_map_disjoint. *)
-(*       eexists ∅, _, mtP, msP. repeat split; eauto. *)
-(*       + solve_map_disjoint. *)
-(*       + exists l. now split. *)
-(*   Qed. *)
+    pose proof (inj_exploit I E _ _ Hrel (HnE _ eq_refl)) as H.
+    unseal_in H.
+    apply (H ∅ ∅) in Hinj; try (apply map_disjoint_empty_r || easy).
+    clear H.
+    destruct Hinj as (vt & vs & Hinj).
+    rewrite !map_empty_union in Hinj.
+    destruct Hinj as (? & ? & ? & ? & ? & ? & <- & <- & [-> ->] & Hinj).
+    destruct Hinj as (? & ? & ? & ? & ? & ? & <- & <- & [-> ->] & Hinj).
+    destruct Hinj as (? & ? & mtI & msI & _ & _ & <- & <- & [[-> ->] Hsame] & Hinj).
+    simpl in Hsame.
+    smap.
 
-(*   Lemma source_if C ρₜ ρₛ P fₜ pcₜ j i fₛ pcₛ Q : *)
-(*     ∀ pc_true pc_false reg v pc, *)
-(*     fₛ@pcₛ is <<{ if reg then goto pc_true else goto pc_false }>> -> *)
-(*     ρₛ @ reg ⇒ v -> *)
-(*     (if (v =? 0)%Z then pc_true else pc_false) = pc -> *)
-(*     [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, 1+i}= fₛ @ pc {{ Q }} -> *)
-(*     [C] (ρₜ, ρₛ) ⊢ {{ P }} fₜ @ pcₜ <{j, i}= fₛ @ pcₛ {{ Q }}. *)
-(*   Proof using Type. *)
-(*     intros pc_true pc_false reg v pc Hpc Hv Hnext_pc H. *)
-(*     intros ? ? Hemp Ψ mtPre msPre ? ? Hpre mtPost msPost ? ? Hpost. *)
+    decompose_map_disjoint.
 
-(*     eapply FSourceSteps. *)
-(*     - econstructor; eassumption || reflexivity. *)
-(*     - subst. now apply H. *)
-(*   Qed. *)
+    eapply FSourceSteps.
+    {
+      eapply exec_Iload with (v := vs); try done.
+      rewrite get_at_union_left; last done.
+      rewrite get_at_union_right; last done.
+      by apply get_at_singl.
+    }
 
-(* End SourceRulesDef. *)
+    replace (mtS ∪ {[lt := vt]} ∪ mtI) with (mtS ∪ ∅ ∪ ∅ ∪ {[lt := vt]} ∪ ∅ ∪ ∅ ∪ mtI)
+      by smap.
+    replace (msS ∪ {[ls := vs]} ∪ msI) with (msS ∪ ∅ ∪ ∅ ∪ ∅ ∪ {[ls := vs]} ∪ ∅ ∪ msI)
+      by smap.
+
+    eapply Hsim; smap; by solve_map_disjoint.
+  Qed.
+
+  Lemma source_store C st j i cs fs pcs ρs Q :
+    ∀ pc dst src v l old,
+    fs@pcs is <<{ !dst := src -> pc }>> ->
+    ρs @ dst ⇒ VPtr l ->
+    ρs @ src ⇒ v ->
+    (l →ₛ v -∗
+     [C] st <{j, i}= (cs, State fs pc ρs) {{ Q }}) -∗
+    l →ₛ old -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros pc dst src v l old Hpc Haddr Hsrc.
+    unseal.
+    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros ? ? _ Hdij [-> ->].
+    decompose_map_disjoint.
+
+    eapply FSourceSteps.
+    {
+      eapply exec_Istore with (v := v); try done.
+      erewrite set_at_some.
+      - rewrite insert_union_r; last done.
+        rewrite insert_singleton_eq.
+        reflexivity.
+      - rewrite get_at_union_right; last done.
+        by apply get_at_singl.
+    }
+
+    eapply Hsim; smap; by solve_map_disjoint.
+  Qed.
+
+  Lemma source_store_exploit I E C st j i cs fs pcs ρs Q :
+    ∀ pc dst src v addr valt,
+    fs@pcs is <<{ !dst := src -> pc }>> ->
+    ρs @ dst ⇒ addr ->
+    ρs @ src ⇒ v ->
+    same_val I valt addr ->
+    (∀ lt, addr = VPtr lt -> E !! lt = None) ->
+    (∀ lt ls vt,
+       ⌜addr = VPtr ls⌟ -∗
+       ⌜valt = VPtr lt⌟ -∗
+       lt →ₜ vt -∗
+       ls →ₛ v -∗
+       mem_inj I (<[ls := lt]>E) -∗
+       [C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }}) -∗
+    mem_inj I E -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros pc dst src v addr valt Hpc Haddr Hsrc Hrel HnE.
+    unseal.
+    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros mtI msI HtI HsI Hinj.
+    destruct addr as [ | | ls | ]; try source_does_UB.
+    destruct valt as [ | | lt | ]; try contradiction.
+
+    pose proof (inj_exploit I E _ _ Hrel (HnE _ eq_refl)) as H.
+    unseal_in H.
+    apply (H ∅ ∅) in Hinj; try (apply map_disjoint_empty_r || easy).
+    clear H.
+    destruct Hinj as (vt & vs & Hinj).
+    rewrite !map_empty_union in Hinj.
+    destruct Hinj as (? & ? & ? & ? & ? & ? & <- & <- & [-> ->] & Hinj).
+    destruct Hinj as (? & ? & ? & ? & ? & ? & <- & <- & [-> ->] & Hinj).
+    destruct Hinj as (? & ? & mtI & msI & _ & _ & <- & <- & [[-> ->] Hsame] & Hinj).
+    simpl in Hsame.
+    smap.
+
+    decompose_map_disjoint.
+
+    eapply FSourceSteps.
+    {
+      eapply exec_Istore with (v := v); try done.
+      erewrite set_at_some.
+      - rewrite insert_union_l insert_union_r; last done.
+        rewrite insert_singleton_eq.
+        reflexivity.
+      - rewrite get_at_union_left; last done.
+        rewrite get_at_union_right; last done.
+        by apply get_at_singl.
+    }
+
+    replace (mtS ∪ {[lt := vt]} ∪ mtI) with (mtS ∪ ∅ ∪ ∅ ∪ {[lt := vt]} ∪ ∅ ∪ mtI)
+      by smap.
+    replace (msS ∪ {[ls := v]} ∪ msI) with (msS ∪ ∅ ∪ ∅ ∪ ∅ ∪ {[ls := v]} ∪ msI)
+      by smap.
+
+    eapply Hsim; smap; by solve_map_disjoint.
+  Qed.
+
+  Lemma source_if C st j i cs fs pcs ρs Q :
+    ∀ pc_true pc_false reg v,
+    fs@pcs is <<{ if reg then goto pc_true else goto pc_false }>> ->
+    ρs @ reg ⇒ v ->
+    (∀ b pc,
+       ⌜v = VBool b⌟ -∗
+       ⌜pc = if b then pc_true else pc_false⌟ -∗
+       [C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }}) -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros pc_true pc_false reg v Hpc Hv.
+    unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim.
+    destruct v as [ | b | | ].
+    - apply FSourceStuck.
+      split. { by destruct cs. }
+      intros Hprog. apply can_progress_must_step in Hprog.
+      destruct Hprog as [? Hprog].
+      inv Hprog. simregs.
+    - eapply FSourceSteps.
+      + by econstructor.
+      + replace (∅ ∪ mtP) with (mtP ∪ ∅ ∪ ∅)
+          by (now rewrite !map_empty_union !map_union_empty).
+        replace (∅ ∪ msP) with (msP ∪ ∅ ∪ ∅)
+          by (now rewrite !map_empty_union !map_union_empty).
+        apply Hsim with b.
+        * apply map_disjoint_empty_l.
+        * apply map_disjoint_empty_l.
+        * by split.
+        * rewrite !map_union_empty. apply map_disjoint_empty_l.
+        * rewrite !map_union_empty. apply map_disjoint_empty_l.
+        * by split.
+    - apply FSourceStuck.
+      split. { by destruct cs. }
+      intros Hprog. apply can_progress_must_step in Hprog.
+      destruct Hprog as [? Hprog].
+      inv Hprog. simregs.
+    - apply FSourceStuck.
+      split. { by destruct cs. }
+      intros Hprog. apply can_progress_must_step in Hprog.
+      destruct Hprog as [? Hprog].
+      inv Hprog. simregs.
+  Qed.
+
+End SourceRulesDef.

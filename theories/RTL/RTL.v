@@ -8,15 +8,16 @@ From stdpp Require Import strings.
 Definition node : Type := nat.
 Definition ident : Type := string.
 
-Inductive op : Type :=
-| Add
-| Sub
-| Mul
-| Div
-| Move
-| LoadI (v: val)
-| Incr
-| Decr.
+Variant op : Type :=
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Move
+  | LoadI (v: val)
+  | Incr
+  | Decr
+  | EqZ.
 
 Inductive instr : Type :=
 | Inop: node -> instr
@@ -70,16 +71,17 @@ Notation "f '@' pc 'is' i" :=
 
 Definition eval_op (op: op) (args: list val) : option val :=
   match op, args with
-  | Add, [v1; v2] => Some (v1 + v2)%Z
-  | Sub, [v1; v2] => Some (v1 - v2)%Z
-  | Mul, [v1; v2] => Some (v1 * v2)%Z
-  | Div, [v1; v2] =>
+  | Add, [VInt v1; VInt v2] => Some (VInt (v1 + v2)%Z)
+  | Sub, [VInt v1; VInt v2] => Some (VInt (v1 - v2)%Z)
+  | Mul, [VInt v1; VInt v2] => Some (VInt (v1 * v2)%Z)
+  | Div, [VInt v1; VInt v2] =>
       if (v2 =? 0)%Z
       then None
-      else Some (v1 / v2)%Z
+      else Some (VInt (v1 / v2)%Z)
   | Move, [v] => Some v
   | LoadI v, [] => Some v
-  | Incr, [v] => Some (v + 1)%Z
-  | Decr, [v] => Some (v - 1)%Z
+  | Incr, [VInt v] => Some (VInt (v + 1)%Z)
+  | Decr, [VInt v] => Some (VInt (v - 1)%Z)
+  | EqZ, [VInt v] => Some (VBool (v =? 0)%Z)
   | _, _ => None
   end.

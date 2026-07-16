@@ -134,7 +134,7 @@ Section Playground.
       result := @ fun_name ([n]);
 
       (* 2. Expressions: Immediates and Loads *)
-      result := #1;
+      result := #(VInt 1);
       one := !addr;
 
       (* 3. Arithmetic Operations *)

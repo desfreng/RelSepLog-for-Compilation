@@ -1,7 +1,7 @@
 From RSL Require Import Prelude.
 
-From RSL Require Import RTL.RTL.
 From RSL Require Import Toy.Toy.
+From RSL Require Import RTL.RTL.
 
 Definition Build (T: Type) : Type :=
   node -> option (node * T * code).

@@ -1,4 +1,4 @@
-From stdpp Require Import prelude.
+From RSL Require Import Prelude.
 
 Section NoDupProof.
   Context `{dec : EqDecision A}.

@@ -1,6 +1,6 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Import Language.
+From RSL.Commons Require Export Values.
 
 From stdpp Require Import gmap.
 
@@ -12,7 +12,7 @@ Definition regbank : Type := gmap reg val.
 Definition regbank_get (ρ: regbank) (r: reg) : val :=
   match ρ !! r with
   | Some v => v
-  | None => 0%Z (* Default val *)
+  | None => VUndef
   end.
 
 Definition regbank_set (ρ: regbank) (r: reg) (v: val) : regbank :=

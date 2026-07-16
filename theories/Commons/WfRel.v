@@ -1,4 +1,4 @@
-From stdpp Require Import prelude.
+From RSL Require Import Prelude.
 
 From Stdlib Require Import Relation_Operators.
 

@@ -1,5 +1,6 @@
 From RSL Require Import Prelude.
-From RSL.Commons Require Import Language.
+
+From RSL.Commons Require Export Language.
 
 From stdpp Require Import gmap.
 
@@ -63,8 +64,8 @@ Inductive rtl_step (P: program) : rtl_state * memory -> rtl_state * memory -> Pr
 
 | exec_Icond: forall  σ m ρ f pc cond ifso ifnot v pc',
   f@pc is <<{ if cond then goto ifso else goto ifnot }>> ->
-  ρ@cond ⇒ v ->
-  pc' = (if Z.eqb v 0 then ifso else ifnot) ->
+  ρ@cond ⇒ VBool v ->
+  pc' = (if v then ifso else ifnot) ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
 
 | exec_Icall: forall σ m ρ f pc dst sig args pc' σ' fn vals,
@@ -84,15 +85,15 @@ Inductive rtl_step (P: program) : rtl_state * memory -> rtl_state * memory -> Pr
   rtl_step P (Stackframe dst f pc ρ :: σ, ReturnState v, m) (σ, State f pc ρ', m)
 .
 
-Definition is_final (s: rtl_state * memory) : option (val * memory) :=
+Definition is_rtl_final (s: rtl_state) : option (val) :=
   match s with
-  | ([], ReturnState v, m) => Some (v, m)
+  | ([], ReturnState v) => Some (v)
   | _ => None
   end.
 
-Lemma rtl_mixin_lang : LangMixin rtl_step is_final.
+Lemma rtl_mixin_lang : LangMixin rtl_step is_rtl_final.
 Proof.
-  constructor. intros [[[] []] ?] ? ? H ? ? Hstep; inv H. inv Hstep.
+  constructor. intros [[] []] ? H ? ? ? Hstep; inv H. inv Hstep.
 Qed.
 
 Definition rtl_lang : lang := Lang _ _ _ _ _ rtl_mixin_lang.
@@ -100,6 +101,8 @@ Definition rtl_lang : lang := Lang _ _ _ _ _ rtl_mixin_lang.
 Section SemProp.
   Let Λ : lang := rtl_lang.
   Context (P: prog Λ).
+  Implicit Type s : state Λ.
+  Implicit Type v : value Λ.
 
   (** Lemmas on the step relation  *)
   Lemma is_final_struct s v m :
@@ -133,32 +136,32 @@ Section SemProp.
   Qed.
 
   (** Lift and Unlift lemmas for step *)
-  Lemma lift_step : ∀ σ σ' Σ s t m m',
-    P ⊨ (σ, s, m) ->> (σ', t, m') ->
-    P ⊨ (σ ++ Σ, s, m) ->> (σ' ++ Σ, t, m').
+  Lemma lift_step σ σ' Σ ps pt m m':
+    P ⊨ (σ, ps, m) ->> (σ', pt, m') ->
+    P ⊨ (σ ++ Σ, ps, m) ->> (σ' ++ Σ, pt, m').
   Proof using Type.
-    intros ? ? ? ? ? ? ? H; inv H; econstructor; now eauto.
+    intros H; inv H; econstructor; now eauto.
   Qed.
 
-  Lemma unlift_step : ∀ σ s m σ' t m' Σ,
-    P ⊨ (σ ++ Σ, s, m) ->> (σ' ++ Σ, t, m') ->
-    P ⊨ (σ, s, m) ->> (σ', t, m').
+  Lemma unlift_step σ ps m σ' pt m' Σ:
+    P ⊨ (σ ++ Σ, ps, m) ->> (σ' ++ Σ, pt, m') ->
+    P ⊨ (σ, ps, m) ->> (σ', pt, m').
   Proof using Type.
-    intros ? ? ? ? ? ? ? H; inv H;
+    intros H; inv H;
       rewrite ? app_comm_cons in *;
       eassert _ by (eapply app_inv_tail; eassumption);
       subst; econstructor; now eauto.
   Qed.
 
-  Theorem lift_steps : ∀ σ s m σ' t m' Σ,
-    P ⊨ (σ, s, m) ->>* (σ', t, m') ->
-    P ⊨ (σ ++ Σ, s, m) ->>* (σ' ++ Σ, t, m').
+  Theorem lift_steps σ ps m σ' pt m' Σ:
+    P ⊨ (σ, ps, m) ->>* (σ', pt, m') ->
+    P ⊨ (σ ++ Σ, ps, m) ->>* (σ' ++ Σ, pt, m').
   Proof using Type.
-    intros σ s m σ' t m' Σ Hrtc.
-    remember (σ, s, m) as x eqn:Hx.
-    remember (σ', t, m') as y eqn:Hy.
+    intros Hrtc.
+    remember (σ, ps, m) as x eqn:Hx.
+    remember (σ', pt, m') as y eqn:Hy.
     induction Hrtc as [ y | x y z H Hrtc IH]
-      in σ, s, m, Hx, σ', t, m', Hy |- *.
+      in σ, ps, m, Hx, σ', pt, m', Hy |- *.
     - subst. inv Hy. reflexivity.
     - subst. destruct y as [[] ?].
       etransitivity.
@@ -210,9 +213,9 @@ Section SemProp.
     ~ can_progress P ([], ReturnState v, m).
   Proof using Type. intros v m [u H]. inv H. Qed.
 
-  Lemma lift_not_stuck : ∀ σ Σ s m,
-    can_progress P (σ, s, m) ->
-    can_progress P (σ ++ Σ, s, m).
-  Proof using Type. intros σ Σ s m [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
+  Lemma lift_not_stuck σ Σ ps m:
+    can_progress P (σ, ps, m) ->
+    can_progress P (σ ++ Σ, ps, m).
+  Proof using Type. intros [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
 
 End SemProp.
