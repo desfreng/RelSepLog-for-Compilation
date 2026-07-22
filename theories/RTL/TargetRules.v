@@ -26,20 +26,18 @@ Section TargetRulesDef.
     rewrite ?map_union_empty ?map_empty_union ?map_union_assoc;
     try done.
 
+  Ltac target_step :=
+    repeat intro; subst; unseal; intros ? ? [-> ->] ? ? _ _ Hsim;
+    smap; apply FTargetSteps;
+    [ eexists; by econstructor
+    | intros t' Hstep; inv Hstep; try simregs; eexists; apply Hsim ].
+
   Lemma target_nop C ct ft pct ρt j i ss Q :
     ∀ pc,
     ft@pct is <<{ nop -> pc }>> ->
     [C] (ct, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
     [C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
-  Proof using Type.
-    intros pc Hpc.
-    unseal. intros ? ? [-> ->] ? ? _ _ Hsim. smap.
-
-    apply FTargetSteps.
-    - eexists. by econstructor.
-    - intros t Hstep. inv Hstep.
-      eexists. now apply Hsim.
-  Qed.
+  Proof using Type. by target_step. Qed.
 
   Lemma target_ret C ct ft pct ρt j i ss Q :
     ∀ r v,
@@ -47,16 +45,7 @@ Section TargetRulesDef.
     ρt@r ⇒ v ->
     [C] (ct, ReturnState v) <{1+j, i}= ss {{ Q }} -∗
     [C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
-  Proof using Type.
-    intros r v Hpc Hr.
-    unseal. intros ? ? [-> ->] ? ? _ _ Hsim.
-    smap.
-
-    eapply FTargetSteps.
-    - eexists. by econstructor.
-    - intros t' Hstep. inv Hstep. simregs.
-      eexists. by apply Hsim.
-  Qed.
+  Proof using Type. by target_step. Qed.
 
   Lemma target_op C ct ft pct ρt j i ss Q :
     ∀ pc dst op regs args v,
@@ -65,15 +54,7 @@ Section TargetRulesDef.
     eval_op op args = Some v ->
     [C] (ct, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
     [C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
-  Proof using Type.
-    intros pc dst op regs args v Hpc Hargs Hv.
-    unseal. intros ? ? [-> ->] ? ? _ _ Hsim. smap.
-
-    eapply FTargetSteps.
-    - eexists. by econstructor.
-    - intros t Hstep. inv Hstep. simregs.
-      eexists. now apply Hsim.
-  Qed.
+  Proof using Type. by target_step. Qed.
 
   Lemma target_load C ct ft pct ρt j i ss Q :
     ∀ pc dst src l v,
@@ -151,15 +132,30 @@ Section TargetRulesDef.
     let pc := if b then pc_true else pc_false in
     [C] (ct, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
     [C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
-  Proof using Type.
-    intros pc_true pc_false reg b pc Hpc.
-    unseal.
-    intros ? ? [-> ->] ? ? _ _ Hsim. smap.
+  Proof using Type. by target_step. Qed.
 
-    apply FTargetSteps.
-    - eexists. by econstructor.
-    - intros t Hstep. inv Hstep. simregs.
-      eexists. now apply Hsim.
-  Qed.
+  Lemma target_call C ct ft pct ρt j i ss Q :
+    ∀ dst sig args pc' fn vals,
+    ft@pct is <<{ dst := @call sig args -> pc' }>> ->
+    find_fun Pₜ sig = Some fn ->
+    ρt@args ⇒ vals ->
+    [C] (Stackframe dst ft pc' ρt :: ct, CallState fn vals) <{1+j, i}= ss {{ Q }} -∗
+    [C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+  Proof using Type. by target_step. Qed.
+
+  Lemma target_callstate C ct ft args j i ss Q :
+    ∀ ρt pc,
+    length args = length (fn_regs ft) ->
+    ρt = init_regs ft args ->
+    pc = fn_entrypoint ft ->
+    [C] (ct, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
+    [C] (ct, CallState ft args) <{j, i}= ss {{ Q }}.
+  Proof using Type. by target_step. Qed.
+
+  Lemma source_retstate C ct v j i ss Q :
+    ∀ fn pc ρt dst,
+    [C] (ct, State fn pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
+    [C] (Stackframe dst fn pc ρt :: ct, ReturnState v) <{j, i}= ss {{ Q }}.
+  Proof using Type. by target_step. Qed.
 
 End TargetRulesDef.

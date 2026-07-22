@@ -2,11 +2,12 @@ From RSL Require Import Prelude.
 
 From RSL.Commons Require Export Language.
 
-From stdpp Require Import gmap.
-
 From RSL.RTL Require Import RTL Notations.
 
 Import RTLNotations.
+
+Definition init_regs (f: function) (v: list val) : regbank :=
+  list_to_map (zip (fn_regs f) v).
 
 Inductive stackframe : Type :=
 | Stackframe
@@ -77,7 +78,7 @@ Inductive rtl_step (P: program) : rtl_state * memory -> rtl_state * memory -> Pr
 
 | exec_function: forall σ m ρ f args,
   length args = length (fn_regs f) ->
-  ρ@(fn_regs f) ⇒ args ->
+  init_regs f args = ρ ->
   rtl_step P (σ, CallState f args, m) (σ, State f (fn_entrypoint f) ρ, m)
 
 | exec_return: forall σ m ρ f pc dst v ρ',
@@ -169,53 +170,95 @@ Section SemProp.
       + eauto.
   Qed.
 
-  Lemma unfold_call fn : ∀ n dst f pc ρ args m σ t m',
-    P ⊨ ([Stackframe dst f pc ρ], CallState fn args, m) -{n}> (σ, t, m') ->
-    (∃ σ',
-        σ = σ' ++ [Stackframe dst f pc ρ]
-        ∧ P ⊨ ([], CallState fn args, m) -{n}> (σ', t, m'))
-    ∨
-      (∃ m1 m2 v m'',
-          n = 1 + m1 + m2
-          ∧ P ⊨ ([], CallState fn args, m) -{m1}> ([], ReturnState v, m'')
-          ∧ P ⊨ ([], State f pc (⟦dst ⇐ v⟧ρ), m'') -{m2}> (σ, t, m')
-      ).
-  Proof using Type.
-    intros n.
-    induction n as [ | n IH ];
-      intros dst f pc ρ args m σ t m' Hrtc.
-    - inv Hrtc. left. exists []. split; auto. constructor.
-    - apply nsteps_inv_r in Hrtc. destruct Hrtc as ([[] ?] & Hrtc & Hstep).
-      apply IH in Hrtc.
-      destruct Hrtc
-        as [(σ' & -> & Hlift) | (m1 & m2 & v & m'' & Hn & Hcall & Hrest)].
-      + inv Hstep as [ | | | | | | | | ? ? ? ? ? ? v ? ? Hσ];
-          try (left; eexists; split;
-               [ rewrite ? app_comm_cons; reflexivity
-               | eapply nsteps_r; [ now apply Hlift | econstructor; now eauto]
-               ]
-            ).
-        destruct σ'; inv Hσ.
-        * right. exists n, 0, v, m'. repeat split; eauto. constructor.
-        * left. eexists. split.
-          -- reflexivity.
-          -- eapply nsteps_r; [ now apply Hlift | econstructor; now eauto].
-      + inversion Hstep; subst; right; (exists m1, (S m2), v, m''); repeat split;
-          now eauto || (eapply nsteps_r;
-                        [ now apply Hrest | econstructor; now eauto]).
-  Qed.
-
-  Lemma ret_not_stuck : ∀ frame σ v m,
+  Lemma ret_can_progress frame σ v m :
     can_progress P (frame :: σ, ReturnState v, m).
-  Proof using Type. intros []. repeat econstructor; now eauto. Qed.
+  Proof using Type. destruct frame. by do 2 econstructor. Qed.
 
-  Lemma ret_stuck_in_empty : ∀ v m,
+  Lemma ret_empty_final v m:
     ~ can_progress P ([], ReturnState v, m).
-  Proof using Type. intros v m [u H]. inv H. Qed.
+  Proof using Type. intros [u H]. inv H. Qed.
 
-  Lemma lift_not_stuck σ Σ ps m:
+  Lemma lift_can_progress σ Σ ps m:
     can_progress P (σ, ps, m) ->
     can_progress P (σ ++ Σ, ps, m).
-  Proof using Type. intros [[[] ?] Ht]. eexists. apply lift_step. eassumption. Qed.
+  Proof using Type.
+    intros [[[] ?] Ht]. eexists. apply lift_step. eassumption.
+  Qed.
 
+  Lemma unlift_can_progress σ Σ ps m:
+    is_rtl_final (σ, ps) = None ->
+    can_progress P (σ ++ Σ, ps, m) ->
+    can_progress P (σ, ps, m).
+  Proof using Type.
+    intros Hfin [[[] ?] Ht].
+    inv Ht; try by do 2 econstructor.
+    destruct σ as [|[]]; inv Hfin.
+    econstructor. try by do 2 econstructor.
+  Qed.
+
+  Lemma init_regs_sound f args :
+    length args = length (fn_regs f) ->
+    ∃ ρ,
+      ρ = init_regs f args ∧
+      ∀ i r v,
+      fn_regs f !! i = Some r ->
+      args !! i = Some v ->
+      ρ@r ⇒ v.
+  Proof using Type.
+    intros Hlen.
+    eexists. split; [ done | ].
+    intros i r v Hr Hv.
+    autounfold with regbank.
+    unfold init_regs, regbank.
+    rewrite (elem_of_list_to_map_1' _ r v).
+    - easy.
+    - intros y (i' & ? & ? & Heq & Hr' & Hv')%elem_of_lookup_zip_with.
+      inv Heq.
+      assert (i = i').
+      {
+        eapply NoDup_lookup.
+        - by eapply is_no_dup_sound, fn_regs_no_dup.
+        - eassumption.
+        - eassumption.
+      }
+      cbn in *. congruence.
+    - apply elem_of_lookup_zip_with. by exists i, r, v.
+  Qed.
 End SemProp.
+
+
+(* Lemma unfold_call fn : ∀ n dst f pc ρ args m σ' σ t m', *)
+(*   P ⊨ (Stackframe dst f pc ρ :: σ, CallState fn args, m) -{n}> (σ', t, m') -> *)
+(*   (∃ σ'', *)
+(*       σ = σ'' ++ Stackframe dst f pc ρ :: σ *)
+(*       ∧ P ⊨ ([], CallState fn args, m) -{n}> (σ'', t, m')) *)
+(*   ∨ *)
+(*     (∃ m1 m2 v m'', *)
+(*         n = 1 + m1 + m2 *)
+(*         ∧ P ⊨ ([], CallState fn args, m) -{m1}> ([], ReturnState v, m'') *)
+(*         ∧ P ⊨ ([], State f pc (⟦dst ⇐ v⟧ρ), m'') -{m2}> (σ, t, m') *)
+(*     ). *)
+(* Proof using Type. *)
+(*   intros n. *)
+(*   induction n as [ | n IH ]; *)
+(*     intros dst f pc ρ args m σ t m' Hrtc. *)
+(*   - inv Hrtc. left. exists []. split; auto. constructor. *)
+(*   - apply nsteps_inv_r in Hrtc. destruct Hrtc as ([[] ?] & Hrtc & Hstep). *)
+(*     apply IH in Hrtc. *)
+(*     destruct Hrtc *)
+(*       as [(σ' & -> & Hlift) | (m1 & m2 & v & m'' & Hn & Hcall & Hrest)]. *)
+(*     + inv Hstep as [ | | | | | | | | ? ? ? ? ? ? v ? ? Hσ]; *)
+(*         try (left; eexists; split; *)
+(*              [ rewrite ? app_comm_cons; reflexivity *)
+(*              | eapply nsteps_r; [ now apply Hlift | econstructor; now eauto] *)
+(*              ] *)
+(*           ). *)
+(*       destruct σ'; inv Hσ. *)
+(*       * right. exists n, 0, v, m'. repeat split; eauto. constructor. *)
+(*       * left. eexists. split. *)
+(*         -- reflexivity. *)
+(*         -- eapply nsteps_r; [ now apply Hlift | econstructor; now eauto]. *)
+(*     + inversion Hstep; subst; right; (exists m1, (S m2), v, m''); repeat split; *)
+(*         now eauto || (eapply nsteps_r; *)
+(*                       [ now apply Hrest | econstructor; now eauto]). *)
+(* Qed. *)

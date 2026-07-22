@@ -1,19 +1,12 @@
 From RSL Require Import Prelude.
 
+From Stdlib Require Import Program.Equality.
+
 Section NoDupProof.
   Context `{dec : EqDecision A}.
+  Implicit Types (l: list A).
 
-  Global Instance list_elem_of_dec : RelDecision (∈@{list A}).
-  Proof using Type*.
-   refine (
-    fix go x l :=
-    match l return Decision (x ∈ l) with
-    | [] => right _
-    | y :: l => cast_if_or (decide (x = y)) (go x l)
-    end); clear go dec; subst; try (by constructor); abstract by inv 1.
-  Defined.
-
-  Fixpoint is_no_dup (l: list A) : bool :=
+  Fixpoint is_no_dup l : bool :=
     match l with
     | [] => true
     | hd :: tl =>
@@ -36,7 +29,7 @@ Section NoDupProof.
         * apply IH. now inv H.
   Qed.
 
-  Lemma no_dup_dec : ∀ l : list A, Decision (NoDup l).
+  Lemma no_dup_dec : ∀ l, Decision (NoDup l).
   Proof using dec.
     intros l. destruct (is_no_dup l) eqn:H.
     - left. now apply is_no_dup_sound.

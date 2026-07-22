@@ -33,13 +33,6 @@ Notation "ρ @ r '⇒' v" :=
   (regbank_assert ρ r%nat v%Z)
     (at level 60, no associativity).
 
-Definition regbank_same (ρ1: regbank) (r1: reg) (ρ2: regbank) (r2: reg) : Prop :=
-  ∃ v, ρ1 @ r1 ⇒ v ∧ ρ2 @ r2 ⇒ v.
-
-Notation "ρ1 @ r1 '<=>' ρ2 @ r2" :=
-  (regbank_same ρ1 r1%nat ρ2 r2%nat)
-    (at level 60, ρ2 at next level, no associativity).
-
 Notation "'⟦' r '⇐' v '⟧' ρ" :=
   (regbank_set ρ r%nat v%Z)
     (at level 20, ρ at level 20, right associativity).
@@ -52,8 +45,7 @@ Hint Unfold
   regbank_set
   regbank_assert
   regbank_assert_single
-  regbank_assert_list
-  regbank_same : regbank.
+  regbank_assert_list : regbank.
 
 Lemma regbank_assert_unfold ρ :
   ∀ r v tl tv,

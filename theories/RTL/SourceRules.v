@@ -1,8 +1,8 @@
 From RSL Require Import Prelude.
 
-From RSL.Logic Require Export Logic.
 From RSL.Simulations Require Export FreeSimRules.
 From RSL.RTL Require Export RTL Semantics Notations.
+From RSL.Logic Require Export Logic.
 
 Import RTLNotations.
 
@@ -39,20 +39,17 @@ Section SourceRulesDef.
     rewrite ?map_union_empty ?map_empty_union ?map_union_assoc;
     try done.
 
+  Ltac source_step :=
+    repeat intro; subst; unseal;
+    intros ? ? [-> ->] ? ? _ _ Hsim; smap;
+    econstructor; [by econstructor|apply Hsim].
+
   Lemma source_nop C st j i cs fs pcs ρs Q :
     ∀ pc,
     fs@pcs is <<{ nop -> pc }>> ->
     [C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }} -∗
     [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
-  Proof using Type.
-    intros pc Hpc.
-    unseal. intros ? ? [-> ->] ? ? _ _ Hsim.
-    smap.
-
-    eapply FSourceSteps.
-    - by econstructor.
-    - by apply Hsim.
-  Qed.
+  Proof using Type. by source_step. Qed.
 
   Lemma source_ret C st j i cs fs pcs ρs Q :
     ∀ r v,
@@ -60,17 +57,18 @@ Section SourceRulesDef.
     ρs@r ⇒ v ->
     [C] st <{j, 1+i}= (cs, ReturnState v) {{ Q }} -∗
     [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
-  Proof using Type.
-    intros r v Hpc Hr.
-    unseal. intros ? ? [-> ->] ? ? _ _ Hsim.
-    smap.
-
-    eapply FSourceSteps.
-    - by econstructor.
-    - by apply Hsim.
-  Qed.
+  Proof using Type. by source_step. Qed.
 
   Lemma source_op C st j i cs fs pcs ρs Q :
+    ∀ pc dst op regs args v,
+    fs@pcs is <<{ dst := @op regs -> pc }>> ->
+    ρs @ regs ⇒ args ->
+    eval_op op args = Some v ->
+    [C] st <{j, 1+i}= (cs, State fs pc (⟦dst ⇐ v⟧ρs)) {{ Q }} -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type. by source_step. Qed.
+
+  Lemma source_op_exploit C st j i cs fs pcs ρs Q :
     ∀ pc dst op regs args,
     fs@pcs is <<{ dst := @op regs -> pc }>> ->
     ρs @ regs ⇒ args ->
@@ -124,14 +122,14 @@ Section SourceRulesDef.
     fs@pcs is <<{ dst := !src -> pc }>> ->
     ρs @ src ⇒ addr ->
     same_val I valt addr ->
-    (∀ lt, addr = VPtr lt -> E !! lt = None) ->
+    (∀ ls, addr = VPtr ls -> ls ∉ dom E) ->
     (∀ lt ls vt vs,
        ⌜addr = VPtr ls⌟ -∗
        ⌜valt = VPtr lt⌟ -∗
        lt →ₜ vt -∗
        ls →ₛ vs -∗
        ⌜same_val I vt vs⌟ -∗
-       mem_inj I (<[ls := lt]>E) -∗
+       mem_inj I ({[ (ls, lt) ]} ∪ E) -∗
        [C] st <{j, 1+i}= (cs, State fs pc (⟦dst ⇐ vs⟧ρs)) {{ Q }}) -∗
     mem_inj I E -∗
     [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
@@ -165,6 +163,7 @@ Section SourceRulesDef.
       by apply get_at_singl.
     }
 
+    simpl in Hsim.
     replace (mtS ∪ {[lt := vt]} ∪ mtI) with (mtS ∪ ∅ ∪ ∅ ∪ {[lt := vt]} ∪ ∅ ∪ ∅ ∪ mtI)
       by smap.
     replace (msS ∪ {[ls := vs]} ∪ msI) with (msS ∪ ∅ ∪ ∅ ∪ ∅ ∪ {[ls := vs]} ∪ ∅ ∪ msI)
@@ -209,13 +208,13 @@ Section SourceRulesDef.
     ρs @ dst ⇒ addr ->
     ρs @ src ⇒ v ->
     same_val I valt addr ->
-    (∀ lt, addr = VPtr lt -> E !! lt = None) ->
+    (∀ ls, addr = VPtr ls -> ls ∉ dom E) ->
     (∀ lt ls vt,
        ⌜addr = VPtr ls⌟ -∗
        ⌜valt = VPtr lt⌟ -∗
        lt →ₜ vt -∗
        ls →ₛ v -∗
-       mem_inj I (<[ls := lt]>E) -∗
+       mem_inj I ({[ (ls, lt) ]} ∪ E) -∗
        [C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }}) -∗
     mem_inj I E -∗
     [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
@@ -262,6 +261,14 @@ Section SourceRulesDef.
   Qed.
 
   Lemma source_if C st j i cs fs pcs ρs Q :
+    ∀ pc_true pc_false reg b,
+    fs@pcs is <<{ if reg then goto pc_true else goto pc_false }>> ->
+    ρs @ reg ⇒ VBool b ->
+    [C] st <{j, 1+i}= (cs, State fs (if b then pc_true else pc_false) ρs) {{ Q }} -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type. by source_step. Qed.
+
+  Lemma source_if_exploit C st j i cs fs pcs ρs Q :
     ∀ pc_true pc_false reg v,
     fs@pcs is <<{ if reg then goto pc_true else goto pc_false }>> ->
     ρs @ reg ⇒ v ->
@@ -274,35 +281,100 @@ Section SourceRulesDef.
     intros pc_true pc_false reg v Hpc Hv.
     unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim.
-    destruct v as [ | b | | ].
-    - apply FSourceStuck.
-      split. { by destruct cs. }
-      intros Hprog. apply can_progress_must_step in Hprog.
-      destruct Hprog as [? Hprog].
-      inv Hprog. simregs.
-    - eapply FSourceSteps.
-      + by econstructor.
-      + replace (∅ ∪ mtP) with (mtP ∪ ∅ ∪ ∅)
-          by (now rewrite !map_empty_union !map_union_empty).
-        replace (∅ ∪ msP) with (msP ∪ ∅ ∪ ∅)
-          by (now rewrite !map_empty_union !map_union_empty).
-        apply Hsim with b.
-        * apply map_disjoint_empty_l.
-        * apply map_disjoint_empty_l.
-        * by split.
-        * rewrite !map_union_empty. apply map_disjoint_empty_l.
-        * rewrite !map_union_empty. apply map_disjoint_empty_l.
-        * by split.
-    - apply FSourceStuck.
-      split. { by destruct cs. }
-      intros Hprog. apply can_progress_must_step in Hprog.
-      destruct Hprog as [? Hprog].
-      inv Hprog. simregs.
-    - apply FSourceStuck.
-      split. { by destruct cs. }
-      intros Hprog. apply can_progress_must_step in Hprog.
-      destruct Hprog as [? Hprog].
-      inv Hprog. simregs.
+    destruct v as [ | b | | ]; try source_does_UB.
+    eapply FSourceSteps.
+    { by econstructor. }
+    replace (∅ ∪ mtP) with (mtP ∪ ∅ ∪ ∅) by smap.
+    replace (∅ ∪ msP) with (msP ∪ ∅ ∪ ∅) by smap.
+    apply Hsim with b.
+    - apply map_disjoint_empty_l.
+    - apply map_disjoint_empty_l.
+    - by split.
+    - smap. apply map_disjoint_empty_l.
+    - smap. apply map_disjoint_empty_l.
+    - by split.
   Qed.
+
+  Lemma source_call C st j i cs fs pcs ρs Q :
+    ∀ dst sig args pc' fn vals,
+    fs@pcs is <<{ dst := @call sig args -> pc' }>> ->
+    find_fun Pₛ sig = Some fn ->
+    ρs@args ⇒ vals ->
+    [C] st <{j, 1+i}= (Stackframe dst fs pc' ρs :: cs, CallState fn vals) {{ Q }} -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type. by source_step. Qed.
+
+  Lemma source_call_exploit C st j i cs fs pcs ρs Q :
+    ∀ dst sig args pc',
+    fs@pcs is <<{ dst := @call sig args -> pc' }>> ->
+    (∀ fn vals,
+       ⌜find_fun Pₛ sig = Some fn⌟ -∗
+       ⌜ρs@args ⇒ vals⌟ -∗
+       [C] st <{j, 1+i}= (Stackframe dst fs pc' ρs :: cs, CallState fn vals) {{ Q }}) -∗
+    [C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros dst sig args pc' Hpc.
+    unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
+    destruct (find_fun Pₛ sig) as [fn|] eqn:Hfn; try source_does_UB.
+
+    eapply FSourceSteps. { by econstructor. }
+
+    replace mtP with (mtP ∪ ∅ ∪ ∅) by smap.
+    replace msP with (msP ∪ ∅ ∪ ∅) by smap.
+
+    eapply Hsim.
+    - apply map_disjoint_empty_l.
+    - apply map_disjoint_empty_l.
+    - by split.
+    - smap. apply map_disjoint_empty_l.
+    - smap. apply map_disjoint_empty_l.
+    - by split.
+  Qed.
+
+  Lemma source_callstate C st j i cs fs args Q :
+    ∀ ρs pc,
+    length args = length (fn_regs fs) ->
+    ρs = init_regs fs args ->
+    pc = fn_entrypoint fs ->
+    [C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }} -∗
+    [C] st <{j, i}= (cs, CallState fs args) {{ Q }}.
+  Proof using Type. by source_step. Qed.
+
+  Lemma source_callstate_exploit C st j i cs fs args Q :
+    (∀ ρs pc,
+       ⌜length args = length (fn_regs fs)⌟ -∗
+       ⌜ρs = init_regs fs args⌟ -∗
+       ⌜pc = fn_entrypoint fs⌟ -∗
+       [C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }}) -∗
+    [C] st <{j, i}= (cs, CallState fs args) {{ Q }}.
+  Proof using Type.
+    unseal.
+    intros ? ? [-> ->] mt ms _ _ Hsim. smap.
+    destruct (decide (length args = length (fn_regs fs))) as [Heq | Hneq];
+      try source_does_UB.
+
+    eapply FSourceSteps. { by econstructor. }
+
+    replace mt with (mt ∪ ∅ ∪ ∅ ∪ ∅) by smap.
+    replace ms with (ms ∪ ∅ ∪ ∅ ∪ ∅) by smap.
+
+    apply Hsim.
+    - apply map_disjoint_empty_l.
+    - apply map_disjoint_empty_l.
+    - by split.
+    - smap. apply map_disjoint_empty_l.
+    - smap. apply map_disjoint_empty_l.
+    - by split.
+    - smap. apply map_disjoint_empty_l.
+    - smap. apply map_disjoint_empty_l.
+    - by split.
+  Qed.
+
+  Lemma source_retstate C st j i cs v Q :
+    ∀ fn pc ρs dst,
+    [C] st <{j, 1+i}= (cs, State fn pc (⟦dst ⇐ v⟧ρs)) {{ Q }} -∗
+    [C] st <{j, i}= (Stackframe dst fn pc ρs :: cs, ReturnState v) {{ Q }}.
+  Proof using Type. by source_step. Qed.
 
 End SourceRulesDef.

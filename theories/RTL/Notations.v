@@ -122,6 +122,14 @@ Module RTLNotations.
           src custom rtl_reg at level 1,
           next constr at level 0).
 
+  (* EqZ *)
+  Notation "dst ':=' 'isZ' src '->' next" :=
+    (Iop EqZ [src] dst next)
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          src custom rtl_reg at level 1,
+          next constr at level 0).
+
   (* Load *)
   Notation "dst ':=' '!' addr '->' next" :=
     (Iload addr dst next)

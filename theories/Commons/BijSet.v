@@ -4,9 +4,9 @@ From stdpp Require Import gmap.
 
 Section bij_set.
   Context `{Countable A, Countable B}.
-  Implicit Types (a : A) (b : B).
+  Implicit Types (a : A) (b : B) (p: A * B) (L: gset (A * B)).
 
-  Definition bij_set (L : gset (A * B)) :=
+  Definition bij_set L :=
     ∀ a b,
     (a, b) ∈ L ->
     (∀ b', (a, b') ∈ L -> b' = b) ∧
@@ -56,8 +56,8 @@ Section bij_set.
   Proof using Type.
     intros Hbij Hle a b Hin.
     split.
-    - intros ? Hin'. eapply Hbij; eapply elem_of_subseteq; eassumption.
-    - intros ? Hin'. eapply Hbij; eapply elem_of_subseteq; eassumption.
+    - intros ? Hin'. eapply Hbij; by eapply Hle.
+    - intros ? Hin'. eapply Hbij; by eapply Hle.
   Qed.
 
   Lemma bij_set_functional L a b1 b2 :
@@ -120,4 +120,58 @@ Section bij_set.
     f_equal. by eapply bij_set_injective.
   Qed.
 
+  Definition dom L : gset A := set_map fst L.
+  Definition codom L : gset B := set_map snd L.
+
+  Lemma dom_spec L a : a ∈ dom L <-> ∃ b, (a, b) ∈ L.
+  Proof using Type.
+    split.
+    - intros ([] & -> & Hin)%elem_of_map. by eexists.
+    - intros [b Hin]. apply elem_of_map. exists (a, b). by split.
+  Qed.
+
+  Lemma codom_spec L b : b ∈ codom L <-> ∃ a, (a, b) ∈ L.
+  Proof using Type.
+    split.
+    - intros ([] & -> & Hin)%elem_of_map. by eexists.
+    - intros [a Hin]. apply elem_of_map. exists (a, b). by split.
+  Qed.
+
+  Lemma dom_union L L' a : a ∈ dom L ∨ a ∈ dom L' <-> a ∈ dom (L ∪ L').
+  Proof using Type.
+    split.
+    - intros [[b Hdom]%dom_spec | [b Hdom]%dom_spec];
+        apply dom_spec; eexists.
+      + by apply elem_of_union_l.
+      + by apply elem_of_union_r.
+    - intros [b [Hdom | Hdom]%elem_of_union]%dom_spec.
+      + left. by apply dom_spec; eexists.
+      + right. by apply dom_spec; eexists.
+  Qed.
+
+  Lemma codom_union L L' b : b ∈ codom L ∨ b ∈ codom L' <-> b ∈ codom (L ∪ L').
+  Proof using Type.
+    split.
+    - intros [[a Hdom]%codom_spec | [a Hdom]%codom_spec];
+        apply codom_spec; eexists.
+      + by apply elem_of_union_l.
+      + by apply elem_of_union_r.
+    - intros [a [Hdom | Hdom]%elem_of_union]%codom_spec.
+      + left. by apply codom_spec; eexists.
+      + right. by apply codom_spec; eexists.
+  Qed.
+
+  Lemma dom_singleton a b x : x ∈ dom {[ (a, b) ]} <-> x = a.
+  Proof using Type.
+    split.
+    - intros [y Heq%elem_of_singleton]%dom_spec. by inv Heq.
+    - intros ->. apply dom_spec. eexists. by apply elem_of_singleton.
+  Qed.
+
+  Lemma codom_singleton a b y : y ∈ codom {[ (a, b) ]} <-> y = b.
+  Proof using Type.
+    split.
+    - intros [x Heq%elem_of_singleton]%codom_spec. by inv Heq.
+    - intros ->. apply codom_spec. eexists. by apply elem_of_singleton.
+  Qed.
 End bij_set.

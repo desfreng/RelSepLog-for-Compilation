@@ -57,13 +57,23 @@ Record function := {
     fn_regs_no_dup : is_no_dup fn_regs = true;
   }.
 
+Definition find_fun_in_list (L: list function) (s: ident) : option function :=
+  List.find (fun f => (fn_name f =? s)%string) L.
+
 Record program := {
-    prog_func: list function;
-    prog_main: function;
+    prog_fun_list: list function;
+
+    prog_main: ident;
+
+    prog_fun_list_no_dup:
+      is_no_dup (fn_name <$> prog_fun_list) = true;
+
+    prog_main_exists:
+      is_Some (find_fun_in_list prog_fun_list prog_main);
 }.
 
 Definition find_fun (P: program) (s: ident) : option function :=
-  List.find (fun f => (fn_name f =? s)%string) (prog_func P).
+  find_fun_in_list (prog_fun_list P) s.
 
 (* Assert that instruction at [pc] in function [f] is [i] *)
 Notation "f '@' pc 'is' i" :=

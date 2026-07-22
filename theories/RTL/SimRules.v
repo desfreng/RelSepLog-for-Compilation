@@ -51,16 +51,16 @@ Section SyncRulesDef.
     iIntros (pct' pcs' dstt dsts srct srcs addrt addrs).
     iIntros (Hpct Hpcs Haddrt Haddrs Hsame) "Hsim Hinj".
     iApply (source_load_exploit with "[Hsim] Hinj"); eauto.
+    { set_solver. }
     iIntros (lt ls vt vs -> ->) "Ht Hs %Hsame' Hinj".
     iApply (target_load with "[-Ht] Ht"); eauto.
     iIntros "Ht".
     iApply "Hsim"; eauto.
-    replace (∅) with (delete ls (<[ls:=lt]> ∅) : gmap loc loc) at 2.
+    replace (∅) with (({[ (ls, lt) ]} ∪ ∅) ∖ {[ (ls, lt) ]} : gset (loc * loc)) at 2.
     - iApply (inj_release with "Hinj Ht Hs").
-      + by rewrite lookup_insert_eq.
+      + by apply elem_of_union_l, elem_of_singleton.
       + done.
-    - rewrite delete_insert_eq.
-      by rewrite delete_empty.
+    - set_solver.
   Qed.
 
   Lemma both_store I C ct ft pct ρt j i cs fs pcs ρs Q :
@@ -83,15 +83,39 @@ Section SyncRulesDef.
     iIntros (pct' pcs' dstt dsts srct srcs addrt addrs valt vals).
     iIntros (Hpct Hpcs Haddrt Haddrs Hvalt Hvals HsameAddr HsameVal) "Hsim Hinj".
     iApply (source_store_exploit with "[Hsim] Hinj"); eauto.
+    { set_solver. }
     iIntros (lt ls vt -> ->) "Ht Hs Hinj".
     iApply (target_store with "[-Ht] Ht"); eauto.
     iIntros "Ht".
     iApply "Hsim"; eauto.
-    replace (∅) with (delete ls (<[ls:=lt]> ∅) : gmap loc loc) at 2.
+    replace (∅) with (({[ (ls, lt) ]} ∪ ∅) ∖ {[ (ls, lt) ]} : gset (loc * loc)) at 2.
     - iApply (inj_release with "Hinj Ht Hs").
-      + by rewrite lookup_insert_eq.
+      + by apply elem_of_union_l, elem_of_singleton.
       + done.
-    - rewrite delete_insert_eq.
-      by rewrite delete_empty.
+    - set_solver.
   Qed.
+
+
+  (* Definition hoare (Pre: rProp) f1 f2 (Post: val -> val -> rProp) : rProp := *)
+  (*   □ ([C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}). *)
+  (*   ∀ args m, length args = length (fn_regs f) -> *)
+  (*               Pre args m -> *)
+  (*               safe P (uncurry Post) ([], CallState f args, m) n. *)
+
+  (* Lemma both_call : I C ct ft pct ρt j i cs fs pcs ρs Q : *)
+  (*   ∀ pct' pcs' dstt dsts srct srcs addrt addrs valt vals, *)
+  (*   ft@pct is <<{ dstt := srct -> pct' }>> -> *)
+  (*   fs@pcs is <<{ dsts := srcs -> pcs' }>> -> *)
+  (*   ρt @ dstt ⇒ addrt -> *)
+  (*   ρs @ dsts ⇒ addrs -> *)
+  (*   ρt @ srct ⇒ valt -> *)
+  (*   ρs @ srcs ⇒ vals -> *)
+  (*   same_val I addrt addrs -> *)
+  (*   same_val I valt vals -> *)
+  (*   (mem_inj I ∅ -∗ *)
+  (*      [C] (ct, State ft pct' ρt) *)
+  (*           <{1+j, 1+i}= *)
+  (*          (cs, State fs pcs' ρs) {{ Q }}) -∗ *)
+  (*   mem_inj I ∅ -∗ *)
+  (*   [C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}. *)
 End SyncRulesDef.
