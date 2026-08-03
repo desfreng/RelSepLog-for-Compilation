@@ -6,17 +6,17 @@ From RSL Require Import Simulations.Equiv.ExplicitSimLax.
 From RSL Require Import Simulations.Equiv.EAltSim.
 
 Section PROOF.
-  Context {Λₜ Λₛ: lang}.
+  Context {Λt Λs: lang}.
   Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
-  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Context (Pt: prog Λt) (Ps: prog Λs).
+  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
 
   Lemma ealt_sim_implies_esim_lax: ∀ b t a s,
-    ealt_sim J I Pₜ Pₛ Φ b t a s ->
-    ∃ W i, esim_lax W Pₜ Pₛ Φ i t s.
+    ealt_sim J I Pt Ps Φ b t a s ->
+    ∃ W i, esim_lax W Pt Ps Φ i t s.
   Proof using Type.
     intros b t a s Hsim.
-    exists (WfWithBot (WfLexProd J I)), (Some (b, a)).
+    exists (WfWithBot (WfLexProd J I)), (Some (ord_pair _ _ b a)).
     revert b t a s Hsim.
     unfold esim_lax.
     coinduction R cih.
@@ -29,7 +29,7 @@ Section PROOF.
                       | b t a s Hprogress Hboth].
     - now constructor.
     - now constructor.
-    - assert (Hrtc: Pₛ ⊨ s ->>+ s').
+    - assert (Hrtc: Ps ⊨ s ->>+ s').
       { econstructor; eassumption || reflexivity. }
       clear Hstep. revert b' s' Hrtc Hsim.
       induction a' as [a' IHw] using (well_founded_ind wf).
@@ -56,28 +56,28 @@ Section PROOF.
         { assumption. }
         intros t' Htstep.
         destruct (Ht _ Htstep) as (b'' & a'' & Hlt & Hsim).
-        exists (Some (b'', a'')), s'. split.
+        exists (Some (ord_pair _ _ b'' a'')), s'. split.
         * assumption.
         * apply cih. eassumption.
       + apply ELaxBothSteps.
         { assumption. }
         intros t' Htstep.
         destruct (Hboth _ Htstep) as (b'' & a'' & s'' & Hsteps & Hsim).
-        exists (Some (b'', a'')), s''. split.
+        exists (Some (ord_pair _ _ b'' a'')), s''. split.
         * eapply pstep_r; eassumption.
         * apply cih. eassumption.
     - apply ELaxTargetSteps.
       { assumption. }
       intros t' Hstep.
       destruct (Ht _ Hstep) as (b' & a' & Hlt & Hgfp).
-      eexists. split.
-      + do 2 constructor. eassumption.
+      eexists (Some (ord_pair _ _ b' _)). split.
+      + do 2 constructor. done.
       + apply cih. eassumption.
     - apply ELaxBothSteps.
       { assumption. }
       intros t' Hstep.
       edestruct (Hboth _ Hstep) as (b' & a' & s' & Hs & Hsim).
-      exists (Some (b', a')), s'. split.
+      exists (Some (ord_pair _ _ b' a')), s'. split.
       + econstructor; eassumption || reflexivity.
       + apply cih. assumption.
   Qed.

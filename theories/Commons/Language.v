@@ -116,6 +116,15 @@ Section LangProp.
     can_progress s -> ~ stuck s.
   Proof using Type. intros H [_ Hnprog]. by eapply Hnprog. Qed.
 
+  Lemma progress_not_final s:
+    can_progress s -> is_final s = None.
+  Proof using Type.
+    intros (s' & ?)%can_progress_must_step.
+    destruct (is_final s) eqn:Hfin; auto.
+    exfalso.
+    by eapply final_no_step.
+  Qed.
+
   Lemma is_final_mem_ignore ps m m1 m2 v :
     is_final (ps, m1) = Some (v, m) ->
     is_final (ps, m2) = Some (v, m2).
@@ -133,12 +142,12 @@ Section LangProp.
 End LangProp.
 
 Section TwoProg.
-  Context {Λₜ Λₛ: lang}.
-  Context (Pₜ : prog Λₜ) (Pₛ : prog Λₛ).
+  Context {Λₜ Λs: lang}.
+  Context (Pt : prog Λₜ) (Ps : prog Λs).
 
-  Abbreviation post := (value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Abbreviation post := (value Λₜ * memory -> value Λs * memory -> Prop).
 
-  Definition both_final (ϕ: post) (t: state Λₜ) (s: state Λₛ) : Prop :=
+  Definition both_final (ϕ: post) (t: state Λₜ) (s: state Λs) : Prop :=
     ∃ vt vs,
       is_final t = Some vt ∧
       is_final s = Some vs ∧

@@ -4,7 +4,7 @@ From RSL Require Import Toy.Toy.
 From RSL Require Import RTL.RTL.
 
 Definition Build (T: Type) : Type :=
-  node -> option (node * T * code).
+  node -> option (node * T * rtl_code).
 
 Instance build_bind : MBind Build :=
   fun _ _ f m pc =>
@@ -18,25 +18,25 @@ Instance build_ret : MRet Build :=
 Instance build_fail : MFail Build :=
   fun _ _ _ => None.
 
-Definition add (i: instr) : Build node :=
+Definition add (i: rtl_instr) : Build node :=
   fun pc =>
     let next_pc := 1 + pc in
     Some (1 + pc, pc, {[ pc := i ]}).
 
-Definition add_next (npc: option node) (i: node -> instr) : Build node :=
+Definition add_next (npc: option node) (i: node -> rtl_instr) : Build node :=
   match npc with
   | Some npc => add $ i npc
   | None => mfail
   end.
 
-Definition reserve : Build (node * (instr -> Build unit)) :=
+Definition reserve : Build (node * (rtl_instr -> Build unit)) :=
   fun reserved_pc =>
-    let fill (i: instr) : Build unit :=
+    let fill (i: rtl_instr) : Build unit :=
       fun current_pc => Some (current_pc, (), {[ reserved_pc := i ]})
     in
     Some (1 + reserved_pc, (reserved_pc, fill), ∅).
 
-Definition texpr_rtl (dst: reg) (e: texpr) (npc: node) : instr :=
+Definition texpr_rtl (dst: reg) (e: texpr) (npc: node) : rtl_instr :=
   match e with
   | EReg r => Iop Move [r] dst npc
   | EImm v => Iop (LoadI v) [] dst npc
@@ -83,7 +83,7 @@ Fixpoint tinstr_rtl (i: tinstr) (npc: option node) (bpc: list node) : Build node
       mret loop_fst
   end.
 
-Definition compile (f: tfunction) : option function :=
+Definition compile (f: tfunction) : option rtl_function :=
   let c := tfn_code f in
   match tinstr_rtl c None [] 0 with
   | None =>

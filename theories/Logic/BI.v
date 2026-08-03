@@ -3,7 +3,7 @@ From RSL Require Import Prelude.
 From iris.bi Require Export bi.
 From iris.proofmode Require Export proofmode.
 
-From RSL.Logic Require Import rPropDef.
+From RSL.Logic Require Import rPropDef rPropLaw.
 
 Section BI_def.
   Import rProp_primitive.
@@ -67,25 +67,6 @@ Section BI_def.
     - by apply wand_elim.
   Qed.
 
-  Definition bi_persistently_mixin :
-    BiPersistentlyMixin
-      rPropDef_entails
-      rPropDef_empty
-      rPropDef_and
-      rPropDef_exist
-      rPropDef_sep
-      rPropDef_persistently.
-  Proof using Type.
-    pose proof rProp_bi_mixin as H. revert H.
-    apply bi_persistently_mixin_discrete.
-    - done.
-    - unseal. intros Q Φ H. destruct (H ∅ ∅) as [x Hx]. { done. }
-      exists x. intros ? ?.
-      by intros [-> ->].
-    - intros P. by unseal.
-  Qed.
-
-  (** ** Later connective *)
 
   Definition bi_later_mixin :
     BiLaterMixin
@@ -99,8 +80,39 @@ Section BI_def.
       rPropDef_persistently
       rPropDef_later.
   Proof using Type.
-    pose proof rProp_bi_mixin as H. revert H.
-    apply bi_later_mixin_id. by unseal.
+    constructor.
+    - unfold dist, rPropDef_dist; intros _.
+      by apply later_ne.
+    - by apply later_mono.
+    - by apply later_intro.
+    - by apply @later_forall_2.
+    - by apply @later_exist_false.
+    - by apply later_sep_1.
+    - by apply later_sep_2.
+    - by apply later_persistently_1.
+    - by apply later_persistently_2.
+    - by apply later_false_em.
+  Qed.
+
+  Definition bi_persistently_mixin :
+    BiPersistentlyMixin
+      rPropDef_entails
+      rPropDef_empty
+      rPropDef_and
+      rPropDef_exist
+      rPropDef_sep
+      rPropDef_persistently.
+  Proof using Type.
+    constructor.
+    - unfold dist, rPropDef_dist; intros _.
+      by apply persistently_ne.
+    - by apply persistently_mono.
+    - by apply persistently_idemp_2.
+    - by apply persistently_emp_2.
+    - by apply persistently_and_2.
+    - by apply @persistently_exist_1.
+    - by apply persistently_absorbing.
+    - by apply persistently_and_sep_elim.
   Qed.
 
   (** ** RProp is a BI *)
@@ -132,17 +144,17 @@ Section BI_def.
   (** Extra BI instances *)
 
   Global Instance rProp_persistently_forall : BiPersistentlyForall rProp.
-  Proof.
-    intros A Ψ.
-    unfold bi_entails, bi_persistently, bi_forall. simpl. unseal.
-    intros mt ms H ? ? [-> ->] a. by apply H.
+  Proof using Type.
+    intros Q Ψ.
+    unfold bi_entails, bi_persistently, bi_forall.
+    apply persistently_forall_2.
   Qed.
 
   Global Instance rProp_pure_forall : BiPureForall rProp.
-  Proof.
+  Proof using Type.
     intros A φ.
-    unfold bi_entails, bi_pure, bi_forall. simpl. unseal.
-    intros mt ms H a. apply H.
+    unfold bi_entails, bi_pure, bi_forall.
+    apply pure_forall_2.
   Qed.
 
 End BI_def.
@@ -150,30 +162,3 @@ End BI_def.
 Notation "'⌜' φ '⌟'" :=
   (bi_affinely (bi_pure φ%type%stdpp))%I
     (at level 0, φ constr at level 200) : bi_scope.
-
-Ltac unseal :=
-  repeat (
-      unfold
-        bi_entails,
-        bi_pure,
-        bi_and,
-        bi_or,
-        bi_impl,
-        bi_forall,
-        bi_exist,
-        bi_sep,
-        bi_wand,
-        bi_persistently,
-        bi_later,
-        bi_emp_valid,
-        bi_intuitionistically,
-        bi_absorbingly,
-        bi_affinely,
-        bi_wand_iff,
-        bi_emp,
-        bi_iff;
-      rProp_primitive.unseal;
-      simpl
-    ).
-
-Ltac unseal_in H := revert H; unseal; intro H.

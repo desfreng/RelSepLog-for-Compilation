@@ -5,29 +5,29 @@ From RSL.Commons Require Export Language WfRel.
 From Coinduction Require Import all.
 
 Section ISimDef.
-  Context {Λₜ Λₛ: lang}.
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
-  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Context {Λt Λs: lang}.
+  Context (Pt: prog Λt) (Ps: prog Λs).
+  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
 
   Inductive isim_lfp'
-    (gfp: state Λₜ -> state Λₛ -> Prop) : state Λₜ -> state Λₛ-> Prop :=
+    (gfp: state Λt -> state Λs -> Prop) : state Λt -> state Λs-> Prop :=
   | IRelated : ∀ t s,
     both_final Φ t s -> isim_lfp' gfp t s
 
   | ISourceStuck : ∀ t s,
-    stuck Pₛ s -> isim_lfp' gfp t s
+    stuck Ps s -> isim_lfp' gfp t s
 
   | ISourceSteps : ∀ t s s',
-    Pₛ ⊨ s ->> s' -> isim_lfp' gfp t s' -> isim_lfp' gfp t s
+    Ps ⊨ s ->> s' -> isim_lfp' gfp t s' -> isim_lfp' gfp t s
 
   | ITargetSteps : ∀ t s,
-    can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> isim_lfp' gfp t' s) ->
+    can_progress Pt t ->
+    (∀ t', Pt ⊨ t ->> t' -> isim_lfp' gfp t' s) ->
     isim_lfp' gfp t s
 
   | IBothSteps : ∀ t s,
-    can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ s', Pₛ ⊨ s ->> s' ∧ gfp t' s') ->
+    can_progress Pt t ->
+    (∀ t', Pt ⊨ t ->> t' -> ∃ s', Ps ⊨ s ->> s' ∧ gfp t' s') ->
     isim_lfp' gfp t s.
 
   Instance isim_lfp'_proper : Proper (leq ==> leq) isim_lfp'.
@@ -39,7 +39,7 @@ Section ISimDef.
     eexists. split; eassumption || now apply Hgfp.
   Qed.
 
-  Definition isim_lfp : mon (state Λₜ -> state Λₛ -> Prop) := {| body := isim_lfp' |}.
+  Definition isim_lfp : mon (state Λt -> state Λs -> Prop) := {| body := isim_lfp' |}.
 
   Lemma isim_unroll t s :
     gfp isim_lfp t s -> isim_lfp' (gfp isim_lfp) t s.

@@ -159,13 +159,13 @@ Section Behavior.
 End Behavior.
 
 Section Refinement.
-  Context {Λₜ Λₛ: lang}.
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context {Λₜ Λs: lang}.
+  Context (Pt: prog Λₜ) (Ps: prog Λs).
 
-  Instance behₜ_elem : ElemOf behavior (state Λₜ) := beh Pₜ.
-  Instance behₛ_elem : ElemOf behavior (state Λₛ) := beh Pₛ.
+  Instance behₜ_elem : ElemOf behavior (state Λₜ) := beh Pt.
+  Instance behₛ_elem : ElemOf behavior (state Λs) := beh Ps.
 
-  Variant behavior_order Φ : @behavior Λₜ -> @behavior Λₛ -> Prop :=
+  Variant behavior_order Φ : @behavior Λₜ -> @behavior Λs -> Prop :=
   | BehOrderTerm vt vs mt ms :
       Φ (vt, mt) (vs, ms) -> behavior_order Φ (Terminating vt mt) (Terminating vs ms)
   | BehOrderDiv :
@@ -183,7 +183,7 @@ Section Refinement.
   (*    - if the target diverges, *)
   (*    the source must either diverges or be stuck. *)
   (*    - if the target is stuck, the source should also be stuck. *)
-  Definition refines Φ (t: state Λₜ) (s: state Λₛ) : Prop :=
+  Definition refines Φ (t: state Λₜ) (s: state Λs) : Prop :=
     ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ⊑{Φ} b'.
 
 End Refinement.

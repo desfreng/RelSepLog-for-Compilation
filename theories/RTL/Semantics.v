@@ -2,29 +2,29 @@ From RSL Require Import Prelude.
 
 From RSL.Commons Require Export Language.
 
-From RSL.RTL Require Import RTL Notations.
+From RSL.RTL Require Export RTL Notations.
 
 Import RTLNotations.
 
-Definition init_regs (f: function) (v: list val) : regbank :=
+Definition init_regs (f: rtl_function) (v: list val) : regbank :=
   list_to_map (zip (fn_regs f) v).
 
 Inductive stackframe : Type :=
 | Stackframe
     (res: reg) (* where to store the result *)
-    (f: function) (* calling function *)
+    (f: rtl_function) (* calling function *)
     (pc: node) (* program point in caller function *)
     (ρ: regbank) (* state in caller function *)
 .
 
 Inductive pcstate : Type :=
 | State
-    (f: function) (* current function *)
+    (f: rtl_function) (* current function *)
     (pc: node) (* current program point in c *)
     (ρ: regbank) (* register state *)
 
 | CallState
-    (f: function) (* function to call *)
+    (f: rtl_function) (* function to call *)
     (args: list val) (* arguments to the call *)
 
 | ReturnState
@@ -32,7 +32,7 @@ Inductive pcstate : Type :=
 
 Definition rtl_state : Type := list stackframe * pcstate.
 
-Inductive rtl_step (P: program) : rtl_state * memory -> rtl_state * memory -> Prop :=
+Inductive rtl_step (P: rtl_program) : rtl_state * memory -> rtl_state * memory -> Prop :=
 | exec_Inop: ∀ σ m ρ f pc pc',
   f@pc is <<{ nop -> pc' }>> ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
@@ -149,7 +149,7 @@ Section SemProp.
     P ⊨ (σ, ps, m) ->> (σ', pt, m').
   Proof using Type.
     intros H; inv H;
-      rewrite ? app_comm_cons in *;
+      rewrite ?app_comm_cons in *;
       eassert _ by (eapply app_inv_tail; eassumption);
       subst; econstructor; now eauto.
   Qed.
@@ -186,7 +186,7 @@ Section SemProp.
   Qed.
 
   Lemma unlift_can_progress σ Σ ps m:
-    is_rtl_final (σ, ps) = None ->
+    is_final ((σ, ps, m) : state Λ)= None ->
     can_progress P (σ ++ Σ, ps, m) ->
     can_progress P (σ, ps, m).
   Proof using Type.
@@ -194,6 +194,34 @@ Section SemProp.
     inv Ht; try by do 2 econstructor.
     destruct σ as [|[]]; inv Hfin.
     econstructor. try by do 2 econstructor.
+  Qed.
+
+  Lemma step_frame_preserved σ Σ ps m t'' :
+    is_final ((σ, ps, m) : state Λ) = None ->
+    P ⊨ (σ ++ Σ, ps, m) ->> t'' ->
+    ∃ σ' pt m', t'' = (σ' ++ Σ, pt, m') ∧ P ⊨ (σ, ps, m) ->> (σ', pt, m').
+  Proof using Type.
+    intros Hnf Hstep.
+    destruct t'' as [[σ'' pt] m'].
+    inv Hstep as [ | | | | | | | | ? ? ? ? ? ? ? ? ? Heq];
+      try (eexists _, _, _; split; [ done | by econstructor]).
+    - eexists (_ :: _), _, _. split.
+      + done.
+      + by econstructor.
+    - destruct σ as [|[]]; inv Hnf.
+      inv Heq.
+      eexists _, _, _; split; [ done | by econstructor].
+  Qed.
+
+  Lemma unlift_stuck σ Σ ps m :
+    stuck P (σ, ps, m) ->
+    stuck P (σ ++ Σ, ps, m).
+  Proof using Type.
+    intros [Hfin Hcan].
+    split.
+    - destruct σ, Σ; simpl; auto.
+    - intros Hprog. apply Hcan.
+      by eapply unlift_can_progress.
   Qed.
 
   Lemma init_regs_sound f args :
@@ -225,7 +253,6 @@ Section SemProp.
     - apply elem_of_lookup_zip_with. by exists i, r, v.
   Qed.
 End SemProp.
-
 
 (* Lemma unfold_call fn : ∀ n dst f pc ρ args m σ' σ t m', *)
 (*   P ⊨ (Stackframe dst f pc ρ :: σ, CallState fn args, m) -{n}> (σ', t, m') -> *)

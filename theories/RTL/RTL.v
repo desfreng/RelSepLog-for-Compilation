@@ -19,49 +19,49 @@ Variant op : Type :=
   | Decr
   | EqZ.
 
-Inductive instr : Type :=
-| Inop: node -> instr
+Inductive rtl_instr : Type :=
+| Inop: node -> rtl_instr
     (** No operation -- just branch to the successor. *)
-| Iop: op -> list reg -> reg -> node -> instr
+| Iop: op -> list reg -> reg -> node -> rtl_instr
     (** [Iop op args dest succ] performs the pure (not memory related)
         operation [op] over the values of registers [args],
         stores the result in [dest], and branches to [succ]. *)
-| Iload: reg -> reg -> node -> instr
+| Iload: reg -> reg -> node -> rtl_instr
     (** [Iload addr dest succ] loads the value at [addr] into [dest],
         and branches to [succ]. *)
-| Istore: reg -> reg -> node -> instr
+| Istore: reg -> reg -> node -> rtl_instr
     (** [Istore addr src succ] stores the value of register
         [src] at memory address [src], then branches to [succ]. *)
-| Icall: ident -> list reg -> reg -> node -> instr
+| Icall: ident -> list reg -> reg -> node -> rtl_instr
     (** [Icall sig args dest succ] invokes the function determined by
         [fn], giving it the values of registers [args] as arguments.
         It stores the return value in [dest] and branches to [succ]. *)
-| Icond: reg -> node -> node -> instr
+| Icond: reg -> node -> node -> rtl_instr
     (** [Icond cond args ifso ifnot] branch on the value in [cond].
         If the value in register [cond] is non zero, it transitions to [ifso].
         Otherwise it transitions to [ifnot]. *)
-| Ireturn: reg -> instr
+| Ireturn: reg -> rtl_instr
     (** [Ireturn reg] terminates the execution of the current function
         (it has no successor). It returns the value of the register [reg]. *)
 .
 
-(** [code] is a finite map from nodes to instructions *)
-Definition code := gmap node instr.
+(** [code] is a finite map from nodes to rtl_instructions *)
+Definition rtl_code := gmap node rtl_instr.
 
 (** A [function] includes its signature, an entry node, and its code. *)
-Record function := {
+Record rtl_function := {
     fn_name: ident;
     fn_regs: list reg;
     fn_entrypoint : node;
-    fn_code : code;
+    fn_code : rtl_code;
     fn_regs_no_dup : is_no_dup fn_regs = true;
   }.
 
-Definition find_fun_in_list (L: list function) (s: ident) : option function :=
-  List.find (fun f => (fn_name f =? s)%string) L.
+Definition find_fun_in_list (L: list rtl_function) (s: ident) : option rtl_function :=
+  snd <$> list_find (fun f => (fn_name f =? s)%string) L.
 
-Record program := {
-    prog_fun_list: list function;
+Record rtl_program := {
+    prog_fun_list: list rtl_function;
 
     prog_main: ident;
 
@@ -72,10 +72,10 @@ Record program := {
       is_Some (find_fun_in_list prog_fun_list prog_main);
 }.
 
-Definition find_fun (P: program) (s: ident) : option function :=
+Definition find_fun (P: rtl_program) (s: ident) : option rtl_function :=
   find_fun_in_list (prog_fun_list P) s.
 
-(* Assert that instruction at [pc] in function [f] is [i] *)
+(* Assert that rtl_instruction at [pc] in function [f] is [i] *)
 Notation "f '@' pc 'is' i" :=
   ((fn_code f)!!pc = Some i) (at level 60, no associativity).
 

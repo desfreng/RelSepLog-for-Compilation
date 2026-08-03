@@ -7,10 +7,10 @@ Import RTLNotations.
 
 Section T.
   Let Λₜ : lang := rtl_lang.
-  Let Λₛ : lang := rtl_lang.
-  Context (Pₜ : prog Λₜ) (Pₛ : prog Λₛ).
+  Let Λs : lang := rtl_lang.
+  Context (Pt : prog Λₜ) (Ps : prog Λs).
 
-  Abbreviation fsim := (fsim WfNat WfNat Pₜ Pₛ).
+  Abbreviation fsim := (fsim WfNat WfNat Pt Ps).
 
   Let reg_n : reg := 1.
   Let reg_res : reg := 2.
@@ -18,7 +18,7 @@ Section T.
   Let reg_addr : reg := 4.
   Let reg_cond : reg := 5.
 
-  Definition fact_bad : function :=
+  Definition fact_bad : rtl_function :=
     {|
       fn_name := "fact"%string;
       fn_regs := [reg_n; reg_addr];
@@ -37,7 +37,7 @@ Section T.
       fn_regs_no_dup := eq_refl;
     |}.
 
-  Definition fact_good : function :=
+  Definition fact_good : rtl_function :=
     {|
       fn_name := "fact"%string;
       fn_regs := [reg_n; reg_addr];
@@ -55,15 +55,6 @@ Section T.
         }}>>;
       fn_regs_no_dup := eq_refl;
     |}.
-
-  Notation
-    "'[' C ']' st '<{' j ',' i '}=' ss '{{' Q '}}'" :=
-    (sim_lfp Pₜ Pₛ C st j i ss Q%I)
-      (at level 0,
-       st at level 99,
-       ss at level 99,
-       Q at level 200,
-       no associativity).
 
   Ltac close_hyp :=
     match goal with
@@ -84,7 +75,7 @@ Section T.
       ⌜I ⊆ I'⌟ ∗
       mem_inj I' ∅.
 
-  Local Definition inv lt ls v (st: pstate Λₜ) (j i: nat) (ss: pstate Λₛ) ψ : rProp :=
+  Local Definition inv lt ls v (st: pstate Λₜ) (j i: nat) (ss: pstate Λs) ψ : rProp :=
     ∃ I ρt ρs,
       mem_inj I {[ (ls, lt) ]} ∗
       ls →ₛ v ∗
@@ -104,7 +95,7 @@ Section T.
     ∀ args_t args_s,
     Forall2 (same_val I) args_t args_s ->
     mem_inj I ∅ -∗
-    [C]
+    [Pt, Ps, C]
       ([], CallState fact_good args_t)
         <{0, 0}=
       ([], CallState fact_bad args_s)
@@ -141,7 +132,7 @@ Section T.
 
     iApply (source_store_exploit). all: close_hyp.
     { by set_solver. }
-    iIntros (lt ls vt -> ->).
+    iIntros (E' lt ls vt -> -> ->).
     iIntros "Ht Hs Hinj".
 
     iApply (target_store with "[-Ht] Ht"). all: close_hyp.
@@ -151,7 +142,7 @@ Section T.
     iApply (target_op). all: close_hyp.
     simpl.
 
-    iApply (coind Pₜ Pₛ C (inv lt ls (VInt 1))).
+    iApply (coind (inv lt ls (VInt 1))).
     {
       clear.
       iIntros "!>" (C st j i ss ϕ) "#CIH".
@@ -176,7 +167,7 @@ Section T.
       destruct (vn =? 0)%Z.
       - iApply (source_ret). all: close_hyp.
         iApply (target_ret). all: close_hyp.
-        iApply (both_final).
+        iApply (final); try done.
         iAssert (mem_inj I ∅) with "[Hinj Ht Hs]" as "Hinj".
         {
           replace ∅ with ({[(ls, lt)]} ∖ {[(ls, lt)]} : gset (loc * loc)) by set_solver.

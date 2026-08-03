@@ -11,19 +11,19 @@ From RSL Require Import Simulations.Equiv.EAltSim.
 From RSL Require Import Simulations.Equiv.FSimToGSim.
 
 Section PROOF.
-  Context {Λₜ Λₛ: lang}.
+  Context {Λt Λs: lang}.
   Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
-  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Context (Pt: prog Λt) (Ps: prog Λs).
+  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
 
-  Definition StatePair := (state Λₜ * state Λₛ)%type.
+  Definition StatePair := (state Λt * state Λs)%type.
 
   Lemma gsim_implies_ealt_sim: ∀ j b t i a s,
-    gsim J I (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s  ->
-    ∃ Rₜ Rₛ zₜ zₛ, ealt_sim Rₜ Rₛ Pₜ Pₛ Φ zₜ t zₛ s.
+    gsim J I (WfOrdTree StatePair) Pt Ps Φ j b t i a s  ->
+    ∃ Rₜ Rₛ zₜ zₛ, ealt_sim Rₜ Rₛ Pt Ps Φ zₜ t zₛ s.
   Proof using Type.
     intros j b t i a s Hsim.
-    exists (WfLexProd I _), (WfLexProd J _), (i, b), (j, a).
+    exists (WfLexProd I _), (WfLexProd J _), (ord_pair _ _ i b), (ord_pair _ _ j a).
     revert j b t i a s Hsim.
     unfold ealt_sim. coinduction R cih.
     intros j.
@@ -37,7 +37,7 @@ Section PROOF.
       | j j' b t i i' a s Ht Hs Hsim].
     - now constructor.
     - now constructor.
-    - eapply EAltSourceSteps.
+    - eapply EAltSourceSteps with (i' := ord_pair _ _ _ _).
       + eassumption.
       + right. eassumption.
       + apply cih. eassumption.
@@ -45,7 +45,7 @@ Section PROOF.
       { assumption. }
       intros t' Hstep.
       edestruct (IHt _ Hstep) as (j' & b' & Hlt & Hsim & IH).
-      eexists. eexists. split.
+      eexists (ord_pair _ _ _ _). eexists. split.
       + right. eassumption.
       + apply cih. eassumption.
     - apply fsim_implies_gsim in Hsim.

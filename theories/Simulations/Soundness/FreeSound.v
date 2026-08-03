@@ -7,19 +7,19 @@ From RSL Require Import Commons.Behaviors.
 From RSL Require Import Simulations.FreeSim.
 
 Section FSimSound.
-  Context {Λₜ Λₛ: lang}.
+  Context {Λt Λs: lang}.
   Context {J I: WfRel}.
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context (Pt: prog Λt) (Ps: prog Λs).
 
-  Instance behₜ_elem : ElemOf behavior (state Λₜ) := beh Pₜ.
-  Instance behₛ_elem : ElemOf behavior (state Λₛ) := beh Pₛ.
+  Instance behₜ_elem : ElemOf behavior (state Λt) := beh Pt.
+  Instance behₛ_elem : ElemOf behavior (state Λs) := beh Ps.
 
   Notation "a '⊑{' Φ '}' b" :=
     (behavior_order Φ a b)
       (at level 70, format "a  '⊑{' Φ '}'  b", no associativity).
 
   Notation " t '<{' j ',' i '}=' s '{{' Φ '}}'" :=
-    (fsim J I Pₜ Pₛ Φ t j i s)
+    (fsim J I Pt Ps Φ t j i s)
       (at level 1, i at level 0, j at level 0, no associativity).
 
   Lemma terminating_fsim Φ t j i s:
@@ -90,11 +90,11 @@ Section FSimSound.
 
   Lemma fsim_lfp_progress Φ t j s i:
     t <{ j, i }= s {{ Φ }} ->
-    diverges Pₜ t ->
-    stuck Pₛ s ∨
+    diverges Pt t ->
+    stuck Ps s ∨
       ∃ t' j' s' i',
-        Pₛ ⊨ s ->> s' ∧
-        diverges Pₜ t' ∧
+        Ps ⊨ s ->> s' ∧
+        diverges Pt t' ∧
         t' <{ j', i' }= s' {{ Φ }}.
   Proof using Type.
     (* Induction on the progress index of s *)
@@ -139,7 +139,7 @@ Section FSimSound.
   Proof using Type.
     intros Hsim Hdiv.
     (* We see in the future: can s be stuck ? *)
-    destruct (classic (∃ s', Pₛ ⊨ s ->>* s' ∧ stuck Pₛ s')) as [Hstuck | Hnstuck].
+    destruct (classic (∃ s', Ps ⊨ s ->>* s' ∧ stuck Ps s')) as [Hstuck | Hnstuck].
     - (* s can be stuck -> s has Undef behavior *)
       exists Undef. split; now apply has_undef_behavior || constructor.
     - (* s is never stuck -> s is diverging *)
@@ -224,7 +224,7 @@ Section FSimSound.
 
   Theorem fsim_sound Φ t j s i:
     t <{ j, i }= s {{ Φ }} ->
-    refines Pₜ Pₛ Φ t s.
+    refines Pt Ps Φ t s.
   Proof using Type.
     intros Hsim [] Hb.
     - eapply terminating_fsim; now eauto.

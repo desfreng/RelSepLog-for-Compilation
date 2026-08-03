@@ -8,17 +8,17 @@ From RSL Require Import Simulations.FreeSim.
 From RSL Require Import Simulations.Equiv.GSim.
 
 Section PROOF.
-  Context {Λₜ Λₛ: lang}.
+  Context {Λt Λs: lang}.
   Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
-  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Context (Pt: prog Λt) (Ps: prog Λs).
+  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
 
-  Definition StatePair := (state Λₜ * state Λₛ)%type.
+  Definition StatePair := (state Λt * state Λs)%type.
 
   Lemma fsim_implies_gsim: ∀ j t i s,
-    fsim J I Pₜ Pₛ Φ t j i s ->
+    fsim J I Pt Ps Φ t j i s ->
     ∃ b a,
-      gsim J I (WfOrdTree StatePair) Pₜ Pₛ Φ j b t i a s.
+      gsim J I (WfOrdTree StatePair) Pt Ps Φ j b t i a s.
   Proof using Type.
     intros t j i s Hsim.
     apply fsim_unroll in Hsim.
@@ -39,13 +39,13 @@ Section PROOF.
       + eassumption.
     - pose (P := fun a: StatePair =>
                    let (t', s') := a in
-                   s' = s ∧ Pₜ ⊨ t ->> t').
+                   s' = s ∧ Pt ⊨ t ->> t').
 
       pose (R := fun (a: StatePair) (o: ord_tree StatePair) =>
                    let (t', s') := a in
-                   s' = s ∧ Pₜ ⊨ t ->> t' ∧
+                   s' = s ∧ Pt ⊨ t ->> t' ∧
                    ∃ (j: J) a,
-                     gsim _ _ _ Pₜ Pₛ Φ j o t' i a s).
+                     gsim _ _ _ Pt Ps Φ j o t' i a s).
 
       assert (Hord: ∀ a, P a -> ∃ o, R a o).
       { intros [t' s'] [Heq Hstep]. subst s'.
@@ -57,10 +57,10 @@ Section PROOF.
       pose (R2 := fun (a: StatePair) (o: ord_tree StatePair) =>
                     let (t', s') := a in
                     s' = s ∧
-                    Pₜ ⊨ t ->> t' ∧
+                    Pt ⊨ t ->> t' ∧
                     ∃ (j': J) b',
                        b' ⊏ b ∧
-                      gsim _ _ _ Pₜ Pₛ Φ j' b' t' i o s).
+                      gsim _ _ _ Pt Ps Φ j' b' t' i o s).
       assert (Hord2: ∀ a, P a -> ∃ o, R2 a o).
       { intros [t' s'] [Heq Hstep]. subst s'.
         destruct (Hjoin1 (t', s)) as [b' [Hrw Hlt]].

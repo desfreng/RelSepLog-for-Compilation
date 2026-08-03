@@ -6,16 +6,16 @@ From RSL Require Import Simulations.ExplicitSim.
 From RSL Require Import Simulations.Equiv.ExplicitSimLax.
 
 Section PROOF.
-  Context {Λₜ Λₛ: lang}.
-  Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
-  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Context {Λt Λs: lang}.
+  Context (W: WfRel) (Pt: prog Λt) (Ps: prog Λs).
+  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
 
   Definition Wnew : WfRel := WfLexProd W WfNat.
 
   Lemma esim_lax_to_esim_inv: ∀ n i t s s',
-    Pₛ ⊨ s -{ n }> s' ->
-    esim_lax W Pₜ Pₛ Φ i t s' ->
-    esim Wnew Pₜ Pₛ Φ (i, n) t s.
+    Ps ⊨ s -{ n }> s' ->
+    esim_lax W Pt Ps Φ i t s' ->
+    esim Wnew Pt Ps Φ (ord_pair _ _ i n) t s.
   Proof using Type.
     unfold esim.
     coinduction C cih.
@@ -32,15 +32,15 @@ Section PROOF.
       + now constructor.
       + now constructor.
       + destruct (pstep_to_nstep_l _ _ Hsteps) as (n & s' & Hstep & Hnstep).
-        eapply ESourceSteps.
+        eapply ESourceSteps with (i' := ord_pair _ _ _ _).
         * eassumption.
-        * constructor. eassumption.
+        * by constructor.
         * eapply cih; eassumption.
       + apply ETargetSteps.
         { assumption. }
         intros t' Hstep. destruct (Ht _ Hstep) as (i' & Hlt & Hgfp).
-        exists (i', 0). split.
-        * now constructor.
+        eexists (ord_pair _ _ _ 0). split.
+        * constructor. done.
         * eapply cih; eassumption || constructor.
       + apply EBothSteps.
         { assumption. }
@@ -52,18 +52,18 @@ Section PROOF.
         * eapply cih; eassumption || constructor.
     - intros i t s s' Hstep Hgfp.
       inv Hstep as [ | ? ? ? ? Hs Hnstep ].
-      eapply ESourceSteps with (i' := (_, n)).
+      eapply ESourceSteps with (i' := ord_pair _ _ _ n).
       + eassumption.
       + right. simpl. lia.
       + eapply cih; eassumption.
   Qed.
 
   Lemma esim_lax_implies_esim: ∀ i t s,
-    esim_lax W Pₜ Pₛ Φ i t s ->
-    ∃ (R: WfRel) w, esim R Pₜ Pₛ Φ w t s.
+    esim_lax W Pt Ps Φ i t s ->
+    ∃ (R: WfRel) w, esim R Pt Ps Φ w t s.
   Proof using Type.
     intros i t s Hsim.
-    exists Wnew, (i, 0).
+    exists Wnew, (ord_pair _ _ i 0).
     apply esim_lax_to_esim_inv with s.
     - constructor.
     - assumption.

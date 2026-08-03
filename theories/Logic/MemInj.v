@@ -5,7 +5,7 @@ From RSL.Commons Require Export BijSet.
 
 From RSL.Commons Require Import RegisterBank.
 
-Implicit Types (I E : gset (loc * loc)) (lt ls : loc).
+Implicit Types (I E: gset (loc * loc)) (lt ls : loc).
 
 Definition related I lt ls := (ls, lt) ∈ I.
 
@@ -30,12 +30,29 @@ Proof using Type.
   unfold related. by auto.
 Qed.
 
+Definition sdom E : gset loc := set_map fst E.
+Definition tdom E : gset loc := set_map snd E.
+
+Lemma sdom_spec E ls : ls ∈ sdom E <-> ∃ lt, (ls, lt) ∈ E.
+Proof using Type.
+  rewrite elem_of_map. split.
+  - intros ([] & -> & Hin). by eexists.
+  - intros (? & ?). by eexists (_, _).
+Qed.
+
+Lemma tdom_spec E lt : lt ∈ tdom E <-> ∃ ls, (ls, lt) ∈ E.
+Proof using Type.
+  rewrite elem_of_map. split.
+  - intros ([] & -> & Hin). by eexists.
+  - intros (? & ?). by eexists (_, _).
+Qed.
+
 Definition mem_inj I E : rProp :=
   (
     ⌜bij_set I⌟ ∗
     ⌜E ⊆ I⌟ ∗
     [∗ set] '(ls, lt) ∈ I,
-        if (decide (ls ∈ dom E))
+        if (decide (ls ∈ sdom E))
         then emp
         else
           ∃ vt vs,
@@ -45,23 +62,23 @@ Definition mem_inj I E : rProp :=
 Lemma inj_empty : ⊢ mem_inj ∅ ∅.
 Proof using Type.
   unfold mem_inj.
+  iSplit. { iPureIntro. by apply bij_set_empty. }
   iSplit.
-  { iPureIntro. by apply bij_set_empty. }
-  iSplit.
-  { easy. }
-  { by iApply big_sepS_empty. }
+  - iPureIntro. intros p Hin. inv Hin.
+  - by iApply big_sepS_empty.
 Qed.
 
-Lemma inj_insert_exploit I E lt ls vt vs :
-  ls ∉ dom E ->
-  lt ∉ codom E ->
+Lemma inj_insert_exploit I I' E lt ls vt vs :
+  I' = {[ (ls, lt) ]} ∪ I ->
+  ls ∉ sdom E ->
+  lt ∉ tdom E ->
   mem_inj I E -∗
   lt →ₜ vt -∗
   ls →ₛ vs -∗
   ⌜same_val I vt vs⌟ -∗
-  mem_inj ({[ (ls, lt) ]} ∪ I) E.
+  mem_inj I' E.
 Proof using Type.
-  iIntros (Hls Hlt) "(%Hbij & %HE & Hin) Ht Hs %H".
+  iIntros (-> Hls Hlt) "(%Hbij & %HE & Hin) Ht Hs %H".
 
   iAssert (⌜∀ lt', (ls, lt') ∉ I⌝)%I with "[Hin Hs]" as "%Hs".
   {
@@ -77,22 +94,20 @@ Proof using Type.
     iIntros (ls' Hej).
     iDestruct (big_sepS_delete _ _ _ Hej with "Hin") as "[Hcond H]".
     case_decide as He.
-    - apply dom_spec in He as [lt' Hlt'].
+    - apply sdom_spec in He as [lt' Hlt'].
       assert (Heq: lt = lt').
       { eapply bij_set_functional.
         - by apply Hbij.
         - by apply Hej.
         - by apply HE.
       }
-      subst lt. exfalso. apply Hlt. apply codom_spec. by eexists.
+      subst lt. exfalso. apply Hlt. apply tdom_spec. by eexists.
     - iDestruct "Hcond" as (vt' vs') "(_ & Ht' & Hs')".
       by iDestruct (tgt_points_to_unique with "Ht Ht'") as "%Hneq".
   }
 
-  iSplitR.
-  { iPureIntro. by apply bij_set_extend. }
-  iSplitR.
-  { iPureIntro. transitivity I; auto. by apply union_subseteq_r. }
+  iSplitR. { iPureIntro. by apply bij_set_extend. }
+  iSplitR. { iPureIntro. intros ? ?. by apply elem_of_union_r, HE. }
   iApply big_sepS_union.
   { intros [] He%elem_of_singleton Hj. inv He. by apply (Ht ls). }
   iSplitR "Hin".
@@ -113,41 +128,41 @@ Proof using Type.
       * done.
 Qed.
 
-Lemma inj_insert I lt ls vt vs :
+Lemma inj_insert I I' lt ls vt vs :
+  I' = {[ (ls, lt) ]} ∪ I ->
   mem_inj I ∅ -∗
   lt →ₜ vt -∗
   ls →ₛ vs -∗
   ⌜same_val I vt vs⌟ -∗
-  mem_inj ({[ (ls, lt) ]} ∪ I) ∅.
-Proof using Type. by apply inj_insert_exploit. Qed.
+  mem_inj I' ∅.
+Proof using Type.
+  intros. apply inj_insert_exploit; by set_solver.
+Qed.
 
 Lemma inj_exploit I E lt ls :
   related I lt ls ->
-  ls ∉ dom E ->
+  ls ∉ sdom E ->
   mem_inj I E -∗
-  ∃ vt vs,
+  ∃ E' vt vs,
     lt →ₜ vt ∗
     ls →ₛ vs ∗
     ⌜same_val I vt vs⌟ ∗
-    mem_inj I ({[ (ls, lt) ]} ∪ E).
+    ⌜E' = {[ (ls, lt) ]} ∪ E⌟ ∗
+    mem_inj I E'.
 Proof using Type.
   iIntros (Hrel HnE) "(%Hbij & %HE & Hin)".
   iDestruct (big_sepS_delete _ _ _ Hrel with "Hin") as "[Hpair Hin]".
   rewrite decide_False; last done.
   iDestruct "Hpair" as (vt vs) "(%Hsame & Ht & Hs)".
-  iExists vt, vs. iFrame.
+  iExists _, vt, vs. iFrame.
   iSplitR. { done. }
-
   iSplitR. { done. }
-  iSplitR.
-  { iPureIntro. apply union_subseteq. split.
-    - by apply elem_of_subseteq_singleton.
-    - easy.
-  }
+  iSplitR. { done. }
+  iSplitR. { iPureIntro. intros p [->%elem_of_singleton | Hin]%elem_of_union; by auto. }
   iApply (big_sepS_delete _ _ _ Hrel).
   iSplitR.
   - rewrite decide_True; first done.
-    apply dom_spec. eexists.
+    apply sdom_spec. eexists.
     by apply elem_of_union_l, elem_of_singleton.
   - iApply (big_sepS_impl with "Hin").
     iModIntro.
@@ -155,31 +170,36 @@ Proof using Type.
     assert (ls ≠ ls') by (by eapply bij_set_diff_fst_neq).
     case_decide as He.
     + iIntros "_". rewrite decide_True; first done.
-      apply dom_union. by right.
+      apply sdom_spec in He  as [lt'' Hin].
+      apply sdom_spec. exists lt''. by apply elem_of_union_r.
     + iIntros "(%vt' & %vs' & Hsame & Hcond)".
       rewrite decide_False; first iFrame.
-      intros [->%dom_singleton | HinE]%dom_union; contradiction.
+      intros [lt'' Hin]%sdom_spec.
+      apply elem_of_union in Hin as [Heq%elem_of_singleton | Hin ].
+      * by inv Heq.
+      * apply He, sdom_spec. by exists lt''.
 Qed.
 
-Lemma inj_release I E lt ls vt vs:
+Lemma inj_release I E E' lt ls vt vs:
   (ls, lt) ∈ E ->
+  E' = E ∖ {[ (ls, lt) ]} ->
   same_val I vt vs ->
   mem_inj I E -∗
   lt →ₜ vt -∗
   ls →ₛ vs -∗
-  mem_inj I (E ∖ {[ (ls, lt) ]}).
+  mem_inj I E'.
 Proof using Type.
-  iIntros (HE Hsame) "(%Hbij & %Hinj & Hin) Ht Hs".
+  iIntros (HE -> Hsame) "(%Hbij & %Hinj & Hin) Ht Hs".
   iSplitR. { done. }
   iSplitR.
-  { iPureIntro. by apply subseteq_difference_l. }
+  { iPureIntro. intros ? [Hin ?]%elem_of_difference. by apply Hinj, Hin. }
   assert (Hin: (ls, lt) ∈ I) by (now apply Hinj).
   iDestruct (big_sepS_delete _ _ _ Hin with "Hin") as "[H Hin]".
   iApply (big_sepS_delete _ _ _ Hin).
   iSplitL "Ht Hs".
   { rewrite decide_False.
     - iExists vt, vs. by iFrame.
-    - intros [lt' [Hin' HnIn]%elem_of_difference]%dom_spec.
+    - intros [lt' [Hin' HnIn]%elem_of_difference]%sdom_spec.
       apply HnIn, elem_of_singleton. f_equal.
       by eapply bij_set_functional; eauto. }
   iApply (big_sepS_impl with "Hin").
@@ -191,8 +211,8 @@ Proof using Type.
     case_decide as He.
     + iIntros "_".
       rewrite decide_True; first done.
-      apply dom_spec in He as [lt'' He].
-      apply dom_spec. exists lt''.
+      apply sdom_spec in He as [lt'' He].
+      apply sdom_spec. exists lt''.
       apply elem_of_difference. split; first done.
       intros Hcontra%elem_of_singleton.
       inv Hcontra.
@@ -200,8 +220,8 @@ Proof using Type.
       rewrite decide_False; first iFrame.
       intros Hcontra.
       apply He.
-      apply dom_spec in Hcontra as [y Hinc].
+      apply sdom_spec in Hcontra as [y Hinc].
       apply elem_of_difference in Hinc as [].
-      apply dom_spec. by exists y.
-  - apply dom_spec. by eexists.
+      apply sdom_spec. by exists y.
+  - apply sdom_spec. by eexists.
 Qed.

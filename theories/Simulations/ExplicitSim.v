@@ -5,35 +5,35 @@ From RSL.Commons Require Export Language WfRel.
 From Coinduction Require Import all.
 
 Section ESimDef.
-  Context {Λₜ Λₛ: lang}.
-  Context (W: WfRel) (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
-  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Context {Λt Λs: lang}.
+  Context (W: WfRel) (Pt: prog Λt) (Ps: prog Λs).
+  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
 
-  Variant esim_lfp' (gfp: W -> state Λₜ -> state Λₛ -> Prop)
-    : W -> state Λₜ -> state Λₛ -> Prop :=
+  Variant esim_lfp' (gfp: W -> state Λt -> state Λs -> Prop)
+    : W -> state Λt -> state Λs -> Prop :=
   | ERelated : ∀ i t s,
     both_final Φ t s -> esim_lfp' gfp i t s
 
   | ESourceStuck : ∀ i t s,
-    stuck Pₛ s -> esim_lfp' gfp i t s
+    stuck Ps s -> esim_lfp' gfp i t s
 
   | ESourceSteps : ∀ i i' t s s',
-    Pₛ ⊨ s ->> s' ->
+    Ps ⊨ s ->> s' ->
     i' ⊏ i ->
     gfp i' t s' ->
     esim_lfp' gfp i t s
 
   | ETargetSteps : ∀ i t s,
-    can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ i', i' ⊏ i ∧ gfp i' t' s) ->
+    can_progress Pt t ->
+    (∀ t', Pt ⊨ t ->> t' -> ∃ i', i' ⊏ i ∧ gfp i' t' s) ->
     esim_lfp' gfp i t s
 
   | EBothSteps : ∀ i t s,
-    can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ i' s', Pₛ ⊨ s ->> s' ∧ gfp i' t' s') ->
+    can_progress Pt t ->
+    (∀ t', Pt ⊨ t ->> t' -> ∃ i' s', Ps ⊨ s ->> s' ∧ gfp i' t' s') ->
     esim_lfp' gfp i t s.
 
-  Program Definition esim_lfp : mon (element W -> state Λₜ -> state Λₛ -> Prop) :=
+  Program Definition esim_lfp : mon (element W -> state Λt -> state Λs -> Prop) :=
     {| body := esim_lfp' |}.
   Next Obligation.
     intros gfp gfp' Hgfp i t s Hsim.

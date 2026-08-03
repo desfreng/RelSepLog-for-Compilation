@@ -198,7 +198,7 @@ End RTLNotations.
 Module Test.
   Import RTLNotations.
 
-  Definition my_code : code := <<{{
+  Definition my_code : rtl_code := <<{{
           1: nop -> 2;
           2: $1 := #(VInt 32) -> 3;
           3: $1 := $2 -> 4;
@@ -210,7 +210,7 @@ Module Test.
           9: ret $1;
       }}>>.
 
-  Definition my_code_2 (r: reg) (n: node) (v: val) (op: op): code := <<{{
+  Definition my_code_2 (r: reg) (n: node) (v: val) (op: op): rtl_code := <<{{
           (n): nop -> (n+1);
           (n+1): r := #v -> (n+2);
           (n+2): r := r -> (n+3);

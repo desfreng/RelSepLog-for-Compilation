@@ -30,7 +30,7 @@ Section Playground.
       tfn_regs_no_dup := eq_refl;
     |}.
 
-  Definition sortp (a b: node * instr) : Prop :=
+  Definition sortp (a b: node * rtl_instr) : Prop :=
     match b, a with
     | (x, _), (y, _) => x <= y
     end.

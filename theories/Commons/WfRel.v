@@ -1,6 +1,7 @@
 From RSL Require Import Prelude.
 
-From Stdlib Require Import Relation_Operators.
+From Stdlib Require Import Relations.Relation_Operators.
+From Stdlib Require Import Logic.Eqdep.
 
 From Stdlib Require Import Wellfounded.Wellfounded.
 From Stdlib Require Import Arith.Wf_nat.
@@ -58,8 +59,16 @@ Lemma lt_from_lt_le {W:WfRel} (x y z : W) :
   x ⊏ y -> y ⊑ z -> x ⊏ z.
 Proof. intros Hxy [Hyz| ->]; auto. now transitivity y. Qed.
 
+Class HasSucc {W: WfRel} (x: W) := {
+    succ : W;
+    is_succ: x ⊏ succ;
+  }.
+
+Arguments succ {W} x {_}.
+Arguments is_succ {W} x {_}.
+
 Class NoIsolatedElements (W: WfRel) := {
-  no_isolated : ∀ x : W, ∃ y, x ⊏ y ∨ y ⊏ x
+    no_isolated : ∀ x : W, ∃ y, x ⊏ y ∨ y ⊏ x
   }.
 
 Canonical Structure WfNat: WfRel := {| wf := lt_wf |}.
@@ -114,7 +123,7 @@ End UnitWfRel.
 
 Section WithTopWfRel.
   Context (W: WfRel).
- 
+
   Variant lt_top : relation (option W) :=
   | LtTopSomeSome : ∀ x y, x ⊏ y -> lt_top (Some x) (Some y)
   | LtTopSomeNone : ∀ x, lt_top (Some x) None.
@@ -178,30 +187,82 @@ Section WithBotWfRel.
     |}.
 End WithBotWfRel.
 
-Section LexProdWfRel.
-  Context (W1 W2: WfRel).
+Definition inter {A} (R1 R2: relation A) : relation A :=
+  fun x y => R1 x y ∧ R2 x y.
 
-  Local Lemma slexprod_trans : Transitive (slexprod W1 W2 lt lt).
+Definition lift_rel {A B} (f: A -> B) (R: relation B) : relation A :=
+  fun x y => R (f x) (f y).
+
+Section ProdWfRel.
+  Context (W X: WfRel).
+
+  Definition prod_lt : relation (W * X) :=
+    inter (lift_rel fst lt) (lift_rel snd lt).
+
+  Local Lemma prod_lt_wf : well_founded prod_lt.
   Proof using Type.
-    intros x y z Hxy Hyz.
-    inv Hxy; inv Hyz.
-    - left. etransitivity; eassumption.
-    - left. eassumption.
-    - left. eassumption.
-    - right. etransitivity; eassumption.
+    intros [w x]. revert x.
+    induction w as [w IH] using (well_founded_induction wf).
+    constructor. intros [w' x'] [Hw _].
+    by apply IH, Hw.
+  Qed.
+
+  Local Lemma prod_lt_trans : Transitive prod_lt.
+  Proof using Type.
+    intros x y z [Hxy1 Hxy2] [Hyz1 Hyz2].
+    split; unfold lift_rel in *; by etransitivity.
+  Qed.
+
+  Canonical Structure WfProd : WfRel :=
+    {|
+      wf := prod_lt_wf;
+      trans := prod_lt_trans;
+    |}.
+End ProdWfRel.
+
+Section LexProdWfRel.
+  Context (W: WfRel) (X: WfRel).
+
+  Variant ord_prod : Type := ord_pair (w: W) (x: X).
+
+  Local Definition ord_prod_lt : relation ord_prod :=
+    fun '(ord_pair w1 x1) '(ord_pair w2 x2) =>
+      slexprod _ _ lt lt (w1, x1) (w2, x2).
+
+  Local Definition pair_rel '(ord_pair x1 w1) '(x2, w2) :=
+    x1 = x2 ∧ w1 = w2.
+
+  Local Lemma ord_prod_wf : well_founded ord_prod_lt.
+  Proof using Type.
+    intros [].
+    eapply Acc_simulation with (F := pair_rel) (b := (_, _)).
+    - apply (wf_slexprod W X _ _ wf wf).
+    - intros [x1 w1] [x2 w2] [x3 w3]. simpl.
+      intros H [-> ->]. by eexists (_, _).
+    - by split.
+  Qed.
+
+  Local Lemma ord_prod_trans : Transitive ord_prod_lt.
+  Proof using Type.
+    intros [? ?] [? ?] [? ?]. simpl.
+    intros Hxy Hyz. inv Hxy; inv Hyz.
+    - left. by etransitivity.
+    - by left.
+    - by left.
+    - right. by etransitivity.
   Qed.
 
   Canonical Structure WfLexProd : WfRel :=
     {|
-      wf := wf_slexprod W1 W2 _ _ wf wf;
-      trans := slexprod_trans;
+      wf := ord_prod_wf;
+      trans := ord_prod_trans;
     |}.
 End LexProdWfRel.
 
 Section UnionWfRel.
-  Context (W1 W2: WfRel).
+  Context (W X: WfRel).
 
-  Local Lemma le_AsB_trans : Transitive (le_AsB W1 W2 lt lt).
+  Local Lemma le_AsB_trans : Transitive (le_AsB W X lt lt).
   Proof using Type.
     intros x y z Hxy Hyz.
     inv Hxy; inv Hyz; constructor; etransitivity; eassumption.
@@ -209,7 +270,7 @@ Section UnionWfRel.
 
   Canonical Structure WfUnion : WfRel :=
     {|
-      wf := wf_disjoint_sum W1 W2 _ _ wf wf;
+      wf := wf_disjoint_sum _ _ _ _ wf wf;
       trans := le_AsB_trans;
     |}.
 End UnionWfRel.

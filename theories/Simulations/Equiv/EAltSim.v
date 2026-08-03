@@ -5,38 +5,38 @@ From RSL.Commons Require Export Language WfRel.
 From Coinduction Require Import all.
 
 Section EAltSimDef.
-  Context {Λₜ Λₛ: lang}.
+  Context {Λt Λs: lang}.
   Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
-  Context (Φ: value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Context (Pt: prog Λt) (Ps: prog Λs).
+  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
 
-  Variant ealt_sim_lfp' (gfp: J -> state Λₜ -> I -> state Λₛ -> Prop)
-    : J -> state Λₜ -> I -> state Λₛ -> Prop :=
+  Variant ealt_sim_lfp' (gfp: J -> state Λt -> I -> state Λs -> Prop)
+    : J -> state Λt -> I -> state Λs -> Prop :=
   | EAltBothFinal : ∀ j t i s,
     both_final Φ t s -> ealt_sim_lfp' gfp j t i s
 
   | EAltSourceStuck : ∀ j t i s,
-    stuck Pₛ s -> ealt_sim_lfp' gfp j t i s
+    stuck Ps s -> ealt_sim_lfp' gfp j t i s
 
   | EAltSourceSteps : ∀ j j' t i i' s s',
-    Pₛ ⊨ s ->> s' ->
+    Ps ⊨ s ->> s' ->
     i' ⊏ i ->
     gfp  j' t i' s' ->
     ealt_sim_lfp' gfp j t i s
 
   | EAltTargetSteps : ∀ j t i s,
-    can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' ->
+    can_progress Pt t ->
+    (∀ t', Pt ⊨ t ->> t' ->
            ∃ j' i',
              j' ⊏ j ∧
              gfp j' t' i' s) ->
     ealt_sim_lfp' gfp j t i s
 
   | EAltBothSteps : ∀ j t i s,
-    can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' ->
+    can_progress Pt t ->
+    (∀ t', Pt ⊨ t ->> t' ->
            ∃ j' i' s' ,
-             Pₛ ⊨ s ->> s' ∧
+             Ps ⊨ s ->> s' ∧
              gfp j' t' i' s') ->
     ealt_sim_lfp' gfp j t i s.
 
@@ -63,7 +63,7 @@ Section EAltSimDef.
       apply Hgfp. eassumption.
   Qed.
 
-  Definition ealt_sim_lfp : mon (J -> state Λₜ -> I -> state Λₛ -> Prop) :=
+  Definition ealt_sim_lfp : mon (J -> state Λt -> I -> state Λs -> Prop) :=
     {| body := ealt_sim_lfp' |}.
 
   Lemma ealt_sim_unroll j t i s :

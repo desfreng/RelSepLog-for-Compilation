@@ -5,7 +5,7 @@ From stdpp Require Import sets.
 
 From RSL Require Import RTL.RTL.
 
-Fixpoint last_succ (fuel: nat) (c: code) (n: node) : node :=
+Fixpoint last_succ (fuel: nat) (c: rtl_code) (n: node) : node :=
   match fuel with
   | 0 => n
   | S f =>
@@ -18,7 +18,7 @@ Fixpoint last_succ (fuel: nat) (c: code) (n: node) : node :=
       end
   end.
 
-Definition redirect_instr (f: node -> node) (i: instr) : instr :=
+Definition redirect_instr (f: node -> node) (i: rtl_instr) : rtl_instr :=
   match i with
   | Inop succ => Inop (f succ)
   | Iop op args dst succ => Iop op args dst (f succ)
@@ -29,7 +29,7 @@ Definition redirect_instr (f: node -> node) (i: instr) : instr :=
   | Ireturn reg => Ireturn reg
   end.
 
-Definition remove_nops (fn: function) : function :=
+Definition remove_nops (fn: rtl_function) : rtl_function :=
   let c := fn_code fn in
   let max_fuel := size c in
   let f := last_succ max_fuel c in

@@ -1,35 +1,36 @@
 From RSL Require Import Prelude.
 
 From RSL.Commons Require Export Language WfRel.
+From RSL.Logic Require Export BI.
+From RSL.Logic Require rPropDef.
 
 From Coinduction Require Import all.
 
 Section FSimDef.
-  Context {Λₜ Λₛ: lang}.
-  Context (J I: WfRel).
-  Context (Pₜ: prog Λₜ) (Pₛ: prog Λₛ).
+  Context {Λt Λs: lang}.
+  Context (J I: WfRel) (Pt: prog Λt) (Ps: prog Λs).
 
-  Abbreviation post := (value Λₜ * memory -> value Λₛ * memory -> Prop).
+  Abbreviation post := (value Λt * memory -> value Λs * memory -> Prop).
 
   Unset Elimination Schemes.
 
   Inductive fsim_lfp'
-    (gfp: post -> state Λₜ -> J -> I -> state Λₛ -> Prop)
-    (ϕ : post) : state Λₜ -> J -> I -> state Λₛ -> Prop :=
+    (gfp: post -> state Λt -> J -> I -> state Λs -> Prop)
+    (ϕ : post) : state Λt -> J -> I -> state Λs -> Prop :=
   | FRelated : ∀ t j i s,
     both_final ϕ t s -> fsim_lfp' gfp ϕ t j i s
 
   | FSourceStuck : ∀ t j i s,
-    stuck Pₛ s -> fsim_lfp' gfp ϕ t j i s
+    stuck Ps s -> fsim_lfp' gfp ϕ t j i s
 
   | FSourceSteps : ∀ t j i i' s s',
-    Pₛ ⊨ s ->> s' ->
+    Ps ⊨ s ->> s' ->
     fsim_lfp' gfp ϕ t j i' s' ->
     fsim_lfp' gfp ϕ t j i s
 
   | FTargetSteps : ∀ t j i s,
-    can_progress Pₜ t ->
-    (∀ t', Pₜ ⊨ t ->> t' -> ∃ j', fsim_lfp' gfp ϕ t' j' i s) ->
+    can_progress Pt t ->
+    (∀ t', Pt ⊨ t ->> t' -> ∃ j', fsim_lfp' gfp ϕ t' j' i s) ->
     fsim_lfp' gfp ϕ t j i s
 
   | FProgress : ∀ t j j' i i' s,
@@ -41,27 +42,27 @@ Section FSimDef.
   Set Elimination Schemes.
 
   Section FSimInd.
-    Variable gfp : post -> state Λₜ -> J -> I -> state Λₛ -> Prop.
+    Variable gfp : post -> state Λt -> J -> I -> state Λs -> Prop.
     Variable ϕ : post.
-    Variable P : state Λₜ -> J -> I -> state Λₛ -> Prop.
+    Variable P : state Λt -> J -> I -> state Λs -> Prop.
 
     Hypothesis HFinal:
       ∀ t j i s, both_final ϕ t s -> P t j i s.
 
     Hypothesis HStuck:
-      ∀ t j i s, stuck Pₛ s -> P t j i s.
+      ∀ t j i s, stuck Ps s -> P t j i s.
 
     Hypothesis HSourceSteps:
       ∀ t j i i' s s',
-      Pₛ ⊨ s ->> s' ->
+      Ps ⊨ s ->> s' ->
       fsim_lfp' gfp ϕ t j i' s' ->
       P t j i' s' ->
       P t j i s.
 
     Hypothesis HTargetSteps:
       ∀ t j i s,
-      can_progress Pₜ t ->
-      (∀ t', Pₜ ⊨ t ->> t' ->
+      can_progress Pt t ->
+      (∀ t', Pt ⊨ t ->> t' ->
              ∃ j',
                fsim_lfp' gfp ϕ t' j' i s ∧
                P t' j' i s) ->
@@ -114,6 +115,8 @@ Section FSimDef.
 
   Definition fsim_lfp := {| body := fsim_lfp' |}.
 
+  Global Arguments fsim_lfp : simpl never.
+
   Definition fsim := (gfp fsim_lfp).
 
   Lemma fsim_unroll ϕ t j i s :
@@ -141,11 +144,11 @@ Section FSimDef.
       4: now apply Hinf. all: easy.
     - intros C CIH ϕ t j i s ϕ' j' i' Hϕ Hj Hi Hsim.
       revert ϕ' j' i' Hϕ Hj Hi.
-      induction Hsim as [ ? t ? s Hfin
-                        | ? t ? s Hstuck
-                        | ? t ? ? s s' Hstep Hsim IH
-                        | ? t ? s Hprog IH
-                        | ? ? t  ? ? s Htt Hss Hsim ];
+      induction Hsim as [ t ? ? s Hfin
+                        | t ? ? s Hstuck
+                        | t ? ? ? s s' Hstep Hsim IH
+                        | t ? ? s Hprog IH
+                        | t ? ? s ? ? Htt Hss Hsim ];
         intros ? ? ? Hϕ Hj Hi.
       + constructor.
         destruct Hfin as (vt & vs & Hfint & Hfins & Hfin).
@@ -160,10 +163,9 @@ Section FSimDef.
         destruct (IH _ Hstep) as (? & Hsim & IHt).
         eexists. apply IHt; assumption || reflexivity.
       + destruct Hj as [ Hj | -> ]; destruct Hi as [ Hi | -> ];
-          eapply FProgress; try eassumption;
-          eapply (CIH _ _ _ _ _ _ _ _ _ _ _ Hsim).
-        Unshelve.
-        all: easy || now left.
+          eapply FProgress; try done;
+          (eapply CIH; [ done | | | done ]);
+          reflexivity || by left.
   Qed.
 
   Lemma fsim_mono ϕ t j i s:

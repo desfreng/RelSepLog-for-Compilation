@@ -105,9 +105,14 @@ Lemma regbank_never_empty ρ:
   ∀ r : reg,
   ∃ v, ρ @ r ⇒ v.
 Proof.
-  autounfold with regbank.
-  intros r.
-  destruct (ρ !! r); now eexists.
+  intros r. by eexists.
+Qed.
+
+Lemma regbank_never_empty_list ρ:
+  ∀ r : list reg,
+  ∃ v, ρ @ r ⇒ v.
+Proof.
+  intros r. by eexists.
 Qed.
 
 Lemma regbank_simpl_inj ρ:
