@@ -7,7 +7,7 @@ From Coinduction Require Import all.
 Section ISimDef.
   Context {Λt Λs: lang}.
   Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
+  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
   Inductive isim_lfp'
     (gfp: state Λt -> state Λs -> Prop) : state Λt -> state Λs-> Prop :=

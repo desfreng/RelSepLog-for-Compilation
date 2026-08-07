@@ -8,7 +8,7 @@ Section EAltSimDef.
   Context {Λt Λs: lang}.
   Context (J I: WfRel).
   Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
+  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
   Variant ealt_sim_lfp' (gfp: J -> state Λt -> I -> state Λs -> Prop)
     : J -> state Λt -> I -> state Λs -> Prop :=

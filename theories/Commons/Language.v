@@ -142,16 +142,14 @@ Section LangProp.
 End LangProp.
 
 Section TwoProg.
-  Context {Λₜ Λs: lang}.
-  Context (Pt : prog Λₜ) (Ps : prog Λs).
+  Context {Λt Λs: lang}.
+  Context (Pt : prog Λt) (Ps : prog Λs).
 
-  Abbreviation post := (value Λₜ * memory -> value Λs * memory -> Prop).
-
-  Definition both_final (ϕ: post) (t: state Λₜ) (s: state Λs) : Prop :=
-    ∃ vt vs,
-      is_final t = Some vt ∧
-      is_final s = Some vs ∧
-      ϕ vt vs.
+  Definition both_final ϕ (t: state Λt) (s: state Λs) : Prop :=
+    ∃ vt vs mt ms,
+      is_final t = Some (vt, mt) ∧
+      is_final s = Some (vs, ms) ∧
+      ϕ vt vs mt ms.
 
 End TwoProg.
 
@@ -166,5 +164,5 @@ Ltac langmixin :=
   | [ Hs: stuck ?P ?s, Hp: can_progress ?P ?s |- _ ] =>
       exfalso; now apply (progress_not_stuck _ _ Hp Hs)
   | [ Hfin: both_final _ _ _ |- _ ] =>
-      destruct Hfin as (? & ? & ? & ? & ?); now langmixin
+      destruct Hfin as (? & ? & ? & ? & ? & ? & ?); now langmixin
   end.

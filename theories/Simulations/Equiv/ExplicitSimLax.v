@@ -7,7 +7,7 @@ From Coinduction Require Import all.
 Section ESimLaxDef.
   Context {Λt Λs: lang}.
   Context (W: WfRel) (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
+  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
   Inductive esim_lax_lfp' (gfp: W -> state Λt -> state Λs -> Prop)
     : W -> state Λt -> state Λs -> Prop :=

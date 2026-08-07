@@ -5,6 +5,25 @@ From RSL.Logic Require Import Logic.
 
 Import RTLNotations.
 
+Ltac source_does_UB :=
+  unfold sim_lfp; cbv [rPropDef.rProp_holds];
+  match goal with
+  | |- elem _ ?Q ?t ?j ?i (?cs, ?ss, ?ms) =>
+      let Hpreg := fresh "Hprog" in
+      by eapply chain_stuck; split;
+      [ destruct cs
+      | intros Hprog;
+        apply can_progress_must_step in Hprog;
+        destruct Hprog as [? Hprog]; inv Hprog; simregs
+      ]
+  | _ => fail "Not a fsim goal"
+  end.
+
+Ltac source_step :=
+  repeat intro; subst; unseal;
+  intros ? ? [-> ->] ? ? _ _ Hsim; smap;
+  eapply chain_source_step; [by econstructor|apply Hsim].
+
 Section SourceRulesDef.
   Context {Λt : lang}.
   Let Λs : lang := rtl_lang.
@@ -14,11 +33,6 @@ Section SourceRulesDef.
   Context (st : pstate Λt) (j i : WfNat) (cs : list stackframe)
     (fs : rtl_function) (pcs : node) (ρs : regbank)
     (Q : value Λt -> value Λs -> rProp).
-
-  Ltac source_step :=
-    repeat intro; subst; unseal;
-    intros ? ? [-> ->] ? ? _ _ Hsim; smap;
-    econstructor; [by econstructor|apply Hsim].
 
   Lemma source_nop pc:
     fs@pcs is <<{ nop -> pc }>> ->
@@ -54,7 +68,7 @@ Section SourceRulesDef.
     intros ? ? _ Hdij [-> ->].
     decompose_map_disjoint.
 
-    eapply FSourceSteps.
+    eapply chain_source_step.
     - eapply exec_Iload with (v := vs); try done.
       rewrite get_at_union_right; auto.
       rewrite get_at_singl; auto.
@@ -75,7 +89,7 @@ Section SourceRulesDef.
     intros ? ? _ Hdij [-> ->].
     decompose_map_disjoint.
 
-    eapply FSourceSteps.
+    eapply chain_source_step.
     - eapply exec_Istore with (v := v); try done.
       erewrite set_at_some.
       + rewrite insert_union_r; last done.

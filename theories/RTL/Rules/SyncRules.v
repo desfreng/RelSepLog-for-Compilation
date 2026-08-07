@@ -14,17 +14,18 @@ Section SyncRulesDef.
   Context {Pt : prog Λt} {Ps : prog Λs}.
   Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
 
-  Context (ct : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank).
-  Context (j i : WfNat).
-  Context (cs : list stackframe) (fs : rtl_function) (pcs : node) (ρs : regbank).
-  Context (Q : value Λt -> value Λs -> rProp).
+  Implicit Types (ct : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank).
+  Implicit Types (j i : WfNat).
+  Implicit Types (cs : list stackframe) (fs : rtl_function) (pcs : node) (ρs : regbank).
+  Implicit Types (Q : value Λt -> value Λs -> rProp).
 
-  Lemma both_final vt vs :
+  Lemma both_ret j i Q vt vs :
     Q vt vs -∗
     [Pt, Ps, C] ([], ReturnState vt) <{j, i}= ([], ReturnState vs) {{ Q }}.
   Proof using Type. by iApply (final). Qed.
 
-  Lemma both_load I E pct' pcs' dstt dsts srct srcs addrt addrs:
+  Lemma both_load ct ft pct ρt j i cs fs pcs ρs Q
+    I E pct' pcs' dstt dsts srct srcs addrt addrs:
     ft@pct is <<{ dstt := !srct -> pct' }>> ->
     fs@pcs is <<{ dsts := !srcs -> pcs' }>> ->
     ρt @ srct ⇒ addrt ->
@@ -49,15 +50,15 @@ Section SyncRulesDef.
     iApply (inj_release with "Hinj Ht Hs").
     - by set_solver.
     - assert ((ls, lt) ∉ E).
-      { intros Hin. eapply Hs.
-        - reflexivity.
-        - apply sdom_spec. by eexists.
-      }
-      by set_solver.
+      + intros Hin. eapply Hs.
+        * reflexivity.
+        * apply sdom_spec. by eexists.
+      + by set_solver.
     - done.
   Qed.
 
-  Lemma both_store I E pct' pcs' dstt dsts srct srcs addrt addrs valt vals:
+  Lemma both_store ct ft pct ρt j i cs fs pcs ρs Q
+    I E pct' pcs' dstt dsts srct srcs addrt addrs valt vals:
     ft@pct is <<{ !dstt := srct -> pct' }>> ->
     fs@pcs is <<{ !dsts := srcs -> pcs' }>> ->
     ρt @ dstt ⇒ addrt ->
@@ -83,15 +84,15 @@ Section SyncRulesDef.
     iApply (inj_release with "Hinj Ht Hs").
     - by set_solver.
     - assert ((ls, lt) ∉ E).
-      { intros Hin. eapply Hs.
-        - reflexivity.
-        - apply sdom_spec. by eexists.
-      }
-      by set_solver.
+      + intros Hin. eapply Hs.
+        * reflexivity.
+        * apply sdom_spec. by eexists.
+      + by set_solver.
     - done.
   Qed.
 
-  Lemma both_call pct' pcs' dstt dsts fnamet fnames regt regs valt vals fnt fns Pre Post:
+  Lemma both_call Pre Post ct ft pct ρt j i cs fs pcs ρs Q
+    pct' pcs' dstt dsts fnamet fnames regt regs valt vals fnt fns:
     ft@pct is <<{ dstt := @call fnamet regt -> pct' }>> ->
     fs@pcs is <<{ dsts := @call fnames regs -> pcs' }>> ->
     find_fun Pt fnamet = Some fnt ->
@@ -117,8 +118,8 @@ Section SyncRulesDef.
     unseal.
     intros ? ? [-> ->] mt ms _ _ Hhoare. smap.
     intros ? ? _ _ [[-> ->] Hsim]. smap.
-    eapply FSourceSteps with (i' := i). { by econstructor. }
-    eapply FTargetSteps. { by eexists; econstructor. }
+    eapply chain_source_step with (i' := i). { by econstructor. }
+    eapply chain_target_step. { by eexists; econstructor. }
     intros t' Hstept. inv Hstept. simregs. exists j.
     eapply fsim_lfp_rtl_call_bind.
     - exists (S j). simpl. lia.
@@ -139,15 +140,15 @@ Section SyncRulesDef.
       + assumption.
   Qed.
 
-  Lemma both_call_framed
-    pct' pcs' dstt dsts fnt fns regt regs valt vals funt funs Pre Post F :
-    ft@pct is <<{ dstt := @call fnt regt -> pct' }>> ->
-    fs@pcs is <<{ dsts := @call fns regs -> pcs' }>> ->
-    find_fun Pt fnt = Some funt ->
-    find_fun Ps fns = Some funs ->
+  Lemma both_call_framed Pre Post F ct ft pct ρt j i cs fs pcs ρs Q
+    pct' pcs' dstt dsts fnamet fnames regt regs valt vals fnt fns:
+    ft@pct is <<{ dstt := @call fnamet regt -> pct' }>> ->
+    fs@pcs is <<{ dsts := @call fnames regs -> pcs' }>> ->
+    find_fun Pt fnamet = Some fnt ->
+    find_fun Ps fnames = Some fns ->
     ρt @ regt ⇒ valt ->
     ρs @ regs ⇒ vals ->
-    [Pt, Ps, C] {{ Pre }} funt <{j, i}= funs {{ Post }} -∗
+    [Pt, Ps, C] {{ Pre }} fnt <{j, i}= fns {{ Post }} -∗
     Pre valt vals -∗
     F -∗
     □ (∀ j' i' vt vs,

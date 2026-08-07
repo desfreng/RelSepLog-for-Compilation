@@ -10,12 +10,8 @@ From RSL.Logic Require Import rPropDef Tactic.
 Program Definition sim_lfp {Λt Λs J I} Pt Ps C st j i ss Q : rProp :=
   {|
     rProp_holds mt ms :=
-      let Ψ : value Λt * memory -> value Λs  * memory -> Prop :=
-        fun '(vt, mt) '(vs, ms) => rProp_holds (Q vt vs : rProp) mt ms
-      in
-      @fsim_lfp Λt Λs J I Pt Ps
-        (elem (C: Chain (fsim_lfp _ _ Pt Ps)))
-        Ψ (st, mt) j i (ss, ms)
+      let Ψ vt vs := rProp_holds (Q vt vs : rProp)
+      in elem (C: Chain (@fsim_lfp Λt Λs J I Pt Ps)) Ψ (st, mt) j i (ss, ms)
   |}.
 
 Notation
@@ -25,29 +21,28 @@ Notation
 
 Section SimRules.
   Context {Λt Λs: lang} {J I: WfRel}.
-
   Context {Pt: prog Λt} {Ps: prog Λs}.
   Context {C: Chain (fsim_lfp J I Pt Ps)}.
-  Context {st: pstate Λt} {j: J} {i: I} {ss: pstate Λs}.
-  Context {Q: value Λt → value Λs → rProp}.
 
-  Lemma final vt vs:
+  Implicit Types
+    (st: pstate Λt) (j: J) (i: I) (ss: pstate Λs) (Q: value Λt -> value Λs -> rProp).
+
+  Lemma final st j i ss Q vt vs:
     is_value st = Some vt ->
     is_value ss = Some vs ->
     Q vt vs -∗
     [Pt, Ps, C] st <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Ht Hs.
-    unseal. simpl. unseal.
-    intros ? ? [-> ->] mt ms _ _ Hp. smap.
-    apply FRelated.
-    eexists _, _. split_and!.
+    unseal. intros ? ? [-> ->] mt ms _ _ Hp. smap.
+    apply chain_related.
+    eexists _, _, _, _. split_and!.
     - simpl. by rewrite Ht.
     - simpl. by rewrite Hs.
     - simpl. assumption.
   Qed.
 
-  Lemma sim_mono j' i' Q':
+  Lemma sim_mono st j i ss Q j' i' Q':
     □ (∀ vt vs, Q' vt vs -∗ Q vt vs) -∗
     ⌜j ⊑ j'⌟ -∗
     ⌜i ⊑ i'⌟ -∗
@@ -60,64 +55,24 @@ Section SimRules.
     intros ? ? _ _ [[-> ->] Hj].
     intros ? ? _ _ [[-> ->] Hi].
     intros mt ms _ _ Hsim. smap.
-    revert mt ms j j' i i' st ss Q Q' HQ Hj Hi Hsim.
-    unfold sim_lfp.
-    eapply (tower).
-    { intros P Hp.
-      intros mt ms j j' i i' st ss Q Q' HQ Hj Hi.
-      intros Hinf P' Hp'.
-      eapply (Hp _ Hp'); eauto. by eapply Hinf.
-    }
-    clear C. intros C CIH mt ms j j' i i' st ss Q Q' HQ Hj Hi Hsim.
-    simpl in Hsim.
-    remember (st, mt : memory) as t eqn:Ht.
-    remember (ss, ms : memory) as s eqn:Hs.
-    revert i' j' st mt ss ms Hj Hi HQ CIH Ht Hs.
-    induction Hsim as
-      [ t j' i' s Hfin
-      | t j' i' s Hstuck
-      | t j' i'' i' s s' Hstep Hsim IHs
-      | t j' i' s Hprogress IHt
-      | t j' j'' i' i'' s Ht Hs Hgfp ].
-    - intros i j st mt ss ms Hj Hi Hϕ _ -> ->.
-      apply FRelated.
-      destruct Hfin as ([? mt'] & [? ms'] &
-                          (vt & Het & Hft)%is_final_Some &
-                          (vs & Hes & Hfs)%is_final_Some & Hfin). subst.
-      inv Het.
-      eexists _, _. split_and!.
-      + unfold is_final. by rewrite Hft.
-      + unfold is_final. by rewrite Hfs.
-      + simpl.
-        replace (mt') with (∅ ∪ mt') by smap.
-        replace (ms') with (∅ ∪ ms') by smap.
-        apply Hϕ.
-        * by apply map_disjoint_empty_r.
-        * by apply map_disjoint_empty_r.
-        * assumption.
-    - intros i j st mt ss ms Hj Hi Hϕ _ -> ->.
-      by apply FSourceStuck.
-    - intros i j st mt ss ms Hj Hi Hϕ CIH -> ->.
-      destruct s' as [ss' ms'].
-      eapply FSourceSteps.
-      + done.
-      + by apply IHs.
-    - intros i j st mt ss ms Hj Hi Hϕ CIH -> ->.
-      apply FTargetSteps.
-      { done. }
-      intros [st' mt'] Ht'.
-      apply IHt in Ht' as (j'' & Hsim & IH).
-      exists j''. by apply IH.
-    - intros i j st mt ss ms Hj Hi Hϕ CIH -> ->.
-      destruct Hj as [Hj | ->], Hi as [Hi | ->];
-      (eapply FProgress;
-       [ done
-       | done
-       | eapply CIH; [ done | | | done ]]);
-      reflexivity || now left.
+    simpl in *.
+    eapply chain_mono; last done.
+    - intros vt vs mt' ms' H.
+      replace (mt') with (∅ ∪ mt') by smap.
+      replace (ms') with (∅ ∪ ms') by smap.
+      apply HQ.
+      + by apply map_disjoint_empty_r.
+      + by apply map_disjoint_empty_r.
+      + assumption.
+    - done.
+    - done.
   Qed.
 
-  Lemma coind Inv:
+  Definition SInv : Type :=
+    pstate Λt -> J -> I -> pstate Λs ->
+    (value Λt -> value Λs -> rProp) -> rProp.
+
+  Lemma coind (Inv : SInv) st j i ss Q:
     □ (∀ C st j i ss Q,
        □ (∀ st' j' i' ss' Q',
             ⌜j ⊏ j'⌟ -∗
@@ -132,29 +87,32 @@ Section SimRules.
     [Pt, Ps, C] st <{j, i}= ss {{ Q }}.
   Proof using Type.
     unseal.
-    intros ? ? [-> ->] ? ? _ _ [[-> ->] RIH].
-    revert st j i ss Q. unfold sim_lfp.
+    intros ? ? [-> ->]. smap.
+    intros ? ? _ _ [[-> ->] RIH]. smap.
+    intros mt ms _ _ Hinv. smap.
+    unfold sim_lfp. simpl.
+    revert st j i ss Q mt ms Hinv.
     apply tower.
-    { intros P Hp. do 9 intro. intros Hinf P' Hq. by apply (Hp _ Hq). }
+    { intros P Hp st j i ss Q mt ms Hinv ? Hq. by apply Hp. }
     clear C.
-    intros C CIH st j i ss Q.
-    intros mtI msI _ _ HI.
+    intros C CIH st j i ss Q mt ms Hinv.
+    replace (mt) with (∅ ∪ ∅ ∪ ∅ ∪ mt) by smap.
+    replace (ms) with (∅ ∪ ∅ ∪ ∅ ∪ ms) by smap.
     apply RIH; clear RIH.
-    - by split.
-    - easy.
+    - done.
+    - done.
     - split; [done |]. simpl.
       intros st' i' j' ss' ϕ'.
       intros ? ? _ _ [[-> ->] Hj].
       intros ? ? _ _ [[-> ->] Hi].
-      intros mt ms _ _ HInv.
+      intros mt' ms' _ _ HInv.
       eapply FProgress; [done | done |].
-      apply CIH.
-      + by smap; apply map_disjoint_empty_r.
-      + by smap; apply map_disjoint_empty_r.
-      + done.
+      apply CIH. by smap.
     - by smap; apply map_disjoint_empty_r.
     - by smap; apply map_disjoint_empty_r.
-    - easy.
+    - done.
   Qed.
-
 End SimRules.
+
+Arguments SInv : clear implicits.
+

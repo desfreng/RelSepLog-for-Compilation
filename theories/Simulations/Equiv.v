@@ -14,7 +14,7 @@ From RSL Require Import Simulations.Equiv.ESimLaxToESim.
 Section SimEquiv.
   Context {Λt Λs: lang}.
   Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
+  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
   Abbreviation isim := (isim Pt Ps Φ).
   Abbreviation esim := (esim _ Pt Ps Φ).
@@ -133,7 +133,7 @@ Section SimEquiv.
     intros j' i'.
     destruct (no_isolated j') as [jj [ Hltj | Hgtj ]];
       destruct (no_isolated i') as [ii [ Hlti | Hlti ]];
-      (eapply fsim_mono;
+      (eapply chain_mono;
        [ firstorder | | | eapply isim_to_fsim; eassumption ]; easy || now left).
   Qed.
 

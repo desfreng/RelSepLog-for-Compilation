@@ -10,18 +10,9 @@ From Ltac2 Require Ltac2 Printf.
 Record rPropDef : Type :=
   {
     rProp_holds : memory -> memory -> Prop;
-
-    (* rProp_mono j i mt ms : ∀ j' i', *)
-    (*   j ⊑ j' -> *)
-    (*   i ⊑ i' -> *)
-    (*   rProp_holds j i mt ms -> *)
-    (*   rProp_holds j' i' mt ms; *)
   }.
 
 Section rPropDef_def.
-  (* Context {J I: WfRel}. *)
-  (* Abbreviation rPropDef := (rPropDef J I). *)
-
   Local Coercion rProp_holds : rPropDef >-> Funclass.
 
   (** ** Entailement *)

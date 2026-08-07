@@ -7,7 +7,8 @@ From RSL.Simulations Require Import FreeSim.
 
 Section CallBindLemma.
   Context {I J: WfRel}.
-  Context {Pt Ps : prog rtl_lang} {C : Chain (fsim_lfp J I Pt Ps)}.
+  Context {Pt Ps : prog rtl_lang}.
+  Context {C: Chain (fsim_lfp J I Pt Ps)}.
 
   Context (ct : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank).
   Context (j: J) (i: I).
@@ -15,16 +16,15 @@ Section CallBindLemma.
   Context (Q : val -> val -> rProp).
 
   Lemma fsim_lfp_rtl_call_bind {Hj: HasSucc j} {Hi: HasSucc i} P1 P2 dstt dsts pct' pcs' fnt fns valt vals mt ms:
-    fsim_lfp _ _ Pt Ps (elem C) P1
-      ([], CallState fnt valt, mt) j i ([], CallState fns vals, ms) ->
+    elem C P1 ([], CallState fnt valt, mt) j i ([], CallState fns vals, ms) ->
     (∀ j' i' vt vs mt' ms',
        j ⊏ j' ->
        i ⊏ i' ->
-       P1 (vt, mt') (vs, ms') ->
-       fsim_lfp _ _ Pt Ps (elem C) P2
+       P1 vt vs mt' ms' ->
+       elem C P2
          (ct, State ft pct' (⟦dstt ⇐ vt⟧ ρt), mt') j' i'
          (cs, State fs pcs' (⟦dsts ⇐ vs⟧ ρs), ms')) ->
-    fsim_lfp _ _ Pt Ps (elem C) P2
+    elem C P2
       (Stackframe dstt ft pct' ρt :: ct, CallState fnt valt, mt) j i
       (Stackframe dsts fs pcs' ρs :: cs, CallState fns vals, ms).
   Proof using Type.
@@ -33,18 +33,18 @@ Section CallBindLemma.
     assert
       (Hgen :
         ∀ t jc ic s,
-         fsim_lfp _ _ Pt Ps (elem C) P1 t jc ic s ->
+         elem C P1 t jc ic s ->
          ∀ σt pst mtt σs pss mss,
          (∀ j' i' vt vs mt' ms',
             j ⊏ j' ->
             i ⊏ i' ->
-            P1 (vt, mt') (vs, ms') ->
-            fsim_lfp _ _ Pt Ps (elem C) P2
+            P1 vt vs mt' ms' ->
+            elem C P2
               (ct, State ft pct' (⟦ dstt ⇐ vt ⟧ ρt), mt') j' i'
               (cs, State fs pcs' (⟦ dsts ⇐ vs ⟧ ρs), ms')) ->
          t = (σt, pst, mtt) ->
          s = (σs, pss, mss) ->
-         fsim_lfp _ _ Pt Ps (elem C) P2
+         elem C P2
            (σt ++ Σt, pst, mtt) jc ic (σs ++ Σs, pss, mss)).
     { apply tower.
       { clear.
@@ -75,7 +75,7 @@ Section CallBindLemma.
         | t jc ic s Hprog Ht
         | t jc jc' ic ic' s Htt Hss Hgfp ];
         intros σt pst mt σs pss ms Hcont -> ->.
-      - destruct Hfin as ([vt mt'] & [vs ms'] & Hfint & Hfins & Hphi).
+      - destruct Hfin as (vt & vs & mt' & ms' & Hfint & Hfins & Hphi).
         apply is_final_struct in Hfint; injection Hfint as -> -> ->.
         apply is_final_struct in Hfins; injection Hfins as -> -> ->.
         apply FTargetSteps. { by apply ret_can_progress. }

@@ -8,7 +8,7 @@ Section GSimDef.
   Context {Λt Λs: lang}.
   Context (J I W: WfRel).
   Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
+  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
   Unset Elimination Schemes.
 

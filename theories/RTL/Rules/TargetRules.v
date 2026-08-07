@@ -16,7 +16,7 @@ Section TargetRulesDef.
 
   Ltac target_step :=
     repeat intro; subst; unseal; intros ? ? [-> ->] ? ? _ _ Hsim;
-    smap; apply FTargetSteps;
+    smap; apply chain_target_step;
     [ eexists; by econstructor
     | intros t' Hstep; inv Hstep; try simregs; eexists; apply Hsim ].
 
@@ -55,7 +55,7 @@ Section TargetRulesDef.
 
     decompose_map_disjoint.
 
-    eapply FTargetSteps.
+    eapply chain_target_step.
     - eexists. eapply exec_Iload; try eassumption.
       + rewrite get_at_union_right; last done.
         by apply get_at_singl.
@@ -86,7 +86,7 @@ Section TargetRulesDef.
 
     decompose_map_disjoint.
 
-    eapply FTargetSteps.
+    eapply chain_target_step.
     - eexists. eapply exec_Istore; try eassumption.
       eapply set_at_some.
       rewrite get_at_union_right; last done.

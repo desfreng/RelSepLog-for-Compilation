@@ -11,7 +11,7 @@ Section PROOF.
   Context {Λt Λs: lang}.
   Context (J I: WfRel).
   Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
+  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
   Definition StatePair := (state Λt * state Λs)%type.
 

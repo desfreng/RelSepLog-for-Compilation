@@ -10,7 +10,7 @@ Section FSimDef.
   Context {Λt Λs: lang}.
   Context (J I: WfRel) (Pt: prog Λt) (Ps: prog Λs).
 
-  Abbreviation post := (value Λt * memory -> value Λs * memory -> Prop).
+  Abbreviation post := (value Λt -> value Λs -> memory -> memory -> Prop).
 
   Unset Elimination Schemes.
 
@@ -115,8 +115,7 @@ Section FSimDef.
 
   Definition fsim_lfp := {| body := fsim_lfp' |}.
 
-  Global Arguments fsim_lfp : simpl never.
-
+  Implicit Type (C: Chain fsim_lfp).
   Definition fsim := (gfp fsim_lfp).
 
   Lemma fsim_unroll ϕ t j i s :
@@ -127,9 +126,9 @@ Section FSimDef.
     fsim_lfp' (gfp fsim_lfp) ϕ t j i s -> gfp fsim_lfp ϕ t j i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
-  Lemma idx_mono (R: Chain fsim_lfp) ϕ t j i s:
+  Lemma chain_mono (R: Chain fsim_lfp) ϕ t j i s:
     ∀ ϕ' j' i',
-    (∀ vt vs, ϕ vt vs -> ϕ' vt vs) ->
+    (∀ vt vs mt ms, ϕ vt vs mt ms -> ϕ' vt vs mt ms) ->
     j ⊑ j' ->
     i ⊑ i' ->
     (elem R) ϕ t j i s ->
@@ -151,8 +150,8 @@ Section FSimDef.
                         | t ? ? s ? ? Htt Hss Hsim ];
         intros ? ? ? Hϕ Hj Hi.
       + constructor.
-        destruct Hfin as (vt & vs & Hfint & Hfins & Hfin).
-        exists vt, vs; now auto.
+        destruct Hfin as (vt & vs & mt & ms & Hfint & Hfins & Hfin).
+        exists vt, vs, mt, ms; now auto.
       + now constructor.
       + eapply FSourceSteps.
         { eassumption. }
@@ -168,21 +167,49 @@ Section FSimDef.
           reflexivity || by left.
   Qed.
 
-  Lemma fsim_mono ϕ t j i s:
-    ∀ ϕ' j' i',
-    (∀ vt vs, ϕ vt vs -> ϕ' vt vs) ->
-    j ⊑ j' ->
-    i ⊑ i' ->
-    fsim ϕ t j i s ->
-    fsim ϕ' t j' i' s.
-  Proof using Type. by apply idx_mono. Qed.
+  Lemma chain_related C ϕ t j i s :
+    both_final ϕ t s ->
+    elem C ϕ t j i s.
+  Proof using Type.
+    apply tower.
+    - intros P Hp H Q Hq. by apply Hp.
+    - intros ? _ H. by apply FRelated.
+  Qed.
 
-  Lemma fsim_lfp_mono (R: Chain fsim_lfp) ϕ t j i s:
-    ∀ ϕ' j' i',
-    (∀ vt vs, ϕ vt vs -> ϕ' vt vs) ->
-    j ⊑ j' ->
-    i ⊑ i' ->
-    fsim_lfp (elem R) ϕ t j i s ->
-    fsim_lfp (elem R) ϕ' t j' i' s.
-  Proof using Type. by apply idx_mono. Qed.
+  Lemma chain_stuck C ϕ t j i s :
+    stuck Ps s ->
+    elem C ϕ t j i s.
+  Proof using Type.
+    apply tower.
+    - apply inf_closed_all. intros ? P Hp Q Hq. by apply Hp.
+    - intros ? _ H. by apply FSourceStuck.
+  Qed.
+
+  Lemma chain_source_step C ϕ t j i i' s s':
+    Ps ⊨ s ->> s' ->
+    elem C ϕ t j i' s' ->
+    elem C ϕ t j i s.
+  Proof using Type.
+    apply tower.
+    - apply inf_closed_all. intros ? P Hp Hinv Q Hq.
+      apply Hp.
+      + done.
+      + by apply Hinv.
+    - intros ? _ H. by apply FSourceSteps.
+  Qed.
+
+  Lemma chain_target_step C ϕ t j i s:
+    can_progress Pt t ->
+    (∀ t', Pt ⊨ t ->> t' -> ∃ j', elem C ϕ t' j' i s) ->
+    elem C ϕ t j i s.
+  Proof using Type.
+    apply tower.
+    - apply inf_closed_all. intros ? P Hp Hinv Q Hq.
+      apply Hp.
+      + done.
+      + intros t' Hstep. apply Hinv in Hstep as (j' & Hinf).
+        exists j'. by apply Hinf.
+    - intros ? _ H. by apply FTargetSteps.
+  Qed.
+
 End FSimDef.

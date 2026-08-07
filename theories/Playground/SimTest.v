@@ -6,9 +6,9 @@ From RSL.RTL Require Import SimRules.
 Import RTLNotations.
 
 Section T.
-  Let Λₜ : lang := rtl_lang.
+  Let Λt : lang := rtl_lang.
   Let Λs : lang := rtl_lang.
-  Context (Pt : prog Λₜ) (Ps : prog Λs).
+  Context (Pt : prog Λt) (Ps : prog Λs).
 
   Abbreviation fsim := (fsim WfNat WfNat Pt Ps).
 
@@ -75,21 +75,22 @@ Section T.
       ⌜I ⊆ I'⌟ ∗
       mem_inj I' ∅.
 
-  Local Definition inv lt ls v (st: pstate Λₜ) (j i: nat) (ss: pstate Λs) ψ : rProp :=
-    ∃ I ρt ρs,
-      mem_inj I {[ (ls, lt) ]} ∗
-      ls →ₛ v ∗
-      lt →ₜ v ∗
-      (∀ vt vs, samer I vt vs -∗ ψ vt vs) ∗
-      ⌜
-        st = ([], State fact_good 3 ρt) ∧
-        ss = ([], State fact_bad 2 ρs) ∧
-        ρt @ reg_n <{ I }> ρs @ reg_n ∧
-        ρt @ reg_res <{ I }> ρs @ reg_res ∧
-        ρt @ reg_one ⇒ v ∧
-        ρs @ reg_addr ⇒ VPtr ls ∧
-        ρt @ reg_addr ⇒ VPtr lt
-      ⌟.
+  Local Definition inv lt ls v: SInv rtl_lang rtl_lang WfNat WfNat :=
+    fun st j i ss Ψ =>
+      (∃ I ρt ρs,
+          mem_inj I {[ (ls, lt) ]} ∗
+          ls →ₛ v ∗
+          lt →ₜ v ∗
+          (∀ vt vs, samer I vt vs -∗ Ψ vt vs) ∗
+          ⌜
+            st = ([], State fact_good 3 ρt) ∧
+            ss = ([], State fact_bad 2 ρs) ∧
+            ρt @ reg_n <{ I }> ρs @ reg_n ∧
+            ρt @ reg_res <{ I }> ρs @ reg_res ∧
+            ρt @ reg_one ⇒ v ∧
+            ρs @ reg_addr ⇒ VPtr ls ∧
+            ρt @ reg_addr ⇒ VPtr lt
+          ⌟)%I.
 
   Lemma fact_same C I :
     ∀ args_t args_s,
@@ -143,8 +144,7 @@ Section T.
     simpl.
 
     iApply (coind (inv lt ls (VInt 1))).
-    {
-      clear.
+    - clear.
       iIntros "!>" (C st j i ss ϕ) "#CIH".
       iIntros "(%I & %ρt & %ρs & Hinj & Hs & Ht & Hpost & %Hinv)".
       destruct Hinv as (-> & -> & Hn & Hres & Hone & Haddr_s & Haddr_t).
@@ -165,18 +165,21 @@ Section T.
       simpl.
 
       destruct (vn =? 0)%Z.
-      - iApply (source_ret). all: close_hyp.
+      + iApply (source_ret). all: close_hyp.
         iApply (target_ret). all: close_hyp.
         iApply (final); try done.
         iAssert (mem_inj I ∅) with "[Hinj Ht Hs]" as "Hinj".
         {
           replace ∅ with ({[(ls, lt)]} ∖ {[(ls, lt)]} : gset (loc * loc)) by set_solver.
-          iApply (inj_release with "Hinj Ht Hs"); by set_solver.
+          iApply (inj_release with "Hinj Ht Hs").
+          - by set_solver.
+          - by set_solver.
+          - by constructor.
         }
         iApply "Hpost".
         iExists I. iFrame. by iPureIntro.
-      -
-        iApply (source_op_exploit). all: close_hyp.
+
+      + iApply (source_op_exploit). all: close_hyp.
         iIntros (? Hv).
         destruct vres_s, vres_t; inv Hv; inv Hsame_res.
 
@@ -193,25 +196,24 @@ Section T.
         iApply "CIH"; try (iPureIntro; by lia).
         iExists I, _, _. iFrame. iPureIntro.
         split_and!.
-        + reflexivity.
-        + reflexivity.
-        + eexists _, _. split_and!; simregs || done.
-        + eexists _, _. split_and!; simregs || done.
-        + simregs.
-        + simregs.
-        + simregs.
-    }
-    replace ({[(ls, lt)]} ∪ ∅) with ({[(ls, lt)]} : gset (loc * loc)) by set_solver.
-    iExists I, _, _. iFrame.
-    iSplit. { by iIntros (? ?) "$". }
-    iPureIntro. split_and!.
-    - reflexivity.
-    - reflexivity.
-    - eexists _, _. split_and!; simregs || done.
-    - eexists _, _. split_and!; simregs || done.
-    - simregs.
-    - simregs.
-    - simregs.
+        * reflexivity.
+        * reflexivity.
+        * eexists _, _. split_and!; simregs || by constructor.
+        * eexists _, _. split_and!; simregs || by constructor.
+        * simregs.
+        * simregs.
+        * simregs.
+    - replace ({[(ls, lt)]} ∪ ∅) with ({[(ls, lt)]} : gset (loc * loc)) by set_solver.
+      iExists I, _, _. iFrame.
+      iSplit. { by iIntros (? ?) "$". }
+      iPureIntro. split_and!.
+      + reflexivity.
+      + reflexivity.
+      + eexists _, _. split_and!; simregs || done.
+      + eexists _, _. split_and!; simregs || by constructor.
+      + simregs.
+      + simregs.
+      + simregs.
   Qed.
 End T.
 

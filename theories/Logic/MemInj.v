@@ -7,29 +7,6 @@ From RSL.Commons Require Import RegisterBank.
 
 Implicit Types (I E: gset (loc * loc)) (lt ls : loc).
 
-Definition related I lt ls := (ls, lt) ∈ I.
-
-Definition same_val I := val_eq (related I).
-
-Definition regbank_same I (ρ1: regbank) (r1: reg) (ρ2: regbank) (r2: reg) :=
-  ∃ v1 v2,
-    ρ1@r1 ⇒ v1 ∧
-    ρ2@r2 ⇒ v2 ∧
-    same_val I v1 v2.
-
-Notation "ρ1 @ r1 '<{' I '}>' ρ2 @ r2" :=
-  (regbank_same I ρ1 r1%nat ρ2 r2%nat)
-    (at level 60, ρ2 at next level, no associativity).
-
-Lemma same_val_mono I I' vt vs :
-  I ⊆ I' ->
-  same_val I vt vs ->
-  same_val I' vt vs.
-Proof using Type.
-  destruct vt as [], vs as []; simpl; auto.
-  unfold related. by auto.
-Qed.
-
 Definition sdom E : gset loc := set_map fst E.
 Definition tdom E : gset loc := set_map snd E.
 

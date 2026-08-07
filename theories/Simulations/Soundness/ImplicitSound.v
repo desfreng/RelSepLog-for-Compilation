@@ -41,7 +41,7 @@ Section ISimSound.
                         | t s Hprogress _
                         | t s Hprogress _ ].
       + (* Both Final *)
-        destruct Hfinal as (? & [vs ms] & Ht & ? & ?).
+        destruct Hfinal as (? & vs & ? & ms & Ht & ? & ?).
         (* s is final too *)
         inv Ht. exists (Terminating vs ms). now do 2 constructor.
       + (* Source Stuck *)

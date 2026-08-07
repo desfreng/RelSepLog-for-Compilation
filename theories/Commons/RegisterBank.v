@@ -37,6 +37,16 @@ Notation "'⟦' r '⇐' v '⟧' ρ" :=
   (regbank_set ρ r%nat v%Z)
     (at level 20, ρ at level 20, right associativity).
 
+Definition regbank_same I (ρ1: regbank) (r1: reg) (ρ2: regbank) (r2: reg) :=
+  ∃ v1 v2,
+    ρ1@r1 ⇒ v1 ∧
+    ρ2@r2 ⇒ v2 ∧
+    same_val I v1 v2.
+
+Notation "ρ1 @ r1 '<{' I '}>' ρ2 @ r2" :=
+  (regbank_same I ρ1 r1%nat ρ2 r2%nat)
+    (at level 60, ρ2 at next level, no associativity).
+
 Create HintDb regbank discriminated.
 
 Hint Unfold

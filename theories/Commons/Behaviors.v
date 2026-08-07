@@ -167,7 +167,7 @@ Section Refinement.
 
   Variant behavior_order Φ : @behavior Λₜ -> @behavior Λs -> Prop :=
   | BehOrderTerm vt vs mt ms :
-      Φ (vt, mt) (vs, ms) -> behavior_order Φ (Terminating vt mt) (Terminating vs ms)
+      Φ vt vs mt ms -> behavior_order Φ (Terminating vt mt) (Terminating vs ms)
   | BehOrderDiv :
       behavior_order Φ Diverging Diverging
   | BehOrderUndef bt :

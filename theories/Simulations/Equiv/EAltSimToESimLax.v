@@ -9,7 +9,7 @@ Section PROOF.
   Context {Λt Λs: lang}.
   Context (J I: WfRel).
   Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt * memory -> value Λs * memory -> Prop).
+  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
   Lemma ealt_sim_implies_esim_lax: ∀ b t a s,
     ealt_sim J I Pt Ps Φ b t a s ->
