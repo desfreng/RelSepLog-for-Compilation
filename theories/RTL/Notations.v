@@ -56,7 +56,7 @@ Module RTLNotations.
 
   (* LoadI *)
   Notation "dst ':=' '#' val '->' next" :=
-    (Iop (LoadI val%Z) [] dst next)
+    (Iop (ImmInt val%Z) [] dst next)
       (in custom rtl_instr at level 1,
           dst custom rtl_reg at level 1,
           val constr at level 0,
@@ -146,6 +146,20 @@ Module RTLNotations.
           src custom rtl_reg at level 1,
           next constr at level 0).
 
+  (* Alloc *)
+  Notation "dst ':=' 'alloc' '()' '->' next" :=
+    (Ialloc dst next)
+      (in custom rtl_instr at level 1,
+          dst custom rtl_reg at level 1,
+          next constr at level 0).
+
+  (* Free *)
+  Notation "'free' addr '->' next" :=
+    (Ifree addr next)
+      (in custom rtl_instr at level 1,
+          addr custom rtl_reg at level 1,
+          next constr at level 0).
+
   (* Call *)
   Notation "dst ':=' 'call' sig args '->' next" :=
     (Icall sig args dst next)
@@ -200,7 +214,7 @@ Module Test.
 
   Definition my_code : rtl_code := <<{{
           1: nop -> 2;
-          2: $1 := #(VInt 32) -> 3;
+          2: $1 := #32 -> 3;
           3: $1 := $2 -> 4;
           4: $1 := $2 + $3 -> 5;
           5: $1 := $2 * $3 -> 6;
@@ -208,9 +222,11 @@ Module Test.
           7: !1 := $2 -> 8;
           8: if $1 then goto 9 else goto 9;
           9: ret $1;
+          10: $1 := alloc () -> 10;
+          11: free $1 -> 11;
       }}>>.
 
-  Definition my_code_2 (r: reg) (n: node) (v: val) (op: op): rtl_code := <<{{
+  Definition my_code_2 (r: reg) (n: node) (v: Z) (op: op): rtl_code := <<{{
           (n): nop -> (n+1);
           (n+1): r := #v -> (n+2);
           (n+2): r := r -> (n+3);

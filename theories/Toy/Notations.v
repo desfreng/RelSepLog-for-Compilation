@@ -20,7 +20,7 @@ Module ToyNotations.
           r custom toy_reg).
 
   Notation "# v" :=
-    (EImm v%Z)
+    (EImmInt v%Z)
       (in custom toy_expr at level 1,
           v constr).
 
@@ -134,7 +134,7 @@ Section Playground.
       result := @ fun_name ([n]);
 
       (* 2. Expressions: Immediates and Loads *)
-      result := #(VInt 1);
+      result := #1;
       one := !addr;
 
       (* 3. Arithmetic Operations *)

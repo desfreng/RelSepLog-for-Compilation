@@ -7,16 +7,16 @@ Import RTLNotations.
 
 Definition no_opt_fun (fs: rtl_function) : rtl_function :=
   {|
-    fn_name := fn_name fs;
-    fn_regs := fn_regs fs;
-    fn_entrypoint := fn_entrypoint fs;
-    fn_code := fn_code fs;
-    fn_regs_no_dup := fn_regs_no_dup fs
+    rtl_fn_name := rtl_fn_name fs;
+    rtl_fn_regs := rtl_fn_regs fs;
+    rtl_fn_entrypoint := rtl_fn_entrypoint fs;
+    rtl_fn_code := rtl_fn_code fs;
+    rtl_fn_regs_no_dup := rtl_fn_regs_no_dup fs
   |}.
 
 Lemma no_opt_no_dup {Ps}:
-  is_no_dup (fn_name <$> prog_fun_list Ps) = true ->
-  is_no_dup (fn_name <$> fmap no_opt_fun (prog_fun_list Ps)) = true.
+  is_no_dup (rtl_fn_name <$> prog_fun_list Ps) = true ->
+  is_no_dup (rtl_fn_name <$> fmap no_opt_fun (prog_fun_list Ps)) = true.
 Proof using Type.
   rewrite !is_no_dup_sound.
   induction (prog_fun_list Ps) as [ | f l IH ].
@@ -68,22 +68,6 @@ Section no_opt.
   Context (Ps : rtl_program).
   Let Pt := no_opt Ps.
 
-  Definition same_args I valt vals : rProp :=
-    ⌜Forall2 (same_val I) valt vals⌟ ∗ mem_inj I ∅.
-
-  Definition samer I vt vs : rProp :=
-    ∃ I', ⌜I ⊆ I'⌟ ∗ ⌜same_val I' vt vs⌟ ∗ mem_inj I' ∅.
-
-  Lemma samer_mono I I' vt vs:
-    I ⊆ I' ->
-    samer I' vt vs -∗
-    samer I vt vs.
-  Proof using Type.
-    iIntros (Hincl) "(%I'' & %Hinl' & Hsame & Hinj)".
-    iExists I''. iFrame. iPureIntro.
-    by transitivity I'.
-  Qed.
-
   Definition no_opt_sim_inv : SInv rtl_lang rtl_lang WfNat WfNat :=
     fun st j i ss ϕ =>
       (∃ I f pc ρt ρs,
@@ -94,7 +78,7 @@ Section no_opt.
           (∀ vt vs, samer I vt vs -∗ ϕ vt vs)
       )%I.
 
-  Lemma no_opt_lemma C f I :
+  Lemma no_opt_soundness C f I :
     ⊢ [Pt, Ps, C] {{ same_args I }} (no_opt_fun f) <{0, 0}= f {{ samer I }}.
   Proof using Type.
     iIntros "!>" (valt vals Ψ) "[%Harg Hinj] Hpost".
@@ -107,12 +91,14 @@ Section no_opt.
       clear.
       iIntros "!>" (C st j i ss ϕ) "#CIH".
       iIntros "(%I & %f & %pc & %ρt & %ρs & -> & -> & %Hsame & Hinj & Hpost)".
-      destruct ((fn_code f) !! pc)
+      destruct ((rtl_fn_code f) !! pc)
         as [
           [ pc'
           | op args dst pc'
           | src dst pc'
           | dst src pc'
+          | dst pc'
+          | src pc'
           | fname args dst pc'
           | r tpc fpc
           | r
@@ -123,22 +109,25 @@ Section no_opt.
         iApply "CIH"; try (iPureIntro; simpl; lia).
         iExists I, f, _, ρt, ρs. iFrame. iPureIntro. by split_and!.
 
-      - destruct (regbank_never_empty_list ρs args) as [vs Hvs].
-        destruct (regbank_never_empty_list ρt args) as [vt Hvt].
+      - destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
         iApply (source_op_exploit); try done.
-        iIntros (v Hv). iApply (target_op); try done.
-        + instantiate (1 := v). admit.
-        + iApply "CIH"; try (iPureIntro; simpl; lia).
-          iExists I, f, _, _, _. iFrame. iPureIntro. split_and!; try done.
-          intros r.
-          admit.
+        iIntros (vs Hvs).
+        destruct (eval_op_same_args Hval Hvs) as (vt & Hvt & Hrel).
+        iApply (target_op); try done.
+        iApply "CIH"; try (iPureIntro; simpl; lia).
+        iExists I, f, _, _, _. iFrame. iPureIntro. split_and!; try done.
+        apply update_same_bank.
+        + done.
+        + intros ? ?. apply Hsame.
 
       - destruct (Hsame src) as (vt & vs & Ht & Hs & Hv).
         iApply (both_load with "[Hpost] Hinj"); try done.
         iIntros (vt' vs' Hv') "Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
         iExists I, f, _, _, _. iFrame. iPureIntro. split_and!; try done.
-        admit.
+        apply update_same_bank.
+        + done.
+        + intros ? ?. apply Hsame.
 
       - destruct (Hsame src) as (addrt & addrs & Haddrt & Haddrs & Haddr).
         destruct (Hsame dst) as (dstt & dsts & Hdstt & Hdsts & Hdst).
@@ -147,9 +136,30 @@ Section no_opt.
         iApply "CIH"; try (iPureIntro; simpl; lia).
         iExists I, f, _, _, _. iFrame. iPureIntro. by split_and!.
 
+      - iApply (both_alloc with "[Hpost] Hinj"); try done.
+        iIntros (lt ls vt vs Hrel) "Ht Hs Hinj".
+        iApply "CIH"; try (iPureIntro; simpl; lia).
+        iPoseProof (inj_insert_points_to with "Hinj Ht Hs [//]") as "H"; eauto.
+        iExists _, f, _, _, _. iFrame.
+        iSplitR. { by iPureIntro. }
+        iSplitR. { by iPureIntro. }
+        iSplitR.
+        + iPureIntro. apply update_same_bank.
+          * constructor. unfold related. by set_solver.
+          * intros ? _. eapply same_bank_mono; last done. by set_solver.
+        + clear.
+          iIntros (vt vs) "Hsame".
+          iApply "Hpost".
+          iApply (samer_mono with "Hsame"). by set_solver.
+
+      - destruct (Hsame src) as (addrt & addrs & Haddrt & Haddrs & Haddr).
+        iApply (both_free with "[Hpost] Hinj"); try done.
+        iIntros "Hinj".
+        iApply "CIH"; try (iPureIntro; simpl; lia).
+        iExists I, f, _, _, _. iFrame. iPureIntro. by split_and!.
+
       - destruct (find_fun Ps fname) as [fn |] eqn:Hfn; last by iApply (source_call_fail).
-        destruct (regbank_never_empty_list ρs args) as [vs].
-        destruct (regbank_never_empty_list ρt args) as [vt].
+        destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
         iApply (both_call_framed (same_args I) (samer I) with "[] [Hinj] Hpost"); eauto.
         + by apply no_opt_find_fun.
         + clear.
@@ -162,18 +172,16 @@ Section no_opt.
           split_and!.
           * done.
           * done.
-          * intros r.
-            admit.
-        + iFrame. iPureIntro.
-          admit.
+          * by apply init_same_bank.
+        + iFrame. by iPureIntro.
         + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj) Hpost".
           iApply "CIH"; auto.
           iExists I', f, _, _, _. iFrame.
           iSplitR. { by iPureIntro. }
           iSplitR. { by iPureIntro. }
           iSplitR.
-          * iPureIntro. intros r.
-            admit.
+          * iPureIntro. apply update_same_bank; first done.
+            intros ? ?. by eapply same_bank_mono, Hsame.
           * iIntros (? ?) "Hsame". iApply "Hpost". by iApply (samer_mono with "Hsame").
 
       - destruct (Hsame r) as (bt & bs & Hbt & Hbs & Hb).
@@ -195,7 +203,6 @@ Section no_opt.
     iPureIntro. split_and!.
     - reflexivity.
     - reflexivity.
-    - intros r.
-      admit.
-  Admitted.
+    - by apply init_same_bank.
+  Qed.
 End no_opt.

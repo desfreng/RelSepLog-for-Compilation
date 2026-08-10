@@ -39,7 +39,8 @@ Definition reserve : Build (node * (rtl_instr -> Build unit)) :=
 Definition texpr_rtl (dst: reg) (e: texpr) (npc: node) : rtl_instr :=
   match e with
   | EReg r => Iop Move [r] dst npc
-  | EImm v => Iop (LoadI v) [] dst npc
+  | EImmInt v => Iop (ImmInt v) [] dst npc
+  | EImmBool v => Iop (ImmBool v) [] dst npc
   | ELoad addr => Iload addr dst npc
   | EAdd lhs rhs => Iop Add [lhs; rhs] dst npc
   | ESub lhs rhs => Iop Sub [lhs; rhs] dst npc
@@ -91,10 +92,10 @@ Definition compile (f: tfunction) : option rtl_function :=
   | Some (_, entry, c) =>
       Some
         {|
-          fn_name := tfn_name f;
-          fn_regs := tfn_regs f;
-          fn_entrypoint := entry;
-          fn_code := c;
-          fn_regs_no_dup := tfn_regs_no_dup f;
+          rtl_fn_name := tfn_name f;
+          rtl_fn_regs := tfn_regs f;
+          rtl_fn_entrypoint := entry;
+          rtl_fn_code := c;
+          rtl_fn_regs_no_dup := tfn_regs_no_dup f;
         |}
   end.

@@ -20,12 +20,12 @@ Section T.
 
   Definition fact_bad : rtl_function :=
     {|
-      fn_name := "fact"%string;
-      fn_regs := [reg_n; reg_addr];
-      fn_entrypoint := 0;
-      fn_code :=
+      rtl_fn_name := "fact"%string;
+      rtl_fn_regs := [reg_n; reg_addr];
+      rtl_fn_entrypoint := 0;
+      rtl_fn_code :=
         <<{{
-              0: reg_res := #(VInt 1) -> 1;
+              0: reg_res := #1 -> 1;
               1: !reg_addr := reg_res -> 2;
               2: reg_cond := isZ reg_n -> 3;
               3: if reg_cond then goto 7 else goto 4;
@@ -34,26 +34,26 @@ Section T.
               6: reg_n := reg_n - reg_one -> 2;
               7: ret reg_res;
           }}>>;
-      fn_regs_no_dup := eq_refl;
+      rtl_fn_regs_no_dup := eq_refl;
     |}.
 
   Definition fact_good : rtl_function :=
     {|
-      fn_name := "fact"%string;
-      fn_regs := [reg_n; reg_addr];
-      fn_entrypoint := 0;
-      fn_code :=
+      rtl_fn_name := "fact"%string;
+      rtl_fn_regs := [reg_n; reg_addr];
+      rtl_fn_entrypoint := 0;
+      rtl_fn_code :=
         <<{{
-              0: reg_res := #(VInt 1) -> 1;
+              0: reg_res := #1 -> 1;
               1: !reg_addr := reg_res -> 2;
-              2: reg_one := #(VInt 1) -> 3;
+              2: reg_one := #1 -> 3;
               3: reg_cond := isZ reg_n -> 4;
               4: if reg_cond then goto 7 else goto 5;
               5: reg_res := reg_res * reg_n -> 6;
               6: reg_n := reg_n - reg_one -> 3;
               7: ret reg_res;
         }}>>;
-      fn_regs_no_dup := eq_refl;
+      rtl_fn_regs_no_dup := eq_refl;
     |}.
 
   Ltac close_hyp :=
@@ -68,12 +68,6 @@ Section T.
     | [ |- same_val _ _ _ ] => try done
     | [ |- ?goal ] => idtac
     end.
-
-  Definition samer I vt vs : rProp :=
-    ∃ I',
-      ⌜same_val I vt vs⌟ ∗
-      ⌜I ⊆ I'⌟ ∗
-      mem_inj I' ∅.
 
   Local Definition inv lt ls v: SInv rtl_lang rtl_lang WfNat WfNat :=
     fun st j i ss Ψ =>
@@ -93,47 +87,32 @@ Section T.
           ⌟)%I.
 
   Lemma fact_same C I :
-    ∀ args_t args_s,
-    Forall2 (same_val I) args_t args_s ->
-    mem_inj I ∅ -∗
-    [Pt, Ps, C]
-      ([], CallState fact_good args_t)
-        <{0, 0}=
-      ([], CallState fact_bad args_s)
-    {{ samer I }}.
+    ⊢ [Pt, Ps, C] {{ same_args I }} fact_good <{0, 0}= fact_bad {{ samer I }}.
   Proof using Type.
-    intros args_t args_s Hsame.
-    iIntros "Hinj".
+    iIntros "!>" (valt vals Ψ) "(%Hsame_arg & Hinj) Hpost".
     iApply (source_callstate_exploit).
-    iIntros (ρs pc Hlen -> ->).
+    iIntros (ρs ? Hlen Heqs ->).
+    assert (H: ∃ ρt, ρt = init_regs (rtl_fn_regs fact_good) valt ∧ ∀ r, ρt @ r <{ I }> ρs @ r).
+    {
+      eexists. split; first done.
+      intros r. subst ρs.
+      by apply init_same_bank.
+    }
+    destruct H as (ρt & Heqt & Hsame).
+
     iApply (target_callstate); [ by eapply Forall2_length_r | done | done |].
-
-    destruct (init_regs_sound fact_bad args_s) as (ρs & <- & Hs).
-    { done. }
-
-    destruct (init_regs_sound fact_good args_t) as (ρt & <- & Ht).
-    { by eapply Forall2_length_r. }
-
-    destruct args_s as [|vs_n [|vs_addr []]]; inv Hlen.
-    apply Forall2_cons_inv_r in Hsame as (vt_n & ? & Hv & Hsame & ->).
-    apply Forall2_cons_inv_r in Hsame as (vt_addr & ? & Hreg & Hsame & ->).
-    apply Forall2_nil_inv_r in Hsame as ->.
-
-    eassert (ρs@reg_n ⇒ _) by (by apply Hs with 0).
-    eassert (ρt@reg_n ⇒ _) by (by apply Ht with 0).
-
-    eassert (ρs@reg_addr ⇒ _) by (by apply Hs with 1).
-    eassert (ρt@reg_addr ⇒  _) by (by apply Ht with 1).
-
-    clear Ht Hs.
+    clear Heqt Heqs.
+    simpl.
+    destruct (Hsame reg_n) as (vt & vs & Hvt & Hvs & Hv).
+    destruct (Hsame reg_addr) as (addrt & addrs & Haddrt & Haddrs & Haddr).
 
     iApply (source_op). all: close_hyp.
     iApply (target_op). all: close_hyp.
     simpl.
 
-    iApply (source_store_exploit). all: close_hyp.
+    iApply (source_store_exploit with "[-Hinj] Hinj"). all: close_hyp.
     { by set_solver. }
-    iIntros (E' lt ls vt -> -> ->).
+    iIntros (E' lt ls ? -> -> ->).
     iIntros "Ht Hs Hinj".
 
     iApply (target_store with "[-Ht] Ht"). all: close_hyp.
@@ -171,7 +150,7 @@ Section T.
         iAssert (mem_inj I ∅) with "[Hinj Ht Hs]" as "Hinj".
         {
           replace ∅ with ({[(ls, lt)]} ∖ {[(ls, lt)]} : gset (loc * loc)) by set_solver.
-          iApply (inj_release with "Hinj Ht Hs").
+          iApply (inj_release_points_to with "Hinj Ht Hs").
           - by set_solver.
           - by set_solver.
           - by constructor.
@@ -205,7 +184,6 @@ Section T.
         * simregs.
     - replace ({[(ls, lt)]} ∪ ∅) with ({[(ls, lt)]} : gset (loc * loc)) by set_solver.
       iExists I, _, _. iFrame.
-      iSplit. { by iIntros (? ?) "$". }
       iPureIntro. split_and!.
       + reflexivity.
       + reflexivity.

@@ -19,8 +19,8 @@ Section Playground.
       tfn_regs := [n];
       tfn_code :=
         <{|
-            result := #VInt 1;
-            one := #VInt 1;
+            result := #1;
+            one := #1;
             while n {
                 result := result * n;
                 n := n - one

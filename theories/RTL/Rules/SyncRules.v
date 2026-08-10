@@ -47,7 +47,7 @@ Section SyncRulesDef.
     iApply (target_load with "[-Ht] Ht"); eauto.
     iIntros "Ht".
     iApply "Hsim"; eauto.
-    iApply (inj_release with "Hinj Ht Hs").
+    iApply (inj_release_points_to with "Hinj Ht Hs").
     - by set_solver.
     - assert ((ls, lt) ∉ E).
       + intros Hin. eapply Hs.
@@ -75,20 +75,74 @@ Section SyncRulesDef.
     mem_inj I E -∗
     [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
-    iIntros (Hpct Hpcs Haddrt Haddrs Hvalt Hvals HsameAddr HsameVal Hs) "Hsim Hinj".
+    iIntros (Hpct Hpcs Haddrt Haddrs Hvalt Hvals HsameAddr HsameVal HnE) "Hsim Hinj".
     iApply (source_store_exploit with "[Hsim] Hinj"); eauto.
     iIntros (E' lt ls vt -> -> ->) "Ht Hs Hinj".
     iApply (target_store with "[-Ht] Ht"); eauto.
     iIntros "Ht".
     iApply "Hsim"; eauto.
-    iApply (inj_release with "Hinj Ht Hs").
+    iApply (inj_release_points_to with "Hinj Ht Hs").
     - by set_solver.
     - assert ((ls, lt) ∉ E).
-      + intros Hin. eapply Hs.
+      + intros Hin. eapply HnE.
         * reflexivity.
         * apply sdom_spec. by eexists.
       + by set_solver.
     - done.
+  Qed.
+
+  Lemma both_alloc ct ft pct ρt j i cs fs pcs ρs Q
+    I E pct' pcs' dstt dsts :
+    ft@pct is <<{ dstt := alloc () -> pct' }>> ->
+    fs@pcs is <<{ dsts := alloc () -> pcs' }>> ->
+    (∀ lt ls vt vs,
+       ⌜same_val I vt vs⌟ -∗
+       lt →ₜ vt -∗
+       ls →ₛ vs -∗
+       mem_inj I E -∗
+       [Pt, Ps, C] (ct, State ft pct' (⟦dstt ⇐ VPtr lt⟧ρt))
+            <{1+j, 1+i}=
+           (cs, State fs pcs' (⟦dsts ⇐ VPtr ls⟧ρs)) {{ Q }}) -∗
+    mem_inj I E -∗
+    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    iIntros (Hpct Hpcs) "Hsim Hinj".
+    iApply (source_alloc); eauto.
+    iIntros (ls) "Hs".
+    iApply (target_alloc); eauto.
+    iIntros (lt vt) "Ht".
+    iApply ("Hsim" with "[] Ht Hs Hinj").
+    iPureIntro. by constructor.
+  Qed.
+
+  Lemma both_free ct ft pct ρt j i cs fs pcs ρs Q
+    I E pct' pcs' srct srcs addrt addrs :
+    ft@pct is <<{ free srct -> pct' }>> ->
+    fs@pcs is <<{ free srcs -> pcs' }>> ->
+    ρt @ srct ⇒ addrt ->
+    ρs @ srcs ⇒ addrs ->
+    same_val I addrt addrs ->
+    (∀ ls, addrs = VPtr ls -> ls ∉ sdom E) ->
+    (mem_inj I E -∗
+     [Pt, Ps, C] (ct, State ft pct' ρt)
+                  <{1+j, 1+i}=
+                 (cs, State fs pcs' ρs) {{ Q }}) -∗
+    mem_inj I E -∗
+    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    iIntros (Hpct Hpcs Hsrct Hsrcs Hrel HnE) "Hsim Hinj".
+    iApply (source_free_exploit with "[Hsim] Hinj"); eauto.
+    iIntros (? lt ls vt -> -> ->) "Ht Hs Hinj".
+    iApply (target_free with "[-Ht] Ht"); eauto.
+    iIntros "Ht".
+    iApply "Hsim".
+    iApply (inj_release_freed with "Hinj Ht Hs").
+    - by set_solver.
+    - assert ((ls, lt) ∉ E).
+      + intros Hin. eapply HnE.
+        * reflexivity.
+        * apply sdom_spec. by eexists.
+      + by set_solver.
   Qed.
 
   Lemma both_call Pre Post ct ft pct ρt j i cs fs pcs ρs Q

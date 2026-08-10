@@ -6,7 +6,8 @@ From stdpp Require Import strings.
 
 Variant texpr : Type :=
 | EReg (r: reg)
-| EImm (v: val)
+| EImmInt (v: Z)
+| EImmBool (v: bool)
 | ELoad (addr: reg)
 | EAdd (lhs rhs: reg)
 | ESub (lhs rhs: reg)

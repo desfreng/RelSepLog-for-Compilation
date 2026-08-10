@@ -24,23 +24,25 @@ Definition redirect_instr (f: node -> node) (i: rtl_instr) : rtl_instr :=
   | Iop op args dst succ => Iop op args dst (f succ)
   | Iload addr dst succ => Iload addr dst (f succ)
   | Istore addr src succ => Istore addr src (f succ)
+  | Ialloc dst succ => Ialloc dst (f succ)
+  | Ifree addr succ => Ifree addr (f succ)
   | Icall sig args dst succ => Icall sig args dst (f succ)
   | Icond cond ifso ifnot => Icond cond (f ifso) (f ifnot)
   | Ireturn reg => Ireturn reg
   end.
 
 Definition remove_nops (fn: rtl_function) : rtl_function :=
-  let c := fn_code fn in
+  let c := rtl_fn_code fn in
   let max_fuel := size c in
   let f := last_succ max_fuel c in
   let new_c := fmap (redirect_instr f) c in
-  let new_entry := f $ fn_entrypoint fn in
+  let new_entry := f $ rtl_fn_entrypoint fn in
   {|
-    fn_name := fn_name fn;
-    fn_regs := fn_regs fn;
-    fn_entrypoint := new_entry;
-    fn_code := new_c;
-    fn_regs_no_dup := fn_regs_no_dup fn;
+    rtl_fn_name := rtl_fn_name fn;
+    rtl_fn_regs := rtl_fn_regs fn;
+    rtl_fn_entrypoint := new_entry;
+    rtl_fn_code := new_c;
+    rtl_fn_regs_no_dup := rtl_fn_regs_no_dup fn;
   |}.
 
 (* Fixpoint find_reachable (fuel: nat) (c: code) (worklist: list node) *)

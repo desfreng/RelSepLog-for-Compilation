@@ -6,9 +6,6 @@ From RSL.RTL Require Export RTL Notations.
 
 Import RTLNotations.
 
-Definition init_regs (f: rtl_function) (v: list val) : regbank :=
-  list_to_map (zip (fn_regs f) v).
-
 Inductive stackframe : Type :=
 | Stackframe
     (res: reg) (* where to store the result *)
@@ -37,51 +34,63 @@ Inductive rtl_step (P: rtl_program) : rtl_state * memory -> rtl_state * memory -
   f@pc is <<{ nop -> pc' }>> ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
 
-| exec_Iret: forall σ m ρ f pc r v,
+| exec_Iret: ∀ σ m ρ f pc r v,
   f@pc is <<{ ret r }>> ->
   ρ@r ⇒ v ->
   rtl_step P (σ, State f pc ρ, m) (σ, ReturnState v, m)
 
-| exec_Iop: forall σ m ρ f pc op args dst pc' ρ' v vals,
+| exec_Iop: ∀ σ m ρ f pc op args dst pc' ρ' v vals,
   f@pc is <<{ dst := @op args -> pc' }>> ->
   ρ@args ⇒ vals ->
   eval_op op vals = Some v ->
   ⟦dst ⇐ v⟧ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
-| exec_Iload: forall σ m ρ f pc dst src pc' ρ' addr v,
+| exec_Iload: ∀ σ m ρ f pc dst src pc' ρ' addr v,
   f@pc is <<{ dst := !src -> pc' }>> ->
   ρ@src ⇒ addr ->
   get_at addr m = Some v ->
   ⟦dst ⇐ v⟧ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
-| exec_Istore: forall σ m ρ f pc dst src pc' m' addr v,
+| exec_Istore: ∀ σ m ρ f pc dst src pc' m' addr v,
   f@pc is <<{ !dst := src -> pc' }>> ->
   ρ@dst ⇒ addr ->
   ρ@src ⇒ v ->
   set_at addr v m = Some m' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m')
 
-| exec_Icond: forall  σ m ρ f pc cond ifso ifnot v pc',
+| exec_Ialloc : ∀ σ m ρ f pc dst pc' ρ' m' addr v,
+  f@pc is <<{ dst := alloc () -> pc' }>> ->
+  alloc_at addr v m = Some m' ->
+  ⟦dst ⇐ VPtr addr⟧ρ = ρ' ->
+  rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m')
+
+| exec_Ifree : ∀ σ m ρ f pc src pc' m' addr,
+  f@pc is <<{ free src -> pc' }>> ->
+  ρ@src ⇒ addr ->
+  free_at addr m = Some m' ->
+  rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m')
+
+| exec_Icond: ∀  σ m ρ f pc cond ifso ifnot v pc',
   f@pc is <<{ if cond then goto ifso else goto ifnot }>> ->
   ρ@cond ⇒ VBool v ->
   pc' = (if v then ifso else ifnot) ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
 
-| exec_Icall: forall σ m ρ f pc dst sig args pc' σ' fn vals,
+| exec_Icall: ∀ σ m ρ f pc dst sig args pc' σ' fn vals,
   f@pc is <<{ dst := @call sig args -> pc' }>> ->
   find_fun P sig = Some fn ->
   ρ@args ⇒ vals ->
   Stackframe dst f pc' ρ :: σ = σ' ->
   rtl_step P (σ, State f pc ρ, m) (σ', CallState fn vals, m)
 
-| exec_function: forall σ m ρ f args,
-  length args = length (fn_regs f) ->
-  init_regs f args = ρ ->
-  rtl_step P (σ, CallState f args, m) (σ, State f (fn_entrypoint f) ρ, m)
+| exec_function: ∀ σ m ρ f args,
+  length args = length (rtl_fn_regs f) ->
+  init_regs (rtl_fn_regs f) args = ρ ->
+  rtl_step P (σ, CallState f args, m) (σ, State f (rtl_fn_entrypoint f) ρ, m)
 
-| exec_return: forall σ m ρ f pc dst v ρ',
+| exec_return: ∀ σ m ρ f pc dst v ρ',
   ⟦dst ⇐ v⟧ρ = ρ' ->
   rtl_step P (Stackframe dst f pc ρ :: σ, ReturnState v, m) (σ, State f pc ρ', m)
 .
@@ -203,7 +212,7 @@ Section SemProp.
   Proof using Type.
     intros Hnf Hstep.
     destruct t'' as [[σ'' pt] m'].
-    inv Hstep as [ | | | | | | | | ? ? ? ? ? ? ? ? ? Heq];
+    inv Hstep as [ | | | | | | | | | | ? ? ? ? ? ? ? ? ? Heq];
       try (eexists _, _, _; split; [ done | by econstructor]).
     - eexists (_ :: _), _, _. split.
       + done.
@@ -224,33 +233,26 @@ Section SemProp.
       by eapply unlift_can_progress.
   Qed.
 
-  Lemma init_regs_sound f args :
-    length args = length (fn_regs f) ->
-    ∃ ρ,
-      ρ = init_regs f args ∧
-      ∀ i r v,
-      fn_regs f !! i = Some r ->
-      args !! i = Some v ->
-      ρ@r ⇒ v.
+  Lemma eval_op_same_args {I op valt vals vs}:
+    Forall2 (same_val I) valt vals ->
+    eval_op op vals = Some vs ->
+    ∃ vt, eval_op op valt = Some vt ∧ same_val I vt vs.
   Proof using Type.
-    intros Hlen.
-    eexists. split; [ done | ].
-    intros i r v Hr Hv.
-    autounfold with regbank.
-    unfold init_regs, regbank.
-    rewrite (elem_of_list_to_map_1' _ r v).
-    - easy.
-    - intros y (i' & ? & ? & Heq & Hr' & Hv')%elem_of_lookup_zip_with.
-      inv Heq.
-      assert (i = i').
-      {
-        eapply NoDup_lookup.
-        - by eapply is_no_dup_sound, fn_regs_no_dup.
-        - eassumption.
-        - eassumption.
-      }
-      cbn in *. congruence.
-    - apply elem_of_lookup_zip_with. by exists i, r, v.
+    intros Hsame Hop.
+    destruct op;
+      destruct vals as [|[] [|[] []]];
+      try inv Hop as [H];
+      try inv Hsame as [ | ? ? ? ? Hval1 Hsame'];
+      try inv Hsame' as [ | ? ? ? ? Hval2 Hsame''];
+      try inv Hsame'' as [ | ];
+      try inv Hval1;
+      try inv Hval2;
+      try (eexists; split; done || by constructor).
+    case_match eqn:Hcond.
+    - congruence.
+    - inv H. eexists. split; simpl.
+      + by rewrite Hcond.
+      + by constructor.
   Qed.
 End SemProp.
 

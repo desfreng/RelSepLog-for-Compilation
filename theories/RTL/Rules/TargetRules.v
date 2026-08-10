@@ -61,7 +61,7 @@ Section TargetRulesDef.
         by apply get_at_singl.
       + reflexivity.
     - intros t Hstep.
-      inv Hstep as [ | | | ? ? ? ? ? ? ? ? ? ? ? ? ? Hget | | | | | ].
+      inv Hstep as [ | | | ? ? ? ? ? ? ? ? ? ? ? ? ? Hget | | | | | | | ].
       simregs.
       rewrite get_at_union_right in Hget; last done.
       rewrite get_at_singl in Hget. inv Hget.
@@ -88,16 +88,80 @@ Section TargetRulesDef.
 
     eapply chain_target_step.
     - eexists. eapply exec_Istore; try eassumption.
-      eapply set_at_some.
+      eapply update_at_some.
       rewrite get_at_union_right; last done.
       by apply get_at_singl.
     - intros t Hstep.
-      inv Hstep as [ | | | | ? ? ? ? ? ? ? ? ? ? ? ? ? ? Hset | | | | ].
+      inv Hstep as [ | | | | ? ? ? ? ? ? ? ? ? ? ? ? ? ? Hset | | | | | | ].
       simregs.
-      erewrite set_at_some in Hset.
+      unfold set_at in Hset.
+      erewrite update_at_some in Hset.
       + rewrite insert_union_r in Hset; last done.
         rewrite insert_singleton_eq in Hset.
         inv Hset.
+
+        eexists.
+        replace msP with (msP ∪ ∅) by smap.
+        apply Hsim; smap; by solve_map_disjoint.
+      + rewrite get_at_union_right; last done.
+        by apply get_at_singl.
+  Qed.
+
+  Lemma target_alloc pc dst:
+    ft@pct is <<{ dst := alloc () -> pc }>> ->
+    (∀ l v,
+       l →ₜ v -∗
+       [Pt, Ps, C] (ct, State ft pc (⟦dst ⇐ VPtr l⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
+    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+  Proof using Type.
+    intros Hpc. unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
+
+    eapply chain_target_step.
+    - eexists. eapply exec_Ialloc.
+      + done.
+      + apply alloc_at_is_some with (v := VUndef). split.
+        * done.
+        * apply not_elem_of_dom, is_fresh.
+      + reflexivity.
+    - intros t Hstep.
+      inv Hstep as [ | | | | | ? ? ? ? ? ? ? ? ? ? ? ? Hm | | | | | ].
+      apply alloc_at_is_some in Hm as [-> HnIn].
+
+      eexists.
+      replace msP with (msP ∪ ∅) by smap.
+      eapply Hsim; smap; solve_map_disjoint.
+  Qed.
+
+  Lemma target_free pc src l v:
+    ft@pct is <<{ free src -> pc }>> ->
+    ρt @ src ⇒ VPtr l ->
+    (freeₜ l -∗
+       [Pt, Ps, C]  (ct, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
+    l →ₜ v -∗
+    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+  Proof using Type.
+    intros Hpc Hsrc. unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
+    intros ? ? Hdij _ [-> ->]. smap.
+    decompose_map_disjoint.
+
+    eapply chain_target_step.
+    - eexists. eapply exec_Ifree.
+      + done.
+      + done.
+      + unfold free_at. erewrite update_at_some.
+        * reflexivity.
+        * rewrite get_at_union_right; last done.
+          by apply get_at_singl.
+    - intros t Hstep.
+      inv Hstep as [ | | | | | | ? ? ? ? ? ? ? ? ? ? ? Hm | | | | ].
+      simregs.
+      unfold free_at in Hm.
+      erewrite update_at_some in Hm.
+      + rewrite insert_union_r in Hm; last done.
+        rewrite insert_singleton_eq in Hm.
+        inv Hm.
 
         eexists.
         replace msP with (msP ∪ ∅) by smap.
@@ -124,9 +188,9 @@ Section TargetRulesDef.
   Proof using Type. by target_step. Qed.
 
   Lemma target_callstate args:
-    length args = length (fn_regs ft) ->
-    ρt = init_regs ft args ->
-    pct = fn_entrypoint ft ->
+    length args = length (rtl_fn_regs ft) ->
+    ρt = init_regs (rtl_fn_regs ft) args ->
+    pct = rtl_fn_entrypoint ft ->
     [Pt, Ps, C] (ct, State ft pct ρt) <{1+j, i}= ss {{ Q }} -∗
     [Pt, Ps, C] (ct, CallState ft args) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.

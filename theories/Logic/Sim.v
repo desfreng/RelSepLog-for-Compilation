@@ -115,4 +115,3 @@ Section SimRules.
 End SimRules.
 
 Arguments SInv : clear implicits.
-

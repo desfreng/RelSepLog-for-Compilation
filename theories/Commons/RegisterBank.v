@@ -9,16 +9,21 @@ Definition reg := nat.
 (* [regmap] is a mapping from registers to a value *)
 Definition regbank : Type := gmap reg val.
 
-Definition regbank_get (ρ: regbank) (r: reg) : val :=
+Implicit Type (ρ ρt ρs: regbank) (r: reg) (v: val) (rl: list reg) (vl: list val).
+
+Definition regbank_get ρ r : val :=
   match ρ !! r with
   | Some v => v
   | None => VUndef
   end.
 
-Definition regbank_set (ρ: regbank) (r: reg) (v: val) : regbank :=
-  <[r := v]>ρ.
+Definition regbank_set ρ r v : regbank := <[r := v]>ρ.
 
 (** ** Logical Connectives  *)
+
+Notation "'⟦' r '⇐' v '⟧' ρ" :=
+  (regbank_set ρ r%nat v%Z)
+    (at level 20, ρ at level 20, right associativity).
 
 Class LogicRegisterAssert (R V : Type) :=
   regbank_assert : regbank -> R -> V -> Prop.
@@ -33,19 +38,15 @@ Notation "ρ @ r '⇒' v" :=
   (regbank_assert ρ r%nat v%Z)
     (at level 60, no associativity).
 
-Notation "'⟦' r '⇐' v '⟧' ρ" :=
-  (regbank_set ρ r%nat v%Z)
-    (at level 20, ρ at level 20, right associativity).
+Definition regbank_same I ρt ρs kt ks :=
+  ∃ vt vs,
+    ρt@kt ⇒ vt ∧
+    ρs@ks ⇒ vs ∧
+    same_val I vt vs.
 
-Definition regbank_same I (ρ1: regbank) (r1: reg) (ρ2: regbank) (r2: reg) :=
-  ∃ v1 v2,
-    ρ1@r1 ⇒ v1 ∧
-    ρ2@r2 ⇒ v2 ∧
-    same_val I v1 v2.
-
-Notation "ρ1 @ r1 '<{' I '}>' ρ2 @ r2" :=
-  (regbank_same I ρ1 r1%nat ρ2 r2%nat)
-    (at level 60, ρ2 at next level, no associativity).
+Notation "ρt @ rt '<{' I '}>' ρs @ rs" :=
+  (regbank_same I ρt ρs rt rs)
+    (at level 60, ρs at next level, no associativity).
 
 Create HintDb regbank discriminated.
 
@@ -55,17 +56,28 @@ Hint Unfold
   regbank_set
   regbank_assert
   regbank_assert_single
-  regbank_assert_list : regbank.
+  regbank_assert_list
+  regbank_same : regbank.
 
-Lemma regbank_assert_unfold ρ :
-  ∀ r v tl tv,
+Lemma regbank_assert_fold ρ :
+  ∀ r v rl vl,
   ρ @ r ⇒ v ->
-  ρ @ tl ⇒ tv ->
-  ρ @ (r :: tl) ⇒ (v :: tv).
+  ρ @ rl ⇒ vl ->
+  ρ @ (r :: rl) ⇒ (v :: vl).
 Proof.
   autounfold with regbank.
-  intros r v tl tv Hv Htl.
+  intros r v tl vl Hv Htl.
   simpl. now f_equal.
+Qed.
+
+Lemma regbank_assert_unfold ρ :
+  ∀ r v rl vl,
+  ρ @ (r :: rl) ⇒ (v :: vl) ->
+  ρ @ r ⇒ v ∧ ρ @ rl ⇒ vl.
+Proof.
+  autounfold with regbank.
+  intros r v rl vl H.
+  by inv H.
 Qed.
 
 Lemma regbank_assert_nil ρ :
@@ -112,21 +124,15 @@ Proof.
 Qed.
 
 Lemma regbank_never_empty ρ:
-  ∀ r : reg,
-  ∃ v, ρ @ r ⇒ v.
-Proof.
-  intros r. by eexists.
-Qed.
+  ∀ r, ∃ v, ρ @ r ⇒ v.
+Proof. intros r. by eexists. Qed.
 
 Lemma regbank_never_empty_list ρ:
-  ∀ r : list reg,
-  ∃ v, ρ @ r ⇒ v.
-Proof.
-  intros r. by eexists.
-Qed.
+  ∀ rl, ∃ vl, ρ @ rl ⇒ vl.
+Proof. intros r. by eexists. Qed.
 
 Lemma regbank_simpl_inj ρ:
-  ∀ (r: reg) v1 v2,
+  ∀ r v1 v2,
   ρ @ r ⇒ v1 ->
   ρ @ r ⇒ v2 ->
   v1 = v2.
@@ -137,9 +143,9 @@ Proof.
 Qed.
 
 Lemma regbank_list_inj ρ:
-  ∀ (r: list reg) v1 v2,
-  ρ @ r ⇒ v1 ->
-  ρ @ r ⇒ v2 ->
+  ∀ rl (v1 v2 : list val),
+  ρ @ rl ⇒ v1 ->
+  ρ @ rl ⇒ v2 ->
   v1 = v2.
 Proof.
   autounfold with regbank in *.
@@ -148,13 +154,127 @@ Proof.
 Qed.
 
 Lemma regbank_list_length ρ:
-  ∀ (regs: list reg) vals,
-  ρ @ regs ⇒ vals ->
-  length vals = length regs.
+  ∀ rl vl,
+  ρ @ rl ⇒ vl ->
+  length vl = length rl.
 Proof.
   autounfold with regbank in *.
-  intros regs vals <-.
+  intros rl vl <-.
   now apply length_map.
+Qed.
+
+Definition init_regs rl vl : regbank := list_to_map (zip rl vl).
+
+Lemma init_regs_sound regs vals :
+  NoDup regs ->
+  ∃ ρ,
+    ρ = init_regs regs vals ∧
+    ∀ i r v,
+      regs !! i = Some r ->
+      vals !! i = Some v ->
+      ρ@r ⇒ v.
+Proof using Type.
+  intros HnoDup.
+  eexists. split; [ done | ].
+  intros i r v Hr Hv.
+  autounfold with regbank.
+  unfold init_regs, regbank.
+  rewrite (elem_of_list_to_map_1' _ r v); auto.
+  - intros y (i' & ? & ? & Heq & Hr' & Hv')%elem_of_lookup_zip_with.
+    inv Heq.
+    assert (i = i').
+    + by eapply NoDup_lookup.
+    + congruence.
+  - apply elem_of_lookup_zip_with. by exists i, r, v.
+Qed.
+
+Lemma init_same_bank I regs valt vals :
+  Forall2 (same_val I) valt vals ->
+  ∀ r, init_regs regs valt @ r <{ I }> init_regs regs vals @ r.
+Proof using Type.
+  autounfold with regbank in *.
+  unfold init_regs, regbank.
+  revert valt vals.
+  induction regs as [ | reg regs IH].
+  {
+    intros valt vals H r. simpl.
+    exists VUndef, VUndef.
+    split_and!.
+    - by rewrite lookup_empty.
+    - by rewrite lookup_empty.
+    - by constructor.
+  }
+  intros valt vals H r.
+  destruct valt as [|vt valt].
+  - inv H. simpl.
+    exists VUndef, VUndef.
+    split_and!.
+    + by rewrite lookup_empty.
+    + by rewrite lookup_empty.
+    + by constructor.
+  - inv H as [ | ? vs ? vals' Hrel Hforall ]. simpl.
+    destruct (decide (r = reg)) as [-> | Hneq].
+    + eexists vt, vs.
+      split_and!.
+      * by rewrite lookup_insert_eq.
+      * by rewrite lookup_insert_eq.
+      * done.
+    + destruct (IH _ _ Hforall r) as (vt' & vs' & ? & ? & Hrel').
+      eexists vt', vs'. split_and!.
+      * by rewrite lookup_insert_ne.
+      * by rewrite lookup_insert_ne.
+      * done.
+Qed.
+
+Lemma update_same_bank I ρt ρs dst vt vs:
+  same_val I vt vs ->
+  (∀ r, r ≠ dst -> ρt @ r <{ I }> ρs @ r) ->
+  ∀ r, ⟦ dst ⇐ vt ⟧ ρt @ r <{ I }> ⟦ dst ⇐ vs ⟧ ρs @ r.
+Proof using Type.
+  intros Hrel Hsame r.
+  destruct (decide (r = dst)) as [-> | HnEq].
+  - exists vt, vs. split_and!.
+    + by apply regbank_set_use.
+    + by apply regbank_set_use.
+    + done.
+  - destruct (Hsame _ HnEq) as (vt' & vs' & Ht & Hs & Hrel').
+    exists vt', vs'. split_and!.
+    + by apply regbank_set_discard.
+    + by apply regbank_set_discard.
+    + done.
+Qed.
+
+Lemma same_bank_mono I I' ρt ρs:
+  I ⊆ I' ->
+  (∀ r, ρt @ r <{ I }> ρs @ r) ->
+  ∀ r, ρt @ r <{ I' }> ρs @ r.
+Proof using Type.
+  intros Hincl Hsame r.
+  destruct (Hsame r) as (vt & vs & Ht & Hs & Hrel).
+  exists vt, vs. split_and!.
+  - done.
+  - done.
+  - by eapply same_val_mono.
+Qed.
+
+Lemma multiple_same {I ρt ρs} args:
+  (∀ r, ρt @ r <{ I }> ρs @ r) ->
+  ∃ vt vs,
+    ρt @ args ⇒ vt ∧
+    ρs @ args ⇒ vs ∧
+    Forall2 (same_val I) vt vs.
+Proof using Type.
+  intros Hsame.
+  induction args as [ | hd tl (vlt & vls & Hlt & Hls & Hl)].
+  - exists [], []. split_and!.
+    + by apply regbank_assert_nil.
+    + by apply regbank_assert_nil.
+    + by constructor.
+  - destruct (Hsame hd) as (vt & vs & Ht & Hs & H).
+    exists (vt :: vlt), (vs :: vls). split_and!.
+    + by apply regbank_assert_fold.
+    + by apply regbank_assert_fold.
+    + by constructor.
 Qed.
 
 Ltac simpl_regs tac :=
@@ -168,7 +288,7 @@ Ltac simpl_regs tac :=
   | [ |- ⟦_ ⇐ _⟧?ρ @ ?r ⇒ _ ] =>
       apply regbank_set_discard; [tac| simpl_regs tac]
   | [ |- ?ρ @ (?r :: ?tl) ⇒ _ ] =>
-      apply regbank_assert_unfold; simpl_regs tac
+      apply regbank_assert_fold; simpl_regs tac
   | [ H1: ?ρ @ ?r ⇒ ?v1, H2: ?ρ @ ?r ⇒ ?v2 |- _ ] =>
       let Heq := fresh "Heq" in
       assert (Heq: v2 = v1) by

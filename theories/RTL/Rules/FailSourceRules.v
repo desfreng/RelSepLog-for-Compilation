@@ -17,7 +17,7 @@ Section FailingSourceRulesDef.
     (Q : value Λt -> value Λs -> rProp).
 
   Lemma source_fail :
-    (fn_code fs) !! pcs = None ->
+    (rtl_fn_code fs) !! pcs = None ->
     True -∗
     [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
@@ -50,7 +50,7 @@ Section FailingSourceRulesDef.
   Qed.
 
   Lemma source_callstate_fail args:
-    length args ≠ length (fn_regs fs) ->
+    length args ≠ length (rtl_fn_regs fs) ->
     True -∗
     [Pt, Ps, C] st <{j, i}= (cs, CallState fs args) {{ Q }}.
   Proof using Type.

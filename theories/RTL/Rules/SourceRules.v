@@ -59,7 +59,7 @@ Section SourceRulesDef.
     fs@pcs is <<{ dst := !src -> pc }>> ->
     ρs @ src ⇒ VPtr l ->
     (l →ₛ vs -∗
-     [Pt, Ps, C] st <{j, i}= (cs, State fs pc (⟦dst ⇐ vs⟧ρs)) {{ Q }}) -∗
+     [Pt, Ps, C] st <{j, 1+i}= (cs, State fs pc (⟦dst ⇐ vs⟧ρs)) {{ Q }}) -∗
     l →ₛ vs -∗
     [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
@@ -80,7 +80,7 @@ Section SourceRulesDef.
     ρs @ dst ⇒ VPtr l ->
     ρs @ src ⇒ v ->
     (l →ₛ v -∗
-     [Pt, Ps, C] st <{j, i}= (cs, State fs pc ρs) {{ Q }}) -∗
+     [Pt, Ps, C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }}) -∗
     l →ₛ old -∗
     [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
@@ -91,12 +91,62 @@ Section SourceRulesDef.
 
     eapply chain_source_step.
     - eapply exec_Istore with (v := v); try done.
-      erewrite set_at_some.
+      unfold set_at. erewrite update_at_some.
       + rewrite insert_union_r; last done.
         rewrite insert_singleton_eq.
         reflexivity.
       + rewrite get_at_union_right; last done.
         by apply get_at_singl.
+    - eapply Hsim; smap; by solve_map_disjoint.
+  Qed.
+
+  Lemma source_alloc pc dst:
+    fs@pcs is <<{ dst := alloc () -> pc }>> ->
+    (∀ l,
+       l →ₛ VUndef -∗
+       [Pt, Ps, C] st <{j, 1+i}= (cs, State fs pc (⟦dst ⇐ VPtr l⟧ρs)) {{ Q }}) -∗
+    [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros Hpc. unseal.
+    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+
+    eapply chain_source_step.
+    - eapply exec_Ialloc.
+      + done.
+      + rewrite alloc_at_is_some. split.
+        * reflexivity.
+        * apply not_elem_of_dom, is_fresh.
+      + reflexivity.
+    - replace mtS with (mtS ∪ ∅) by smap.
+      eapply Hsim.
+      + solve_map_disjoint.
+      + apply map_disjoint_singleton_l, not_elem_of_dom, is_fresh.
+      + by split.
+  Qed.
+
+  Lemma source_free pc src l v:
+    fs@pcs is <<{ free src -> pc }>> ->
+    ρs @ src ⇒ VPtr l ->
+    (freeₛ l -∗
+       [Pt, Ps, C] st <{j, 1+i}= (cs, State fs pc ρs) {{ Q }}) -∗
+    l →ₛ v -∗
+    [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros Hpc Hsrc. unseal.
+    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros ? ? _ Hdij [-> ->].
+    decompose_map_disjoint.
+
+    eapply chain_source_step.
+    - eapply exec_Ifree.
+      + done.
+      + done.
+      + unfold free_at. erewrite update_at_some.
+        * rewrite insert_union_r; last done.
+          rewrite insert_singleton_eq.
+          reflexivity.
+        * rewrite get_at_union_right; last done.
+          by apply get_at_singl.
     - eapply Hsim; smap; by solve_map_disjoint.
   Qed.
 
@@ -116,9 +166,9 @@ Section SourceRulesDef.
   Proof using Type. by source_step. Qed.
 
   Lemma source_callstate args:
-    length args = length (fn_regs fs) ->
-    ρs = init_regs fs args ->
-    pcs = fn_entrypoint fs ->
+    length args = length (rtl_fn_regs fs) ->
+    ρs = init_regs (rtl_fn_regs fs) args ->
+    pcs = rtl_fn_entrypoint fs ->
     [Pt, Ps, C] st <{j, 1+i}= (cs, State fs pcs ρs) {{ Q }} -∗
     [Pt, Ps, C] st <{j, i}= (cs, CallState fs args) {{ Q }}.
   Proof using Type. by source_step. Qed.
