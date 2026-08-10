@@ -156,7 +156,6 @@ Section BI_def.
     unfold bi_entails, bi_pure, bi_forall.
     apply pure_forall_2.
   Qed.
-
 End BI_def.
 
 Notation "'⌜' φ '⌟'" :=

@@ -101,8 +101,8 @@ Section SyncRulesDef.
        ls →ₛ vs -∗
        mem_inj I E -∗
        [Pt, Ps, C] (ct, State ft pct' (⟦dstt ⇐ VPtr lt⟧ρt))
-            <{1+j, 1+i}=
-           (cs, State fs pcs' (⟦dsts ⇐ VPtr ls⟧ρs)) {{ Q }}) -∗
+                    <{1+j, 1+i}=
+                   (cs, State fs pcs' (⟦dsts ⇐ VPtr ls⟧ρs)) {{ Q }}) -∗
     mem_inj I E -∗
     [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.

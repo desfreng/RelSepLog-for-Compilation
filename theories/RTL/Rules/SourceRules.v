@@ -40,6 +40,12 @@ Section SourceRulesDef.
     [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
+  Lemma source_nop_noinc pc:
+    fs@pcs is <<{ nop -> pc }>> ->
+    [Pt, Ps, C] st <{j, i}= (cs, State fs pc ρs) {{ Q }} -∗
+    [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+  Proof using Type. by source_step. Qed.
+
   Lemma source_ret r v:
     fs@pcs is <<{ ret r }>> ->
     ρs@r ⇒ v ->
