@@ -3,7 +3,7 @@ From RSL Require Import Prelude.
 From stdpp Require Import prelude strings fin_maps sorting.
 
 From RSL.Toy Require Import Toy Notations Compile.
-From RSL.RTL Require Import RTL Notations Simpl.
+From RSL.RTL Require Import RTL Notations.
 
 Import ToyNotations.
 Import RTLNotations.

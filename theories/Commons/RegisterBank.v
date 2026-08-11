@@ -257,6 +257,20 @@ Proof using Type.
   - by eapply same_val_mono.
 Qed.
 
+Lemma same_bank_set_useless I ρs ρt rup v :
+  ρs@rup ⇒ v ->
+  (∀ r, ρt @ r <{ I }> ρs @ r) ->
+  ∀ r, ρt @ r <{ I }> ⟦rup ⇐ v⟧ρs @ r.
+Proof.
+  intros H Hsame.
+  intros r'. destruct (Hsame r') as (vt & vs & Ht & Hs & Hrel).
+  eexists vt, vs. split_and!; try done.
+  destruct (decide (rup = r')) as [-> | Hneq].
+  - pose proof (regbank_simpl_inj _ _ _ _ H Hs) as ->.
+    by apply regbank_set_use.
+  - by apply regbank_set_discard.
+Qed.
+
 Lemma multiple_same {I ρt ρs} args:
   (∀ r, ρt @ r <{ I }> ρs @ r) ->
   ∃ vt vs,

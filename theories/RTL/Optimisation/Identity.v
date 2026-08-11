@@ -3,7 +3,7 @@ From RSL Require Import Prelude.
 From RSL.Logic Require Import Logic.
 From RSL.RTL Require Import SimRules.
 
-Section no_opt.
+Section identity.
   Context (Pt Ps : prog rtl_lang).
 
   Definition fun_equivalent (f1 f2: rtl_function) :=
@@ -23,7 +23,7 @@ Section no_opt.
     find_fun Ps fn = Some fs ->
     ∃ ft, find_fun Pt fn = Some ft ∧ fun_equivalent ft fs.
 
-  Definition no_opt_sim_inv : SInv rtl_lang rtl_lang WfNat WfNat :=
+  Definition id_sim_inv : SInv rtl_lang rtl_lang WfNat WfNat :=
     fun st j i ss ϕ =>
       (∃ I ft fs pc ρt ρs,
           ⌜st = ([], State ft pc ρt)⌟ ∗
@@ -42,7 +42,7 @@ Section no_opt.
     [Pt, Ps, C] ([], State ft pc ρt) <{ j, i }= ([], State fs pc ρs) {{ Ψ }}.
   Proof using fun_incl.
     iIntros (Heq Hsame) "Hinj Hpost".
-    iApply (coind no_opt_sim_inv).
+    iApply (coind id_sim_inv).
     {
       clear -fun_incl.
       iIntros "!>" (C st j i ss ϕ) "#CIH".
@@ -189,4 +189,4 @@ Section no_opt.
     - done.
     - by apply init_same_bank.
   Qed.
-End no_opt.
+End identity.
