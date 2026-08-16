@@ -1,0 +1,437 @@
+\documentclass[report.tex]{subfiles}
+
+\begin{document}
+
+\section{The Free Simulation}
+
+While explicit simulations effectively prevent infinite stuttering,
+they impose a substantial proof burden.
+Every stuttering transition requires exhibiting a strictly decreasing
+measure in a well-founded order.
+Constructing such a measure can be difficult in practice,
+particularly when compiler optimizations rearrange loop structures.
+In such scenarios,
+finding a global metric that strictly decreases on every asynchronous step
+while remaining invariant across complex control transfers
+is often impractical.
+
+To overcome this rigidity,
+we adapt the \emph{Stuttering for Free} framework
+introduced by \textcite{cho-23-stuttering}.
+We extend their foundational technique to accommodate
+for skewed simulation relations.
+We have formalized and verified all underlying theoretical results
+within our Rocq development.
+
+\subsection{Skewed Implicit Simulation}
+
+A possible approach to eliminating explicit stuttering measures
+is to integrate inductive and coinductive reasoning into a single relation.
+In this formulation,
+finite sequences of asynchronous execution steps are justified inductively,
+whereas mutual progress steps are justified coinductively.
+This family of relations is called
+\emph{implicit simulations}.
+We define a skewed implicit simulation relation,
+denoted $\isim{t}{s}{\Phi}$,
+whose inference rules are presented in \cref{fig:implicit-sim}.
+
+To combine inductive and coinductive reasoning within the same definition,
+the relation $\isim{t}{s}{\Phi}$ is defined as the greatest fixed point%
+\footnote{The relationship between greatest fixed points and coinduction
+  follows from the Knaster--Tarski theorem;
+  see \cites{pous-16-cawu}{schafer-17-tower} for comprehensive treatments.}
+of an inductive operator.
+The rules \textsc{IRelated},
+\textsc{ISourceStuck},
+\textsc{ISourceSteps},
+and \textsc{ITargetSteps} serve as inductive constructors,
+while the rule \textsc{IBothSteps} acts as the coinductive constructor.
+
+\begin{figure}[htb]
+  \begin{align*}
+    &
+    \begin{prooftree}
+      \hypo{\bfinal{\Phi}{t}{s}}
+      \infer1[\textsc{IRelated}]{\isim{t}{s}{\Phi}}
+    \end{prooftree}
+    &
+    &
+    \begin{prooftree}
+      \hypo{\stuck{P_s}{s}}
+      \infer1[\textsc{ISourceStuck}]{\isim{t}{s}{\Phi}}
+    \end{prooftree}
+  \end{align*}
+  \begin{equation*}
+    \begin{prooftree}
+      \hypo{\step{P_s}{s}{s'}}
+      \hypo{\isim{t}{s'}{\Phi}}
+      \infer2[\textsc{ISourceSteps}]{\isim{t}{s}{\Phi}}
+    \end{prooftree}
+  \end{equation*}
+  \begin{equation*}
+    \begin{prooftree}
+      \hypo{\canp{P_t}{t}}
+      \hypo{\forall t', \step{P_t}{t}{t'} \implies \isim{t'}{s}{\Phi}}
+      \infer2[\textsc{ITargetSteps}]{\isim{t}{s}{\Phi}}
+    \end{prooftree}
+  \end{equation*}
+  \begin{equation*}
+    \begin{prooftree}
+      \hypo{\canp{P_t}{t}}
+      \hypo{\forall t',
+        \step{P_t}{t}{t'} \implies
+        \exists s', \step{P_s}{s}{s'} \land \isim{t'}{s'}{\Phi}}
+      \infer[coind]2[\textsc{IBothSteps}]{\isim{t}{s}{\Phi}}
+    \end{prooftree}
+  \end{equation*}
+  \caption{Derivation rules of the \emph{skewed implicit simulation}.}
+  \label{fig:implicit-sim}
+\end{figure}
+
+The rule \textsc{IRelated} characterizes terminating executions.
+Instead of demanding syntactic equality between terminal values,
+it is parameterized by a postcondition $\Phi$
+that relates the final values and the concluding memory states
+of the target and source programs.
+The predicate $\textsf{both\_final}$ is defined as follows:
+\begin{gather*}
+  \Phi :
+  \textsf{val}_t \to
+  \textsf{val}_s \to
+  \textsf{mem} \to
+  \textsf{mem} \to
+  \textsf{Prop}
+  \\
+  \begin{aligned}
+    \bfinal{\Phi}{(t, m_t)}{(s, m_s)} \coloneqq
+    \exists v_t v_s,\;
+    &\isval{t} = \Some{v_t} \land \isval{s} = \Some{v_s} \land {} \\
+    &\Phi(v_t, v_s, m_t, m_s)
+  \end{aligned}
+\end{gather*}
+The assertion $\bfinal{\Phi}{t}{s}$
+holds when both target and source configurations have reached final states,
+producing values $v_t, v_s$ and memories $m_t, m_s$
+that satisfy $\Phi$.
+This parameterization enables the simulation to enforce
+relational invariants on memories at the end of execution.
+
+The rule \textsc{ISourceStuck} introduces more asymmetry to the relation.
+When the source program encounters undefined behavior
+it enters a stuck state in a non-final configuration.
+In this case,
+\textsc{ISourceStuck} immediately validates the simulation,
+leaving the target program free to perform arbitrary transitions or diverge.
+This asymmetricity allows compiler transformations
+that rely on the absence of undefined behavior in well-formed source programs
+to eliminate redundant runtime checks.
+
+Stuttering is soundly handled without an explicit decreasing measure.
+Because \textsc{ISourceSteps} and \textsc{ITargetSteps} are inductive
+constructors,
+they permit only finitely many consecutive asynchronous transitions.
+The coinductive constructor \textsc{IBothSteps} requires
+both programs to execute a synchronized step,
+to remove the inductive proof obligation
+and enable unbounded mutual progress.
+
+\subsection{Step-Indexed Free Simulation}
+
+While the implicit simulation eliminates manual stuttering measures,
+it remains restrictive:
+the coinductive rule \textsc{IBothSteps}
+demands that both programs step at the exact same moment
+that  we need to resume coinductive reasoning.
+Removing this lock-step synchronization requirement
+leads to smaller invariants
+and more direct verification proofs~\parencite{cho-23-stuttering}.
+This decoupling is the core idea developed in the \emph{Stuttering for Free} framework.
+
+The \emph{free simulation},
+denoted $\fsim{t}{j}{i}{s}{\Phi}$,
+overcomes this limitation by decoupling synchronous execution steps
+from coinductive progress.
+The relation is parameterized by two well-founded index domains,
+$(J, \prec_J)$ for the target side
+and $(I, \prec_I)$ for the source side.
+These domains track the progress accumulated by each side
+since the previous coinductive step.
+The formal inference rules of the skewed free simulation
+are presented in \cref{fig:free-sim}.
+Like the implicit simulation,
+it accommodates arbitrary postconditions $\Phi$
+and uses the rule \textsc{FSourceStuck}
+to exploit any undefined behavior in the source.
+
+\begin{figure}[htb]
+  \begin{align*}
+    &
+    \begin{prooftree}
+      \hypo{\bfinal{\Phi}{t}{s}}
+      \infer1[\textsc{FRelated}]{\fsim{t}{j}{i}{s}{\Phi}}
+    \end{prooftree}
+    &
+    &
+    \begin{prooftree}
+      \hypo{\stuck{P_s}{s}}
+      \infer1[\textsc{FSourceStuck}]{\fsim{t}{j}{i}{s}{\Phi}}
+    \end{prooftree}
+  \end{align*}
+  \begin{equation*}
+    \begin{prooftree}
+      \hypo{\step{P_s}{s}{s'}}
+      \hypo{\fsim{t}{j}{i'}{s'}{\Phi}}
+      \infer2[\textsc{FSourceSteps}]{\fsim{t}{j}{i}{s}{\Phi}}
+    \end{prooftree}
+  \end{equation*}
+  \begin{equation*}
+    \begin{prooftree}
+      \hypo{\canp{P_t}{t}}
+      \hypo{\forall t',
+        \step{P_t}{t}{t'} \implies
+        \exists j', \fsim{t'}{j'}{i}{s}{\Phi}}
+      \infer2[\textsc{FTargetSteps}]{\fsim{t}{j}{i}{s}{\Phi}}
+    \end{prooftree}
+  \end{equation*}
+  \begin{equation*}
+    \begin{prooftree}
+      \hypo{j' \prec_J j}
+      \hypo{i' \prec_I i}
+      \hypo{\fsim{t}{j'}{i'}{s}{\Phi}}
+      \infer[coind]3[\textsc{FProgress}]{\fsim{t}{j}{i}{s}{\Phi}}
+    \end{prooftree}
+  \end{equation*}
+  \caption{Derivation rules of the \emph{skewed free simulation}.}
+  \label{fig:free-sim}
+\end{figure}
+
+The design of the free simulation relies on a fundamental shift in perspective
+regarding indices.
+In an explicit simulation,
+an index represents an upper bound on \emph{future} stuttering steps.
+In the free simulation,
+indices record \emph{past} progress
+accumulated since the previous coinductive step.
+
+The source and target programs take transitions asynchronously
+via the inductive rules \textsc{FTargetSteps} and \textsc{FSourceSteps}.
+Whenever a program takes a step,
+its corresponding step index is updated ($j'$ or $i'$).
+We note that $j'$ and $i'$ are not required to be
+immediate successors of $j$ and $i$.
+Instead the user is free to select any new index,
+lower or greater.
+
+This flexibility does not compromise soundness.
+Indeed,
+the only rule that enables coinductive reasoning is \textsc{FProgress}.
+This rule requires both indices to strictly decrease,
+from $j$ down to $j' \prec_J j$
+and from $i$ down to $i' \prec_I i$.
+Because the relations $\prec_J$ and $\prec_I$ are well-founded,
+establishing a simulation between non-terminating executions
+demands that \textsc{FProgress} be applied infinitely often,
+which in turn requires indices to be repeatedly increased
+through \textsc{FTargetSteps} and \textsc{FSourceSteps}.
+This structure decouples stepping from coinductive synchronization,
+allowing multiple asynchronous transitions on either side to be matched flexibly.
+
+Moreover, performing coinductive reasoning over the free simulation
+is equivalent to the following principle:
+to prove $\fsim{t}{j}{i}{s}{\Phi}$,
+one may assume the coinductive hypothesis (\textsf{CIH}):
+\begin{equation*}
+  \forall j' \succ_J j,\; \forall i' \succ_I i,\quad
+  \fsim{t}{j'}{i'}{s}{\Phi}.
+\end{equation*}
+Intuitively,
+this principle allows one to establish that two programs simulate each other
+by assuming that the simulation relation already holds for the current
+states if they are reached after progress on both sides.
+
+To illustrate how the free simulation operates in practice,
+we consider a small imperative language with commands
+$\mathtt{skip} \mid c_1 ; c_2 \mid \mathtt{while}\; b\; \{ c \} \mid \mathtt{ret}\; v$,
+where $\mathtt{ret}\; v$ is a terminal configuration.
+The small-step reduction relation $c \twoheadrightarrow c'$ is defined by:
+\begin{align*}
+  \mathtt{skip} ; c
+  & \twoheadrightarrow c
+  \\
+  \mathtt{while}\; b\; \{ c \} ; k
+  & \twoheadrightarrow c ; \mathtt{while}\; b\; \{ c \} ; k
+  && (\text{if } b = \mathtt{true})
+  \\
+  \mathtt{while}\; b\; \{ c \} ; k
+  & \twoheadrightarrow k
+  && (\text{if } b = \mathtt{false})
+\end{align*}
+We instantiate the index domains with the natural numbers,
+$I = J = (\mathbb{N}, <)$,
+and define the target and source programs:
+\begin{align*}
+  P_t
+  & \coloneqq
+    \mathtt{while}\; (b)\; \{\mathtt{skip}\} ; \mathtt{ret}\; () \\
+  P_s
+  & \coloneqq
+    \mathtt{while}\; (b)\; \{\mathtt{skip} ; \mathtt{skip} ; \mathtt{skip}\} ;
+    \mathtt{ret}\; ()
+\end{align*}
+We wish to prove that $\fsim{P_t}{0}{0}{P_s}{=}$.
+We proceed by coinduction on the free simulation.
+This gives us the following coinductive hypothesis:
+\begin{equation*}
+  \forall j > 0,\; \forall i > 0,\quad \fsim{P_t}{j}{i}{P_s}{=}.
+\end{equation*}
+We then perform case analysis on the boolean condition $b$:
+\begin{itemize}
+  \item If $b = \mathtt{false}$,
+        both programs exit their loops in a single step:
+        $P_t \twoheadrightarrow \mathtt{ret}\; ()$
+        and $P_s \twoheadrightarrow \mathtt{ret}\; ()$.
+        Applying \textsc{FTargetSteps} and \textsc{FSourceSteps},
+        both configurations reach $\mathtt{ret}\; ()$,
+        which are final values returning $()$.
+        The goal is thus closed immediately by \textsc{FRelated}.
+
+  \item If $b = \mathtt{true}$,
+        using \textsc{FTargetSteps} the target loop unrolls:
+        $P_t \twoheadrightarrow \mathtt{skip} ; P_t$,
+        and the target index is updated to $j = 1$.
+        Again with \textsc{FTargetSteps},
+        the target reduces:
+        $\mathtt{skip} ; P_t \twoheadrightarrow P_t$,
+        and the target index is increased to $j = 2$.
+        The simulation goal becomes $\fsim{P_t}{2}{0}{P_s}{=}$.
+
+        The source loop then executes four steps:
+        first,
+        $P_s \twoheadrightarrow \mathtt{skip} ; \mathtt{skip} ; \mathtt{skip} ; P_s$,
+        updating the source index to $i = 1$
+        via \textsc{FSourceSteps};
+        next,
+        three successive applications of \textsc{FSourceSteps}
+        consume the three $\mathtt{skip}$ statements,
+        yielding index $i = 4$
+        and state $P_s$.
+        The simulation goal becomes $\fsim{P_t}{2}{4}{P_s}{=}$.
+
+        Having accumulated positive progress indices ($0 < 2$ and $0 < 4$),
+        we can apply the coinductive hypothesis to conclude the proof.
+\end{itemize}
+
+As illustrated by this example,
+the source and target programs can execute
+arbitrary numbers of asynchronous steps,
+at whatever pace is convenient,
+until matching invariants are reached.
+
+\subsection{Properties}
+
+In the preceding example,
+the proof was initialized with indices set to zero.
+One could equivalently start with larger initial indices,
+since executing steps allows indices to increase arbitrarily
+before \textsc{FProgress}.
+More generally,
+proving a free simulation for smaller indices
+implies that it holds for larger indices.
+This property is captured by index monotonicity:
+\begin{lemma}[Monotonicity of Free Simulation]
+  \label{lem:fsim-mono}
+  If $\fsim{t}{j}{i}{s}{\Phi}$ holds,
+  then for all indices $j \prec_J j'$ and $i \prec_I i'$,
+  and any weaker postcondition $\Phi \implies \Phi'$,
+  the simulation $\fsim{t}{j'}{i'}{s}{\Phi'}$ holds.
+\end{lemma}
+This monotonicity property is valid not only as an external lemma,
+but also as an admissible within coinductive proofs.
+Next the free simulation is sound with respect to the skewed behavioral refinement:
+\begin{theorem}[Soundness of Free Simulation]
+  \label{thm:fsim-soundness}
+  Let $P_t$ and $P_s$ be programs.
+  Let $t$ be the initial state of $P_t$ and
+  $s$ be the initial state of $P_s$.
+  If $\fsim{t}{j}{i}{s}{=}$ holds for some indices $j$ and $i$,
+  then $P_t \slantsqsubseteq P_s$.
+\end{theorem}
+In addition to soundness,
+we established the formal equivalence
+among the three simulation frameworks discussed:
+the free simulation (defined in \cref{fig:free-sim}),
+the implicit simulation (defined in \cref{fig:implicit-sim}),
+and a skewed version of the explicit simulation
+(defined in \cref{fig:explicit-sim} augmented with a stuck-source rule).
+This equivalence is established by chaining cyclic implications:
+\begin{equation*}
+  \text{Explicit Simulation}
+  \overset{\text{\incirc{1}}}{\implies}
+  \text{Implicit Simulation}
+  \overset{\text{\incirc{2}}}{\implies}
+  \text{Free Simulation}
+  \overset{\text{\incirc{3}}}{\implies}
+  \text{Explicit Simulation}
+\end{equation*}
+The implications \incirc{1} and \incirc{2}
+proceed directly by simulation coinduction.
+The last implication \incirc{3} is the most intricate:
+it requires synthesizing a well-founded stuttering measure
+from the derivation tree of the free simulation.
+A direct consequence of this equivalence is the index irrelevance theorem:
+\begin{theorem}[Index Irrelevance]
+  \label{thm:index-irrel}
+  Let $(J, \prec_J)$ and $(I, \prec_I)$ be well-founded relations without
+  isolated elements%
+  \footnote{An element is isolated
+    if it has no predecessors or successors in the relation.}.
+  If there exist indices $j \in J$ and $i \in I$
+  such that $\fsim{t}{j}{i}{s}{\Phi}$,
+  then for any other well-founded structures
+  $(J', \prec_{J'})$ and $(I', \prec_{I'})$,
+  and any indices $j' \in J'$ and $i' \in I'$,
+  the relation $\fsim{t}{j'}{i'}{s}{\Phi}$ holds.
+\end{theorem}
+Our statement refines the index irrelevance theorem
+formulated by \textcite{cho-23-stuttering}.
+Their original formulation,
+phrased in terms of ordinals,
+implicitly assumes that every element participates in the order.
+In a general case,
+isolated elements could cause progress transitions to be uninhabited.
+This small distinction was found
+during our Rocq formalization of the guarantees of the free simulation.
+
+This theorem implies that any free simulation derivation
+can be carried out using the two-element boolean order
+$\mathbb{B} = \{\false \prec \true\}$:
+\begin{equation*}
+  (\exists j \in J, i \in I,\; \fsim{t}{j}{i}{s}{\Phi})
+  \iff
+  (\exists j, i \in \mathbb{B},\; \fsim{t}{j}{i}{s}{\Phi}).
+\end{equation*}
+Under the boolean order,
+$\textsf{false}$ indicates that a program has not yet taken a step,
+whereas $\textsf{true}$ signals that progress has occurred.
+This mean,
+in theory the free simulation proofs
+does not strictly require tracking
+the exact step counts of individual programs,
+but only whether progress has occurred
+since the last coinductive step.
+Nevertheless, in the remainder of our work
+we adopt the natural numbers $(\mathbb{N}, <)$
+as our index domain.
+Indeed natural number indices correspond directly
+to the number of steps executed during symbolic evaluation,
+and they provide some intuition that facilitates
+the interactive verification in Rocq.
+
+\end{document}
+
+% Local Variables:
+% TeX-engine: luatex
+% End:
+
+% LocalWords:  Coinductive coinductive asymmetricity arities

@@ -166,8 +166,7 @@ Section SyncRulesDef.
   Proof using Type.
     intros Hpct Hpcs Hfnt Hfns Hvalt Hvals.
     iIntros "#Hf Hpre Hsim".
-    iSpecialize ("Hf" with "Hpre []").
-    { iIntros (? ?) "H". by iApply "H". }
+    iSpecialize ("Hf" with "Hpre").
     iRevert "Hf Hsim". iStopProof.
     unseal.
     intros ? ? [-> ->] mt ms _ _ Hhoare. smap.
@@ -194,40 +193,40 @@ Section SyncRulesDef.
       + assumption.
   Qed.
 
-  Lemma both_call_framed Pre Post F ct ft pct ρt j i cs fs pcs ρs Q
-    pct' pcs' dstt dsts fnamet fnames regt regs valt vals fnt fns:
-    ft@pct is <<{ dstt := @call fnamet regt -> pct' }>> ->
-    fs@pcs is <<{ dsts := @call fnames regs -> pcs' }>> ->
-    find_fun Pt fnamet = Some fnt ->
-    find_fun Ps fnames = Some fns ->
-    ρt @ regt ⇒ valt ->
-    ρs @ regs ⇒ vals ->
-    [Pt, Ps, C] {{ Pre }} fnt <{j, i}= fns {{ Post }} -∗
-    Pre valt vals -∗
-    F -∗
-    □ (∀ j' i' vt vs,
-         ⌜j < j'⌟ -∗
-         ⌜i < i'⌟ -∗
-         Post vt vs -∗
-         F -∗
-         [Pt, Ps, C] (ct, State ft pct' (⟦dstt ⇐ vt⟧ρt))
-              <{j', i'}=
-            (cs, State fs pcs' (⟦dsts ⇐ vs⟧ρs)) {{ Q }}) -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
-  Proof using Type.
-    intros Hpct Hpcs Hfnt Hfns Hvalt Hvals.
-    iIntros "Hhoare Hpre HF #Hsim".
-    iApply (both_call with "[Hhoare] [Hpre HF]").
-    - done.
-    - done.
-    - done.
-    - done.
-    - done.
-    - done.
-    - iApply (frame with "Hhoare").
-    - iFrame. iApply "HF".
-    - iModIntro. iIntros (j' i' vt vs Hj Hi) "[HPost HP2]".
-      iApply ("Hsim" $! j' i' vt vs Hj Hi with "HPost HP2").
-  Qed.
+  (* Lemma both_call_framed Pre Post F ct ft pct ρt j i cs fs pcs ρs Q *)
+  (*   pct' pcs' dstt dsts fnamet fnames regt regs valt vals fnt fns: *)
+  (*   ft@pct is <<{ dstt := @call fnamet regt -> pct' }>> -> *)
+  (*   fs@pcs is <<{ dsts := @call fnames regs -> pcs' }>> -> *)
+  (*   find_fun Pt fnamet = Some fnt -> *)
+  (*   find_fun Ps fnames = Some fns -> *)
+  (*   ρt @ regt ⇒ valt -> *)
+  (*   ρs @ regs ⇒ vals -> *)
+  (*   [Pt, Ps, C] {{ Pre }} fnt <{j, i}= fns {{ Post }} -∗ *)
+  (*   Pre valt vals -∗ *)
+  (*   F -∗ *)
+  (*   □ (∀ j' i' vt vs, *)
+  (*        ⌜j < j'⌟ -∗ *)
+  (*        ⌜i < i'⌟ -∗ *)
+  (*        Post vt vs -∗ *)
+  (*        F -∗ *)
+  (*        [Pt, Ps, C] (ct, State ft pct' (⟦dstt ⇐ vt⟧ρt)) *)
+  (*             <{j', i'}= *)
+  (*           (cs, State fs pcs' (⟦dsts ⇐ vs⟧ρs)) {{ Q }}) -∗ *)
+  (*   [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}. *)
+  (* Proof using Type. *)
+  (*   intros Hpct Hpcs Hfnt Hfns Hvalt Hvals. *)
+  (*   iIntros "Hhoare Hpre HF #Hsim". *)
+  (*   iApply (both_call with "[Hhoare] [Hpre HF]"). *)
+  (*   - done. *)
+  (*   - done. *)
+  (*   - done. *)
+  (*   - done. *)
+  (*   - done. *)
+  (*   - done. *)
+  (*   - iApply (frame with "Hhoare"). *)
+  (*   - iFrame. iApply "HF". *)
+  (*   - iModIntro. iIntros (j' i' vt vs Hj Hi) "[HPost HP2]". *)
+  (*     iApply ("Hsim" $! j' i' vt vs Hj Hi with "HPost HP2"). *)
+  (* Qed. *)
 
 End SyncRulesDef.

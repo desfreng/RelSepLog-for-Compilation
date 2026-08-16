@@ -89,7 +89,7 @@ Section T.
   Lemma fact_same C I :
     ⊢ [Pt, Ps, C] {{ same_args I }} fact_good <{0, 0}= fact_bad {{ samer I }}.
   Proof using Type.
-    iIntros "!>" (valt vals Ψ) "(%Hsame_arg & Hinj) Hpost".
+    iIntros "!>" (valt vals) "(%Hsame_arg & Hinj)".
     iApply (source_callstate_exploit).
     iIntros (ρs ? Hlen Heqs ->).
     assert (H: ∃ ρt, ρt = init_regs (rtl_fn_regs fact_good) valt ∧ ∀ r, ρt @ r <{ I }> ρs @ r).
@@ -184,6 +184,7 @@ Section T.
         * simregs.
     - replace ({[(ls, lt)]} ∪ ∅) with ({[(ls, lt)]} : gset (loc * loc)) by set_solver.
       iExists I, _, _. iFrame.
+      iSplitL. { by iIntros (? ?) "$". }
       iPureIntro. split_and!.
       + reflexivity.
       + reflexivity.

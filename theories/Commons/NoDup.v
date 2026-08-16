@@ -1,7 +1,5 @@
 From RSL Require Import Prelude.
 
-From Stdlib Require Import Program.Equality.
-
 Section NoDupProof.
   Context `{dec : EqDecision A}.
   Implicit Types (l: list A).

@@ -1,0 +1,199 @@
+\documentclass[report.tex]{subfiles}
+
+\begin{document}
+
+\subsection*{General Context}
+
+Modern software relies on high-level languages
+and formal verification techniques,
+such as deductive verification,
+model checking,
+or static analysis,
+to establish correctness guarantees.
+Hardware executes machine code produced by compilers,
+which translate source programs through intermediate representations
+down to assembly.
+Consequently,
+source-level correctness guarantees remain meaningful only if compilation
+strictly preserves program semantics.
+Unverified compilation passes risk introducing bugs
+or invalidating source-level formal proofs.
+
+Initial efforts in verified compilation established methodologies
+for proving semantic preservation.
+The CompCert compiler developed by \textcite{leroy-09-compcert}
+relies on simulation diagrams,
+establishing a correspondence between execution steps
+of the source and target programs
+while maintaining a state invariant.
+CakeML,
+a verified compiler for functional languages
+made by \textcite{tan-19-cakeml},
+combines simulation diagrams with equational reasoning
+to prove its correctness.
+
+Beyond general-purpose compilers,
+other verified compiler projects focus on specialized application domains.
+For instance,
+Jinja~\parencite{klein-06-jinja}
+targets object-oriented programs compiled to the Java Virtual Machine,
+whereas Jasmin~\parencite{almeida-17-jasmin}
+verifies a dedicated compiler
+for high-performance cryptographic software.
+
+Existing verification paradigms nevertheless exhibit limitations.
+On one hand,
+equational theories are often incomplete,
+especially when programs differ in their memory representations.
+On the other hand,
+traditional simulation diagrams grow complex
+when program control flow structures diverge significantly,
+for instance after nested loop exchanges.
+
+Recent advances in formal verification address these shortcomings.
+Modern coinductive simulation techniques,
+such as those developed by \textcite{cho-23-stuttering}
+in the \emph{Stuttering For Free} framework
+or implemented by \textcite{xia-20-itrees}
+within the \emph{Interaction Trees} library,
+simplify the reasoning about program pairs
+whose execution steps do not correspond one-to-one.
+
+In parallel,
+\emph{relational separation logics}
+have emerged as a technique
+for local reasoning across dual executions,
+allowing memory resources to be tracked independently
+or partitioned between two programs.
+For instance,
+the \emph{Simuliris} framework by \textcite{gaher-22-simuliris}
+uses a relational separation logic
+to verify source-to-source program transformations.
+Recent work on the \emph{Tail Modulo Cons} optimization
+by \textcite{allain-25-tmc}
+employs relational separation logic
+to validate the soundness of the optimization
+within an idealized framework.
+
+\subsection*{Research Problem}
+
+This internship investigates whether recent developments
+in simulations relations and separation logic
+can be integrated into a unified relational separation logic framework.
+To our knowledge,
+no existing verified compiler incorporates a relational separation logic
+to prove the soundness of its optimization passes.
+Consequently,
+establishing such a framework would enable compositional compiler verification
+with improved scalability and fewer language restrictions.
+In short,
+this approach relaxes constraints present in existing systems,
+such as the determinism requirements imposed by CompCert and CakeML.
+
+\subsection*{Contributions}
+
+We developed a logical framework addressing the objectives of this internship.
+At its core,
+the framework relies on a coinductive simulation relation
+capable of matching execution steps of programs with different control flow.
+The simulation used is skewed,
+it permits exploiting undefined behaviors in the source program
+to enable further target-level optimizations.
+This simulation serves as the foundation of our verification framework,
+defining how source and target execution steps are related.
+
+Building upon this simulation relation,
+we defined a relational separation logic
+that enables local reasoning over fragments of source and target heaps.
+The logic is parameterized by the operational semantics
+of the two languages under comparison.
+Our framework uses this logical layer to express
+and prove relational specifications between program pairs.
+
+We instantiated this generalized framework with a low-level language
+that mirrors the RTL language (Register Transfer Language),
+commonly used in compiler backends.
+We defined the small-step operational semantics for our version of RTL,
+with support for arithmetic operations,
+dynamic memory allocation and deallocation,
+and function calls.
+
+Finally,
+we established a system of reasoning rules for RTL programs.
+This proof system comprises two distinct categories of rules.
+First,
+we proved the soundness of asynchronous rules,
+which deal with unilateral execution steps taken independently
+by either the source or the target.
+In particular,
+these rules enable target optimizations to exploit undefined behaviors
+in the source program.
+Second,
+we derived synchronous rules,
+which deal with joint execution steps when both source and target programs
+execute matching instructions at the same time.
+
+\subsection*{Arguments Supporting Its Validity}
+
+We evaluated our framework by proving the correctness
+of two program transformations.
+The first one is a branch tunneling pass that eliminates redundant control-flow jumps
+by collapsing chains of intermediate nodes.
+The second one is an instruction-level optimization pass that removes statically known
+redundant operations.
+Finally, we used our logic to establish the soundness of localized transformations,
+such as hoisting a memory read instruction out of a loop body.
+
+Beyond these practical case studies,
+we established metatheoretic properties confirming framework soundness.
+We proved that the underlying simulation relation is sound,
+guaranteeing that it relates only programs exhibiting related behaviors.
+Additionally,
+we proved our simulation formulation equivalent
+to established simulation definitions used in the
+literature~\parencites{allain-25-tmc,leroy-09-compcert,gaher-22-simuliris}.
+
+The entire framework has been mechanized
+in the Rocq proof assistant~\parencite{rocq}.
+All definitions and theorems are machine checked,
+relying on the \texttt{coinduction}
+Rocq library~\parencite{rocq-coinduction}
+and the Iris/stdpp~\parencite{jung-18-iris,rocq-stdpp}
+data structures.
+A subset of the formalization relies on two standard classical axioms,
+specifically the Law of Excluded Middle
+and Classical Choice.
+
+\subsection*{Future Work}
+
+This work provides a first step for several research perspectives.
+While current case studies verify control flow transformations,
+future effort will target data flow optimizations,
+such as constant propagation
+and common subexpression elimination.
+Such passes will test the logical framework when memory states are altered
+by eliminated loads, stores or allocations.
+
+A second direction involves supporting multi-language verification.
+Our framework is parameterized to relate distinct source and target languages
+across translation passes,
+but the present formalization operates on a single intermediate language.
+Future effort will test the limit of our framework when translating
+programs from one language to another.
+
+Finally,
+we aim to increase the expressiveness of the underlying languages.
+While our logic already accommodates nondeterminism,
+it is not present in our current semantics of RTL.
+We plan to add it to work toward a language semantics with concurrent execution features.
+Additionally,
+extending the framework from imperative languages to functional paradigms
+represents another potential direction for future work.
+
+\end{document}
+
+% Local Variables:
+% TeX-engine: luatex
+% End:
+
+% LocalWords:  Coinductive coinductive asymmetricity arities

@@ -21,7 +21,7 @@ Definition simple_opt_instr (i: rtl_instr) : rtl_instr :=
       | _, _ => i
       end
   | Icond b pcT pcF =>
-      if (pcT  =? pcF)
+      if (pcT =? pcF)
       then Inop pcT
       else Icond b pcT pcF
   | _ => i
@@ -89,14 +89,14 @@ Section simple_opt.
           ⌜st = ([], State (simple_opt_fun f) pc ρt)⌟ ∗
           ⌜ss = ([], State f pc ρs)⌟ ∗
           ⌜∀ r, ρt@r <{ I }> ρs@r⌟ ∗
-          mem_inj I ∅ ∗
-          (∀ vt vs, samer I vt vs -∗ ϕ vt vs)
+          ⌜∀ vt vs, samer I vt vs ⊢ ϕ vt vs⌟ ∗
+          mem_inj I ∅
       )%I.
 
   Lemma simple_opt_soundness C f I :
     ⊢ [Pt, Ps, C] {{ same_args I }} (simple_opt_fun f) <{0, 0}= f {{ samer I }}.
   Proof using Type.
-    iIntros "!>" (valt vals Ψ) "[%Harg Hinj] Hpost".
+    iIntros "!>" (valt vals) "[%Harg Hinj]".
     iApply (source_callstate_exploit).
     iIntros (ρs pc Hlen -> ->).
     iApply (target_callstate); auto; first by eapply Forall2_length_r.
@@ -104,7 +104,7 @@ Section simple_opt.
     {
       clear.
       iIntros "!>" (C st j i ss ϕ) "#CIH".
-      iIntros "(%I & %f & %pc & %ρt & %ρs & -> & -> & %Hsame & Hinj & Hpost)".
+      iIntros "(%I & %f & %pc & %ρt & %ρs & -> & -> & %Hsame & %Hpost & Hinj)".
 
       destruct ((rtl_fn_code f) !! pc)
         as [
@@ -177,7 +177,7 @@ Section simple_opt.
 
 
       - destruct (Hsame src) as (vt & vs & Ht & Hs & Hv).
-        iApply (both_load with "[Hpost] Hinj").
+        iApply (both_load with "[] Hinj").
         { simpl. rewrite lookup_fmap Hi. by simpl. } all: try done.
         iIntros (vt' vs' Hv') "Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
@@ -186,13 +186,13 @@ Section simple_opt.
 
       - destruct (Hsame src) as (addrt & addrs & Haddrt & Haddrs & Haddr).
         destruct (Hsame dst) as (dstt & dsts & Hdstt & Hdsts & Hdst).
-        iApply (both_store with "[Hpost] Hinj").
+        iApply (both_store with "[] Hinj").
         { simpl. rewrite lookup_fmap Hi. by simpl. } all: try done.
         iIntros "Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
         iExists I, f, _, _, _. iFrame. iPureIntro. by split_and!.
 
-      - iApply (both_alloc with "[Hpost] Hinj").
+      - iApply (both_alloc with "[] Hinj").
         { simpl. rewrite lookup_fmap Hi. by simpl. } all: try done.
         iIntros (lt ls vt vs Hrel) "Ht Hs Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
@@ -204,13 +204,13 @@ Section simple_opt.
         + iPureIntro. apply update_same_bank.
           * constructor. unfold related. by set_solver.
           * intros ? _. eapply same_bank_mono; last done. by set_solver.
-        + clear.
-          iIntros (vt vs) "Hsame".
-          iApply "Hpost".
+        + clear -Hpost.
+          iPureIntro. iIntros (vt vs) "Hsame".
+          iApply Hpost.
           iApply (samer_mono with "Hsame"). by set_solver.
 
       - destruct (Hsame src) as (addrt & addrs & Haddrt & Haddrs & Haddr).
-        iApply (both_free with "[Hpost] Hinj").
+        iApply (both_free with "[] Hinj").
         { simpl. rewrite lookup_fmap Hi. by simpl. } all: try done.
         iIntros "Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
@@ -218,11 +218,11 @@ Section simple_opt.
 
       - destruct (find_fun Ps fname) as [fn |] eqn:Hfn; last by iApply (source_call_fail).
         destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
-        iApply (both_call_framed (same_args I) (samer I) with "[] [Hinj] Hpost").
+        iApply (both_call (same_args I) (samer I) with "[] [Hinj]").
         { simpl. rewrite lookup_fmap Hi. by simpl. } all: eauto.
         + by apply simple_opt_find_fun.
         + clear.
-          iIntros "!>" (valt vals Ψ) "[%Harg Hinj] Hpost".
+          iIntros "!>" (valt vals) "[%Harg Hinj]".
           iApply (source_callstate_exploit).
           iIntros (ρs pc Hlen -> ->).
           iApply (target_callstate); auto; first by eapply Forall2_length_r.
@@ -232,7 +232,7 @@ Section simple_opt.
 
         + iFrame. by iPureIntro.
 
-        + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj) Hpost".
+        + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
           iApply "CIH"; auto.
           iExists I', f, _, _, _. iFrame.
           iSplitR. { by iPureIntro. }
@@ -240,7 +240,8 @@ Section simple_opt.
           iSplitR.
           * iPureIntro. apply update_same_bank; first done.
             intros ? ?. by eapply same_bank_mono, Hsame.
-          * iIntros (? ?) "Hsame". iApply "Hpost". by iApply (samer_mono with "Hsame").
+          * iPureIntro. iIntros (? ?) "Hsame".
+            iApply Hpost. by iApply (samer_mono with "Hsame").
 
       - destruct (Hsame r) as (bt & bs & Hbt & Hbs & Hb).
         iApply (source_if_exploit); try done.
@@ -263,7 +264,7 @@ Section simple_opt.
         iApply (source_ret); try done.
         iApply (target_ret).
         { simpl. rewrite lookup_fmap Hi. by simpl. } all: try done.
-        iApply (both_ret). iApply "Hpost".
+        iApply (both_ret). iApply Hpost.
         iExists I. iFrame. by iPureIntro.
 
       - by iApply (source_fail).

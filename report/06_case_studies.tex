@@ -1,0 +1,28 @@
+\documentclass[report.tex]{subfiles}
+
+\begin{document}
+
+\section{Case Studies}
+
+% Proposed Length: 1.5 pages
+\subsection{Local \& Instruction-Level Optimizations}
+% Rocq verification of micro-optimizations in RTL/Optimisation/Simple.v:
+% 1. Loop Load Hoisting: hoisting invariant load instructions out of loop bodies.
+% 2. Redundant Check Elimination via UB: removing (isZ src) checks following division using source_op_exploit.
+% 3. Constant Propagation across Calls: framing constant register states across call boundaries.
+% 4. Lock-step proofs for simple instruction-level replacements.
+
+% Proposed Length: 1.5 pages
+\subsection{Global Control-Flow Optimizations: Branch Tunneling}
+% Rocq verification of Branch Tunneling in RTL/Optimisation/RemoveNop.v:
+% Optimization definition remove_nop_fun using fuel-based find_next_pc and redirect_instr.
+% Coinductive simulation invariant remove_nop_sim_inv parameterized by memory injection mem_inj I \emptyset.
+% Soundness proof theorem remove_nop_soundness mechanized with Iris tactics (iIntros, iApply, iFrame, iExists, iInduction).
+
+\end{document}
+
+% Local Variables:
+% TeX-engine: luatex
+% End:
+
+% LocalWords:  Coinductive coinductive asymmetricity arities

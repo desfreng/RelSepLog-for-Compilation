@@ -30,24 +30,23 @@ Section identity.
           ⌜ss = ([], State fs pc ρs)⌟ ∗
           ⌜fun_equivalent ft fs⌟ ∗
           ⌜∀ r, ρt@r <{ I }> ρs@r⌟ ∗
-          mem_inj I ∅ ∗
-          (∀ vt vs, samer I vt vs -∗ ϕ vt vs)
+          ⌜∀ vt vs, samer I vt vs ⊢ ϕ vt vs⌟ ∗
+          mem_inj I ∅
       )%I.
 
-  Lemma sim_refl (j i: nat) C ft fs pc ρt ρs Ψ I :
+  Lemma sim_refl (j i: nat) C ft fs pc ρt ρs I :
     fun_equivalent ft fs ->
     (∀ r, ρt @ r <{ I }> ρs @ r) ->
     mem_inj I ∅ -∗
-    (∀ vt vs, samer I vt vs -∗ Ψ vt vs) -∗
-    [Pt, Ps, C] ([], State ft pc ρt) <{ j, i }= ([], State fs pc ρs) {{ Ψ }}.
+    [Pt, Ps, C] ([], State ft pc ρt) <{ j, i }= ([], State fs pc ρs) {{ samer I }}.
   Proof using fun_incl.
-    iIntros (Heq Hsame) "Hinj Hpost".
+    iIntros (Heq Hsame) "Hinj".
     iApply (coind id_sim_inv).
     {
       clear -fun_incl.
       iIntros "!>" (C st j i ss ϕ) "#CIH".
       iIntros "(%I & %ft & %fs & %pc & %ρt & %ρs & H)".
-      iDestruct "H" as "(-> & -> & %Hfeq & %Hsame & Hinj & Hpost)".
+      iDestruct "H" as "(-> & -> & %Hfeq & %Hsame & %Hpost & Hinj)".
       destruct ((rtl_fn_code fs) !! pc)
         as [
           [ pc'
@@ -78,7 +77,7 @@ Section identity.
         + intros ? ?. apply Hsame.
 
       - destruct (Hsame src) as (vt & vs & Ht & Hs & Hv).
-        iApply (both_load with "[Hpost] Hinj");
+        iApply (both_load with "[] Hinj");
           [ by eapply pc_eq | done | done | done | done | done | ].
         iIntros (vt' vs' Hv') "Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
@@ -89,13 +88,13 @@ Section identity.
 
       - destruct (Hsame src) as (addrt & addrs & Haddrt & Haddrs & Haddr).
         destruct (Hsame dst) as (dstt & dsts & Hdstt & Hdsts & Hdst).
-        iApply (both_store with "[Hpost] Hinj");
+        iApply (both_store with "[] Hinj");
           [ by eapply pc_eq | done | done | done | done | done | done | done | done | ].
         iIntros "Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
         iExists I, ft, fs, _, _, _. iFrame. iPureIntro. by split_and!.
 
-      - iApply (both_alloc with "[Hpost] Hinj");
+      - iApply (both_alloc with "[] Hinj");
           [ by eapply pc_eq | done | ].
         iIntros (lt ls vt vs Hrel) "Ht Hs Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
@@ -108,13 +107,12 @@ Section identity.
         + iPureIntro. apply update_same_bank.
           * constructor. unfold related. by set_solver.
           * intros ? _. eapply same_bank_mono; last done. by set_solver.
-        + clear.
-          iIntros (vt vs) "Hsame".
-          iApply "Hpost".
-          iApply (samer_mono with "Hsame"). by set_solver.
+        + clear -Hpost.
+          iPureIntro. iIntros (vt vs) "Hsame".
+          iApply (Hpost). iApply (samer_mono with "Hsame"). by set_solver.
 
       - destruct (Hsame src) as (addrt & addrs & Haddrt & Haddrs & Haddr).
-        iApply (both_free with "[Hpost] Hinj");
+        iApply (both_free with "[] Hinj");
           [ by eapply pc_eq | done | done | done | done | done | ].
         iIntros "Hinj".
         iApply "CIH"; try (iPureIntro; simpl; lia).
@@ -123,10 +121,10 @@ Section identity.
       - destruct (find_fun Ps fname) as [fns|] eqn:Hfns; last by iApply (source_call_fail).
         destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
         destruct (fun_incl _ _ Hfns) as (fnt & Hfnt & Heq).
-        iApply (both_call_framed (same_args I) (samer I) with "[] [Hinj] Hpost");
+        iApply (both_call (same_args I) (samer I) with "[] [Hinj]");
           [ by eapply pc_eq | done | done | done | done | done | | | ].
         + clear -Heq.
-          iIntros "!>" (valt vals Ψ) "[%Harg Hinj] Hpost".
+          iIntros "!>" (valt vals) "[%Harg Hinj]".
           iApply (source_callstate_exploit).
           iIntros (ρs pc Hlen -> ->).
           iApply (target_callstate); try done.
@@ -138,8 +136,9 @@ Section identity.
           * by destruct Heq as (_ & _ & -> & _).
           * done.
           * by destruct Heq as (_ & -> & _ & _); apply init_same_bank.
+          * by iIntros (? ? ) "$".
         + iFrame. by iPureIntro.
-        + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj) Hpost".
+        + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
           iApply "CIH"; auto.
           iExists I', ft, fs, _, _, _. iFrame.
           iSplitR. { by iPureIntro. }
@@ -148,7 +147,8 @@ Section identity.
           iSplitR.
           * iPureIntro. apply update_same_bank; first done.
             intros ? ?. by eapply same_bank_mono, Hsame.
-          * iIntros (? ?) "Hsame". iApply "Hpost". by iApply (samer_mono with "Hsame").
+          * iPureIntro. iIntros (? ?) "Hsame".
+            iApply Hpost. by iApply (samer_mono with "Hsame").
 
       - destruct (Hsame r) as (bt & bs & Hbt & Hbs & Hb).
         iApply (source_if_exploit); try done.
@@ -160,7 +160,7 @@ Section identity.
       - destruct (Hsame r) as (vt & vs & Hvt & Hvs & Hr).
         iApply (source_ret); try done.
         iApply (target_ret); [ by eapply pc_eq | done | ].
-        iApply (both_ret). iApply "Hpost".
+        iApply (both_ret). iApply Hpost.
         iExists I. iFrame. by iPureIntro.
 
       - by iApply (source_fail).
@@ -171,6 +171,7 @@ Section identity.
     - reflexivity.
     - done.
     - done.
+    - by iIntros (? ?) "$".
   Qed.
 
   Lemma hoare_refl (j i: nat) C ft fs I :
@@ -178,14 +179,14 @@ Section identity.
     ⊢ [Pt, Ps, C] {{ same_args I }} ft <{j, i}= fs {{ samer I }}.
   Proof using fun_incl.
     intros Heq.
-    iIntros "!>" (valt vals Ψ) "[%Harg Hinj] Hpost".
+    iIntros "!>" (valt vals) "[%Harg Hinj]".
     iApply (source_callstate_exploit).
     iIntros (ρs pc Hlen -> ->).
     iApply (target_callstate); try done.
     { destruct Heq as (_ & -> & _ & _). by eapply Forall2_length_r. }
     destruct Heq as (Hname & Hentry & Hregs & Hcode).
     rewrite Hregs Hentry.
-    iApply (sim_refl with "Hinj Hpost").
+    iApply (sim_refl with "Hinj").
     - done.
     - by apply init_same_bank.
   Qed.

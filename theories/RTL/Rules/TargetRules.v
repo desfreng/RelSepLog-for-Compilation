@@ -11,8 +11,8 @@ Section TargetRulesDef.
   Context {Pt : prog Λt} {Ps : prog Λs}.
   Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
 
-  Context (ct : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank)
-    (j i : WfNat) (ss : pstate Λs) (Q : value Λt -> value Λs -> rProp).
+  Context (σt : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank)
+    (j i : WfNat) (ss : istate Λs) (Q : value Λt -> value Λs -> rProp).
 
   Ltac target_step :=
     repeat intro; subst; unseal; intros ? ? [-> ->] ? ? _ _ Hsim;
@@ -22,32 +22,32 @@ Section TargetRulesDef.
 
   Lemma target_nop pc:
     ft@pct is <<{ nop -> pc }>> ->
-    [Pt, Ps, C] (ct, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_ret r v:
     ft@pct is <<{ ret r }>> ->
     ρt@r ⇒ v ->
-    [Pt, Ps, C] (ct, ReturnState v) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, ReturnState v) <{1+j, i}= ss {{ Q }} -∗
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_op pc dst op regs args v:
     ft@pct is <<{ dst := @op regs -> pc }>> ->
     ρt @ regs ⇒ args ->
     eval_op op args = Some v ->
-    [Pt, Ps, C] (ct, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_load pc dst src l v:
     ft@pct is <<{ dst := !src -> pc }>> ->
     ρt @ src ⇒ VPtr l ->
     (l →ₜ v -∗
-     [Pt, Ps, C] (ct, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
+     [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
     l →ₜ v -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc Haddr. unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
@@ -76,9 +76,9 @@ Section TargetRulesDef.
     ρt @ dst ⇒ VPtr l ->
     ρt @ src ⇒ v ->
     (l →ₜ v -∗
-     [Pt, Ps, C] (ct, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
+     [Pt, Ps, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
     l →ₜ old -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc Haddr Hv. unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
@@ -111,8 +111,8 @@ Section TargetRulesDef.
     ft@pct is <<{ dst := alloc () -> pc }>> ->
     (∀ l v,
        l →ₜ v -∗
-       [Pt, Ps, C] (ct, State ft pc (⟦dst ⇐ VPtr l⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+       [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ VPtr l⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc. unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
@@ -137,9 +137,9 @@ Section TargetRulesDef.
     ft@pct is <<{ free src -> pc }>> ->
     ρt @ src ⇒ VPtr l ->
     (freeₜ l -∗
-       [Pt, Ps, C]  (ct, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
+       [Pt, Ps, C]  (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
     l →ₜ v -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc Hsrc. unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
@@ -174,8 +174,8 @@ Section TargetRulesDef.
     ft@pct is <<{ if reg then goto pcT else goto pcF }>> ->
     ρt @ reg ⇒ VBool b ->
     let pc := if b then pcT else pcF in
-    [Pt, Ps, C] (ct, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_call dst sig args pc' fn vals st:
@@ -183,21 +183,21 @@ Section TargetRulesDef.
     find_fun Pt sig = Some fn ->
     ρt@args ⇒ vals ->
     st = Stackframe dst ft pc' ρt ->
-    [Pt, Ps, C] (st :: ct, CallState fn vals) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (st :: σt, CallState fn vals) <{1+j, i}= ss {{ Q }} -∗
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_callstate args:
     length args = length (rtl_fn_regs ft) ->
     ρt = init_regs (rtl_fn_regs ft) args ->
     pct = rtl_fn_entrypoint ft ->
-    [Pt, Ps, C] (ct, State ft pct ρt) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (ct, CallState ft args) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, State ft pct ρt) <{1+j, i}= ss {{ Q }} -∗
+    [Pt, Ps, C] (σt, CallState ft args) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma source_retstate fn dst v:
-    [Pt, Ps, C] (ct, State fn pct (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (Stackframe dst fn pct ρt :: ct, ReturnState v) <{j, i}= ss {{ Q }}.
+    [Pt, Ps, C] (σt, State fn pct (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
+    [Pt, Ps, C] (Stackframe dst fn pct ρt :: σt, ReturnState v) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
 End TargetRulesDef.

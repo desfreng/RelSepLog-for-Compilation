@@ -25,7 +25,7 @@ Section SimRules.
   Context {C: Chain (fsim_lfp J I Pt Ps)}.
 
   Implicit Types
-    (st: pstate Λt) (j: J) (i: I) (ss: pstate Λs) (Q: value Λt -> value Λs -> rProp).
+    (st: istate Λt) (j: J) (i: I) (ss: istate Λs) (Q: value Λt -> value Λs -> rProp).
 
   Lemma final st j i ss Q vt vs:
     is_value st = Some vt ->
@@ -69,7 +69,7 @@ Section SimRules.
   Qed.
 
   Definition SInv : Type :=
-    pstate Λt -> J -> I -> pstate Λs ->
+    istate Λt -> J -> I -> istate Λs ->
     (value Λt -> value Λs -> rProp) -> rProp.
 
   Lemma coind (Inv : SInv) st j i ss Q:

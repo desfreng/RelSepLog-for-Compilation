@@ -1,0 +1,48 @@
+\documentclass[report.tex]{subfiles}
+
+\begin{document}
+
+\section{Related Work}
+
+% Proposed Length: 0.25 pages
+\subsection{Verified Compilers \& Simulation Frameworks}
+% Comparison with CompCert (Leroy) and CakeML (Tan et al.).
+% Contrasting traditional explicit-measure stuttering with coinductive step-indexed simulation in Rocq.
+
+% This leads to the \emph{safe backward simulation} property:
+% \begin{equation*}
+%   \Safe{s} \implies \forall b \in t, \, b \in s
+% \end{equation*}
+% \emph{Safe backward simulation} ensures specification preservation
+% whenever the source program is safe,
+% while granting the compiler freedom
+% to remove undefined operations in unsafe programs.
+
+% In contrast to backward simulation,
+% a forward simulation asserts that every source behavior
+% is reproduced by the target program: $\forall b, b \in s \implies b \in t$.
+% Forward simulation can similarly be restricted to safe executions.
+% Forward simulations are often easier to prove in practice,
+% as reasoning proceeds along the execution steps of the source program.
+
+% When both the source and target languages are deterministic,
+% forward simulation and backward simulation coincide.
+% This is how CompCert guarantees the specification preservation property.
+% It exploits target determinism to derive backward simulation
+% from a forward simulation proof.
+% However,
+% because our framework aims to accommodate non-deterministic execution,
+% we directly target a safe backward simulation property.
+
+
+% Proposed Length: 0.25 pages
+\subsection{Relational Logics \& Program Transformation Verification}
+% Comparison with Simuliris (Gäher et al.), Tail Modulo Cons (Allain et al.), and Interaction Trees (Xia et al.).
+% Bringing relational separation logic directly to low-level assembly-like languages (RTL).
+\end{document}
+
+% Local Variables:
+% TeX-engine: luatex
+% End:
+
+% LocalWords:  Coinductive coinductive asymmetricity arities

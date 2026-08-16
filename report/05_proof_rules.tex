@@ -1,0 +1,116 @@
+\documentclass[report.tex]{subfiles}
+
+\begin{document}
+
+\section{RTL Proof Rules}
+
+We have everything we need to
+prove things.
+- A simulation,
+- A logic,
+- A language.
+
+We can now extract from all of the above reasonings
+rules to conduct transformations soundness proofs.
+
+\subsection{Asynchronous Rules}
+
+Our simulation decouple the stepping of the Source and of the Target.
+So the rules are calls asynchronous, one stepping does nothing on the other.
+
+Moreover, in the simulation target and source are treated differently:
+- target is demonic. You need to consider all the next steps.
+- source is angelic. You choose which step to look at.
+
+This translate in two set of rules:
+
+The Targets Rules.
+They are simple.
+For each state on the target,
+they express in our relation logic what should be true
+to step to the current expression.
+the rules are given in figure ...
+
+% Figure ...
+% all the rule of the target  using ebproofs.
+% use the \fsim macro and all the separation logic macros too.
+
+The Source Rules.
+The standard rules
+are very similar to those expressed in the Target.
+See figure ...
+
+% Figure ...
+% all the rule of the source using ebproofs.
+% use the \fsim macro and all the separation logic macros too.
+
+A small difference: The non determinism of the allocation !
+In the source, we can chose the value stored in the cell (angelic!)
+but in the target, we only know that a value is stored in the cell,
+and no more (demonic!)
+
+\subsection{Undefined Behavior Exploitation}
+
+Remember of the simulation.
+Is the source is stuck, then the simulation trivial holds.
+This thing can give us information !
+Indeed, to prove that $\fsim{t}{i}{j}{s}{\Phi}$ holds,
+knowing that s will execute an arithmetic op,
+then 2 cases are possible:
+- either this op fails. In this case EASY !:
+the source is stuck, and so the simulation holds.
+- either this op is successful.
+And you need to prove that the simulation holds knowing that this op is successful.
+
+So this lead to a family of exploit rules, see in fig ...
+
+% Figure ...
+% all the exploit rule of the source using ebproofs (with the exploited set empty).
+% use the \fsim macro and all the separation logic macros too.
+
+A small notes on memory rules.
+in separation logic,
+unless by allocation,
+you can't just make appear ressouces.
+So the exploit rules have a different approach:
+They require the memory bijection as argument
+and also a proof that the argument of the operation
+are related (and so, if they are pointers, then they are in the memory bijection)
+
+The exploit here consist on:
+- Knowing that the values are indeed pointers.
+- Using the meminj exploit this pair of location
+- And so doing the memory operation.
+
+So for the load, store and free,
+this give the fact that the pointers could only be alive in the meminj.
+After the step, if not a free, the pointer is still alive.
+Because the used pair is marked as exploited now,
+The user is responsible to put them back in the injection.
+
+
+\subsection{Synchronous Rule}
+
+Okay, this is cool because is open the way to
+synchronous rules with low requirements.
+
+We can merge the source exploit rules,
+with next the target rules with what we learn for the source
+and the restore the meminj automatically because the
+two program has made the ``same'' things.
+
+For instance,
+the both load and both store rules.
+
+Then the big one,
+the 
+
+
+
+\end{document}
+
+% Local Variables:
+% TeX-engine: luatex
+% End:
+
+% LocalWords:  Coinductive coinductive asymmetricity arities

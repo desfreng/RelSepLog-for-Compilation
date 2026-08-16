@@ -1,0 +1,80 @@
+\documentclass[report.tex]{subfiles}
+
+\begin{document}
+
+\section{Coinduction Example: Stream Bisimilarity}
+\label{app:stream-bisimilarity}
+
+To illustrate how coinductive reasoning operates in practice,
+consider the \emph{bisimilarity} relation $\approx$ on streams of natural
+numbers,
+$\Stream{\mathbb{N}}$,
+defined coinductively by the following inference rule:
+\begin{equation*}
+  \begin{prooftree}
+    \hypo{n_1 = n_2}
+    \hypo{s_1 \approx s_2}
+    \infer[double]2[Bisim-Step]{
+      \mathsf{scons}(n_1, s_1) \approx \mathsf{scons}(n_2, s_2)}
+  \end{prooftree}
+\end{equation*}
+
+Let us prove that this relation is reflexive:
+\begin{equation*}
+  \forall s \in \Stream{\mathbb{N}}, s \approx s.
+\end{equation*}
+The proof proceeds by coinduction on the \emph{bisimilarity} relation:
+\begin{enumerate}
+  \item Applying the coinduction principle provides the coinductive
+        hypothesis:
+        \begin{equation*}
+          \textsf{CoIH} : \forall s' \in \Stream{\mathbb{N}}, s' \approx s',
+        \end{equation*}
+        with the restriction that $\textsf{CoIH}$ may only be applied under a
+        constructor of the coinductive relation.
+  \item We decompose the stream $s$ into a head $n \in \mathbb{N}$ and a
+        tail $s' \in \Stream{\mathbb{N}}$,
+        so that $s = \mathsf{scons}(n, s')$.
+        The goal becomes:
+        \begin{equation*}
+          \mathsf{scons}(n, s') \approx \mathsf{scons}(n, s').
+        \end{equation*}
+  \item We apply the coinductive rule \textsf{Bisim-Step}.
+        The first premise $n = n$ holds trivially,
+        leaving the second premise $s' \approx s'$ to be established.
+  \item Because the constructor Bisim-Step has been applied,
+        we can now legitimately invoke $\textsf{CoIH}$.
+        This immediately concludes the proof.
+\end{enumerate}
+
+
+The complete derivation tree for the loop iteration case ($b = \mathtt{true}$)
+is displayed in \cref{fig:free-sim-example-derivation}.
+
+\begin{figure}[htb]
+  \centering
+  \begin{equation*}
+  \begin{prooftree}
+    \hypo{0 < 2}
+    \hypo{0 < 4}
+    \infer2[\textsf{CIH}]{\fsim{P_t}{2}{4}{P_s}{=}}
+    \infer1[\textsc{FSourceSteps}\;($\times 3$)]{%
+      \fsim{P_t}{2}{1}{\mathtt{skip};\mathtt{skip};\mathtt{skip};P_s}{=}}
+    \infer1[\textsc{FSourceSteps}]{\fsim{P_t}{2}{0}{P_s}{=}}
+    \infer1[\textsc{FTargetSteps}]{\fsim{\mathtt{skip};P_t}{1}{0}{P_s}{=}}
+    \infer1[\textsc{FTargetSteps}]{\fsim{P_t}{0}{0}{P_s}{=}}
+  \end{prooftree}
+\end{equation*}
+\caption{Derivation tree for the loop iteration case ($b = \mathtt{true}$).}
+  \label{fig:free-sim-example-derivation}
+\end{figure}
+
+
+% Appendix ideam details the definition of meminj and its lemmas
+\end{document}
+
+% Local Variables:
+% TeX-engine: luatex
+% End:
+
+% LocalWords:  Coinductive coinductive asymmetricity arities

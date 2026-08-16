@@ -1,7 +1,6 @@
 From RSL Require Import Prelude.
 
 From Stdlib Require Import Relations.Relation_Operators.
-From Stdlib Require Import Logic.Eqdep.
 
 From Stdlib Require Import Wellfounded.Wellfounded.
 From Stdlib Require Import Arith.Wf_nat.

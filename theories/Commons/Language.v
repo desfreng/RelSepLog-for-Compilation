@@ -3,10 +3,10 @@ From RSL Require Import Prelude.
 From RSL.Commons Require Export Memory Values.
 
 Section lang_mixin.
-  Context {prog pstate value : Type}.
+  Context {prog istate value : Type}.
 
-  Context (step_rel : prog -> (pstate * memory) -> (pstate * memory) -> Prop).
-  Context (is_value : pstate -> option value).
+  Context (step_rel : prog -> (istate * memory) -> (istate * memory) -> Prop).
+  Context (is_value : istate -> option value).
 
   Record LangMixin := {
       mixin_final_no_step:
@@ -20,11 +20,11 @@ Structure lang :=
   Lang
     {
       prog : Type;
-      pstate : Type;
+      istate : Type;
       value : Type;
 
-      step_rel : prog -> (pstate * memory) -> (pstate * memory) -> Prop;
-      is_value : pstate -> option value;
+      step_rel : prog -> (istate * memory) -> (istate * memory) -> Prop;
+      is_value : istate -> option value;
 
       lang_mixin : LangMixin step_rel is_value;
     }.
@@ -37,10 +37,7 @@ Notation "P ⊨ s '-{' n '}>' t" := (nsteps (step_rel P) n s t) (at level 60, ri
 Notation "P ⊨ s '->>*' t" := (rtc (step_rel P) s t) (at level 60, right associativity).
 Notation "P ⊨ s '->>+' t" := (psteps (step_rel P) s t) (at level 60, right associativity).
 
-Definition state (Λ: lang) : Type := pstate Λ * memory.
-
-Definition pstate_of_state {Λ : lang} : state Λ -> pstate Λ := fst.
-Definition memory_of_state {Λ : lang} : state Λ -> memory := snd.
+Definition state (Λ: lang) : Type := istate Λ * memory.
 
 Definition is_final {Λ : lang} (s: state Λ) :=
   let '(ps, m) := s in

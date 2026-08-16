@@ -1,0 +1,308 @@
+\documentclass[report.tex]{subfiles}
+
+\begin{document}
+
+\section{Relational Separation Logic}
+
+Having defined our free simulation framework
+and instantiated it with the Register Transfer Language,
+we require a program logic to specify and verify relational properties
+of program executions.
+Reasoning about memory transformations using global heap predicates
+imposes a heavy verification burden,
+as every intermediate step must maintain global invariants.
+To enable local reasoning over pairs of memory heaps,
+we develop a relational separation logic.
+
+\subsection{Separation Logic}
+
+Separation logic~\parencite{chargueraud-20-sl} establishes
+a foundation for modular reasoning about programs that manipulate memory.
+In standard Hoare logic,
+assertions describe properties of the entire heap.
+Establishing that an operation modifies only a restricted portion of memory
+requires explicitly proving that all untouched heap regions remain invariant,
+an issue known as the frame problem.
+Separation logic solves this challenge by introducing
+the separating conjunction $P \sep Q$,
+which asserts that the memory can be split into two disjoint sub-heaps
+satisfying $P$ and $Q$,
+respectively.
+
+In verified compilation,
+we reason relationally about two program executions:
+the target program and the source program.
+Because each execution operates over its own memory heap,
+we formulate a relational separation logic~\parencite{yang-07-rsl}
+whose assertions describe pairs of memory states $(m_t, m_s)$.
+
+In modern interactive proof assistants,
+the Iris framework~\parencite{jung-18-iris,krebbers-17-essence} serves
+as the standard platform for separation logic in Rocq.
+Iris provides expressive mechanisms for higher-order concurrent reasoning,
+including step-indexed models,
+higher-order ghost state,
+and user-defined resource algebras.
+For our setting these advanced
+features are not needed.
+Instead,
+we formalize our relational separation logic directly
+as a shallow embedding in Rocq.
+We define the type of relational propositions,
+denoted $\rProp$,
+as a binary relation over memories:
+\begin{equation*}
+  \rProp \coloneqq \mem \to \mem \to \Prop
+\end{equation*}
+By convention,
+the first argument denotes the target memory $m_t$,
+and the second argument denotes the source memory $m_s$.
+An assertion $P \in \rProp$ represents a predicate that
+express ownership over the memory footprints of both programs,
+specifying the contents of sub-heaps of the target and source.
+
+\begin{figure}[htb]
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    Connective
+    & Semantics
+    & Description \\
+    \midrule
+    $\purel{\psi}$
+    & $\lambda m_t\, m_s.\; m_t = \emptyset \land m_s = \emptyset \land \psi$
+    & Pure assertion \\
+    $\emp$
+    & $\lambda m_t\, m_s.\; m_t = \emptyset \land m_s = \emptyset$
+    & Empty memory heaps \\
+    $P \land Q$
+    & $\lambda m_t\, m_s.\; P(m_t, m_s) \land Q(m_t, m_s)$
+    & Conjunction \\
+    $P \lor Q$
+    & $\lambda m_t\, m_s.\; P(m_t, m_s) \lor Q(m_t, m_s)$
+    & Disjunction \\
+    $P \to Q$
+    & $\lambda m_t\, m_s.\; P(m_t, m_s) \implies Q(m_t, m_s)$
+    & Implication \\
+    $\forall x,\, P(x)$
+    & $\lambda m_t\, m_s.\; \forall x,\, P(x)(m_t, m_s)$
+    & Universal quantification \\
+    $\exists x,\, P(x)$
+    & $\lambda m_t\, m_s.\; \exists x,\, P(x)(m_t, m_s)$
+    & Existential quantification \\
+    $P \sep Q$
+    & $\begin{aligned}[t]
+      \lambda m_t\, m_s.\; \exists m_t^P m_t^Q m_s^P m_s^Q,\;
+      & m_t = m_t^P \uplus m_t^Q \land m_s = m_s^P \uplus m_s^Q \land {} \\
+      & P(m_t^P, m_s^P) \land Q(m_t^Q, m_s^Q)
+      \end{aligned}$
+    & Separating conjunction \\
+    $P \wand Q$
+    & $\begin{aligned}[t]
+        \lambda m_t\, m_s.\; \forall m_t' m_s',\;
+        & P(m_t', m_s') \implies Q(m_t \uplus m_t', m_s \uplus m_s')
+      \end{aligned}$
+    & Magic wand \\
+    $\boxm P$
+    & $\lambda m_t\, m_s.\; P(\emptyset, \emptyset)$
+    & Persistent modality \\
+    \midrule
+    $P \ent Q$
+    & $\forall m_t\, m_s,\; P(m_t, m_s) \implies Q(m_t, m_s)$
+    & Logical entailment \\
+    $P \dashv\vdash Q$
+    & $(P \ent Q) \land (Q \ent P)$
+    & Logical equivalence \\
+    \bottomrule
+  \end{tabular}
+  \caption{Base connectives of our relational separation logic.}
+  \label{fig:rprop-connectives}
+\end{figure}
+
+The semantic definitions of our base logical connectives are summarized in
+\cref{fig:rprop-connectives}.
+The entailment $P \ent Q$ asserts that whenever $P$ holds on a memory pair,
+$Q$ holds as well.
+Logical equivalence $P \dashv\vdash Q$ holds
+when both directions of entailment hold.
+The connectives satisfy the standard algebraic properties of separation logic:
+
+\begin{itemize}
+  \item The separating conjunction $P \sep Q$ splits both the target heap $m_t$
+        and the source heap $m_s$ into disjoint sub-heaps%
+        \footnote{Here $\uplus$ denotes the disjoint union of memory heaps,
+          which is defined only when its operand domains are disjoint.},
+        assigning one part to $P$
+        and the other part to $Q$.
+        Because the sub-heaps must be strictly disjoint,
+        this operator prevents duplicate resource ownership.
+
+  \item The persistent modality $\boxm P$ asserts that $P$ holds on empty heaps.
+        Because a persistent assertion requires no memory resources,
+        it represents a duplicable fact:
+        $\boxm P \ent \boxm P \sep \boxm P$.
+\end{itemize}
+
+Our memory logic is \emph{linear} rather than affine.
+In an affine logic,
+heap chunks can be silently discarded via weakening:
+$P \sep Q \ent P$.
+In our linear formulation,
+proving $P \ent Q$ guarantees that every memory cell described by $P$
+is accounted for in $Q$.
+This strict resource forbid any memory leak.
+
+To preserve the interactive proof engineering benefits of the
+Iris Proof Mode (MoSeL)~\parencite{krebbers-18-mosel},
+we prove that our connectives satisfy the required typeclass hierarchy.
+This allows our formalization to use standard Iris tactics
+while executing directly on our shallow relational model.
+
+\subsection{Relational Assertions \& Memory Predicates}
+\label{sec:mem-predicate}
+
+Building on our memory model (\cref{fig:mem-and-reg}),
+we introduce primitive memory assertions for target and source states.
+We define relational points-to and freed assertions:
+\begin{align*}
+  \ptrt{l}{v}
+  &
+    \coloneqq
+    \lambda m_t\, m_s.\;
+    m_t = \{ l \mapsto \Allocated{v} \} \land m_s = \emptyset
+  \\
+  \ptrs{l}{v}
+  &
+    \coloneqq
+    \lambda m_t\, m_s.\;
+    m_t = \emptyset \land m_s = \{ l \mapsto \Allocated{v} \}
+  \\
+  \freet{l}
+  &
+    \coloneqq
+    \lambda m_t\, m_s.\;
+    m_t = \{ l \mapsto \Freed \} \land m_s = \emptyset
+  \\
+  \frees{l}
+  &
+    \coloneqq
+    \lambda m_t\, m_s.\;
+    m_t = \emptyset \land m_s = \{ l \mapsto \Freed \}
+\end{align*}
+The predicate $\ptrt{l}{v}$ asserts that location $l$ in the target heap
+contains value $v$,
+while requiring the source heap to be empty.
+Symmetrically,
+$\ptrs{l}{v}$ asserts ownership of an allocated cell in the source heap.
+The predicates $\freet{l}$ and $\frees{l}$ assert ownership
+of deallocated memory cells in the target and source heaps,
+respectively.
+
+Memory allocations in the target and source programs
+are not guaranteed to produce identical physical addresses.
+To account for address variations,
+we maintain an address mapping $I \subseteq \loc \times \loc$,
+where each pair $(l_t, l_s) \in I$ relates a target location $l_t$
+to a source location $l_s$.
+We enforce that $I$ is a bijective mapping:
+target locations are uniquely related to source locations.
+This mapping $I$ parameterizes the value similarity relation
+$\sameval{I}{v_t}{v_s}$ (\cref{fig:same-val}).
+As the bijection grows monotonically with fresh memory allocations,
+the value relation is preserved:
+\begin{lemma}[Monotonicity of $\sameval{I}{}{}$]
+  \label{lem:sameval-mono}
+  If $I \subseteq I'$,
+  then $\sameval{I}{v_t}{v_s} \implies \sameval{I'}{v_t}{v_s}$.
+\end{lemma}
+
+To relate entire target and source heaps across program execution,
+we adapt the memory injection predicate $\meminj{I}{E}$
+defined by \textcite{gaher-22-simuliris}.
+When the set $E$ is empty,
+this predicate owns all memory cells registered in $I$.
+It asserts that every active pair of locations $(l_t, l_s) \in I$
+holds relationally similar values,
+and that deallocated cells are consistently marked as freed in both heaps.
+
+When verifying an instruction that reads,
+writes,
+or deallocates a specific pair of locations $(l_t, l_s) \in I$,
+we need to access the underlying points-to or freed assertion.
+However,
+removing $(l_t, l_s)$ from the mapping $I$ would shrink $I$,
+breaking its monotonicity and invalidating the value similarity of existing pointers.
+To overcome this difficulty,
+we introduce the \emph{exploited set} $E \subseteq I$.
+The set $E$ tracks the address pairs whose individual heap assertions
+have been temporarily extracted from the global injection for local reasoning.
+
+The interaction between the memory injection predicate,
+the bijection $I$,
+and the exploited set $E$ is primarily governed by three lemmas:
+\begin{itemize}
+  \item \textbf{Exploitation:}
+        When $(l_t, l_s) \in I$ is unexploited,
+        the assertion $\meminj{I}{E}$ can be opened to extract ownership
+        of $(l_t, l_s)$ while updating the exploited set to $E \cup \{ (l_t, l_s) \}$.
+
+  \item \textbf{Reintegration:}
+        Once a memory operation completes,
+        the updated points-to assertion $\ptrt{l_t}{v_t} \sep \ptrs{l_s}{v_s}$
+        (with $\sameval{I}{v_t}{v_s}$)
+        or freed assertion $\freet{l_t} \sep \frees{l_s}$
+        can be released back into the injection,
+        decreasing the exploited set to $E \setminus \{ (l_t, l_s) \}$.
+
+  \item \textbf{Extension:}
+        When allocating fresh memory cells,
+        the fresh pair of addresses $(l_t, l_s)$
+        can be added to the memory injection
+        provided their value are related by $\sameval{I}{}{}$.
+\end{itemize}
+
+\subsection{Relational Hoare Quadruples}
+
+By combining the free simulation with relational separation logic,
+we define relational Hoare quadruples.
+In fixed target and source programs $P_t$ and $P_s$,
+a relational Hoare quadruple relates a target function $f_t$
+to a source function $f_s$.
+The formal definition is given by:
+\begin{equation*}
+  \begin{aligned}
+    \hoareq{P}{f_t}{f_s}{Q} \coloneqq
+    \boxm \Big(
+    \forall \vec{v}_t\, \vec{v}_s,\;
+    P(\vec{v}_t, \vec{v}_s) \wand
+    \fsim{([], \CallState{f_t}{\vec{v}_t})}{0}{0}{([], \CallState{f_s}{\vec{v}_s})}{Q}
+    \Big)
+  \end{aligned}
+\end{equation*}
+where $P$ is a precondition relating the target and source argument vectors,
+and $Q$ is a postcondition refering to the returned values.
+
+The meaning of this quadruple is given by the free simulation:
+whenever the initial function arguments and heap states satisfy
+$P(\vec{v}_t, \vec{v}_s)$,
+if the source execution terminates without encountering undefined behavior,
+then the target execution also terminates with return values and memories
+satisfying $Q(v_t, v_s)$.
+If the source execution diverges,
+the target execution diverges as well.
+If the source execution reaches a stuck state,
+the simulation relation grants the compiler complete freedom.
+
+The definition of the Hoare quadruple is enclosed guarded by a persistent modality $\boxm$
+to guaranty that the specification holds independently of heap ownership.
+As a consequence,
+a verified quadruple constitutes a duplicable resource that can be reused
+across multiple call sites throughout the program.
+
+\end{document}
+
+% Local Variables:
+% TeX-engine: luatex
+% End:
+
+% LocalWords:  Coinductive coinductive asymmetricity arities

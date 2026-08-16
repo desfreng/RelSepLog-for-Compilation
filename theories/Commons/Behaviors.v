@@ -159,13 +159,13 @@ Section Behavior.
 End Behavior.
 
 Section Refinement.
-  Context {Λₜ Λs: lang}.
-  Context (Pt: prog Λₜ) (Ps: prog Λs).
+  Context {Λt Λs: lang}.
+  Context (Pt: prog Λt) (Ps: prog Λs).
 
-  Instance behₜ_elem : ElemOf behavior (state Λₜ) := beh Pt.
-  Instance behₛ_elem : ElemOf behavior (state Λs) := beh Ps.
+  Instance beht_elem : ElemOf behavior (state Λt) := beh Pt.
+  Instance behs_elem : ElemOf behavior (state Λs) := beh Ps.
 
-  Variant behavior_order Φ : @behavior Λₜ -> @behavior Λs -> Prop :=
+  Variant behavior_order Φ : @behavior Λt -> @behavior Λs -> Prop :=
   | BehOrderTerm vt vs mt ms :
       Φ vt vs mt ms -> behavior_order Φ (Terminating vt mt) (Terminating vs ms)
   | BehOrderDiv :
@@ -183,7 +183,32 @@ Section Refinement.
   (*    - if the target diverges, *)
   (*    the source must either diverges or be stuck. *)
   (*    - if the target is stuck, the source should also be stuck. *)
-  Definition refines Φ (t: state Λₜ) (s: state Λs) : Prop :=
+  Definition refines Φ (t: state Λt) (s: state Λs) : Prop :=
     ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ⊑{Φ} b'.
-
 End Refinement.
+
+Section SpecPreserving.
+  Context {Λ: lang} (P: prog Λ).
+  Instance beh_elem : ElemOf behavior (state Λ) := beh P.
+
+  Definition Spec : Type := @behavior Λ -> Prop.
+  Implicit Types (s : state Λ) (S : Spec).
+
+  Definition meaningful S : Prop := ∀ b, S b -> b ≠ Undef.
+  Definition match_spec s S : Prop :=  ∀ b, b ∈ s -> S b.
+  Definition spec_preserved S s t : Prop := match_spec s S -> match_spec t S.
+
+  Definition eq_rel (vt vs: value Λ) (mt ms: memory) : Prop := vt = vs ∧ mt = ms.
+
+  Lemma refine_implies_meaningful_spec_preserve t s:
+    refines P P eq_rel t s -> ∀ S, meaningful S -> spec_preserved S s t.
+  Proof using Type.
+    intros Href S Hmean Hspec b Hb.
+    apply Href in Hb as (b' & Hb & Hord).
+    apply Hspec in Hb.
+    destruct Hord as [ ? ? ? ? (-> & ->) | | ].
+    - done.
+    - done.
+    - exfalso. by eapply Hmean.
+  Qed.
+End SpecPreserving.
