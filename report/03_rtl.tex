@@ -5,7 +5,7 @@
 \section{The Register Transfer Language (RTL)}
 \label{sec:rtl}
 
-To evaluate our logic framework on realistic compiler intermediate
+To evaluate our framework on realistic compiler intermediate
 representations,
 we formalize a low-level imperative language based on the
 Register Transfer Language (RTL) of CompCert~\parencite{leroy-09-compcert}.
@@ -49,7 +49,7 @@ The deduction rules of the value similarity predicate are given in
 \cref{fig:same-val}.
 We note that the rule \textsc{Val-Undef} is asymmetric:
 whenever the source program produces an undefined value $\VUndef$,
-it can be related to any value $v_t$ produced the target program.
+it can be related to any value $v_t$ produced by the target program.
 This asymmetry allows the compiler to replace undefined source computations with
 concrete target operations.
 
@@ -67,7 +67,7 @@ concrete target operations.
       \end{prooftree}
       \\[2em]
       \begin{prooftree}
-        \hypo{(l_s, l_t) \in I}
+        \hypo{(l_t, l_s) \in I}
         \infer1[\textsc{Val-Ptr}]{\sameval{I}{\VPtr{l_t}}{\VPtr{l_s}}}
       \end{prooftree}
       &
@@ -108,6 +108,31 @@ Each instruction explicitly specifies the program points of its successors,
 eliminating the need for loop or block constructs.
 The instruction set and operator grammar of RTL are defined in
 \cref{fig:rtl-grammar}.
+An RTL function $f$ is a record containing:
+\begin{equation*}
+  f \in \rtlfun \Coloneqq \left\{\,
+  \begin{array}{l@{\quad}l}
+    \fnname \in \ident
+    & \text{function identifier} \\
+    \fnregs \in \listT{\reg}
+    & \text{parameter list} \\
+    \fnentry \in \node
+    & \text{function entry point} \\
+    \fncode \in \node \rightharpoonup \instr
+    & \text{control-flow graph}
+  \end{array}
+  \,\right\}
+\end{equation*}
+We enforce the invariant that input parameter registers contain no duplicates.
+The code map $\fncode$ is a finite map associating program points
+with instructions.
+In the following,
+we write $\pcatis{f}{pc}{i}$ to assert that the code map of $f$ contains
+instruction $i$ at program point $pc$.
+An RTL program $P$ consists of a list of functions with a distinguished
+entry function.
+We require that function names in the program are unique,
+and that the entry function is present.
 
 \begin{figure}[htp]
   \centering
@@ -120,7 +145,7 @@ The instruction set and operator grammar of RTL are defined in
     & $\Iop{dst}{\textsf{op}}{\vec{r}}{pc}$
     & pure arithmetic or logical operation \\
     & $\mid$
-    & $\Iload{dst}{addr}{pc}$
+    & $\Iload{dst}{src}{pc}$
     & heap memory load \\
     & $\mid$
     & $\Istore{addr}{src}{pc}$
@@ -143,16 +168,16 @@ The instruction set and operator grammar of RTL are defined in
     \\[1em]
     $\textsf{op}$
     & $\Coloneqq$
-    & $\mathtt{Add} \mid \mathtt{Sub} \mid \mathtt{Mul} \mid \mathtt{Div}$
+    & $\Oadd \mid \Osub \mid \Omul \mid \Odiv$
     & integer arithmetic \\
     & $\mid$
-    & $\mathtt{Incr} \mid \mathtt{Decr}$
+    & $\Oincr \mid \Odecr$
     & increment and decrement \\
     & $\mid$
-    & $\mathtt{ImmInt}(z) \mid \mathtt{ImmBool}(b)$
+    & $\Oimmint{z} \mid \Oimmbool{b}$
     & constant immediate values \\
     & $\mid$
-    & $\mathtt{Move} \mid \mathtt{EqZ}$
+    & $\Omove \mid \Oeqz$
     & register copy and zero test
   \end{tabular}
   \\[0.8em]
@@ -165,33 +190,6 @@ The instruction set and operator grammar of RTL are defined in
   \caption{The syntax of RTL instructions and operators.}
   \label{fig:rtl-grammar}
 \end{figure}
-
-An RTL function $f$ is a record containing:
-\begin{equation*}
-  f \in \textsf{rtl\_function} \Coloneqq \left\{\,
-  \begin{array}{l@{\quad}l}
-    \textsf{fn\_name} \in \ident
-    & \text{function identifier} \\
-    \textsf{fn\_regs} \in \listT{\reg}
-    & \text{parameter list} \\
-    \textsf{fn\_entrypoint} \in \node
-    & \text{function entry point} \\
-    \textsf{fn\_code} \in \node \rightharpoonup \instr
-    & \text{control-flow graph}
-  \end{array}
-  \,\right\}
-\end{equation*}
-We enforce the invariant that input parameter registers contain no duplicates.
-The code map $\textsf{fn\_code}$ is a finite map associating program points
-with instructions.
-In the following,
-we write $\pcatis{f}{pc}{i}$ to assert that the code map of $f$ contains
-instruction $i$ at program point $pc$.
-
-An RTL program $P$ consists of a list of functions with a distinguished
-entry function.
-We require that function names in the program are unique,
-and that the entry function is present.
 
 \subsection{Small-Step Operational Semantics}
 
@@ -251,14 +249,14 @@ from accesses to unallocated memory.
     Notation & Operation Semantics \\
     \midrule
     $\getreg{r}{\rho}$ & Read register $r$;
-    yields $\VUndef$ if $r \notin \text{dom}(\rho)$ \\
+    yields $\VUndef$ if $r \notin \dom{\rho}$ \\
     $\getreg{\vec{r}}{\rho}$ & Pointwise extension to register lists,
     returning $\vec{v}$ \\
     $\setreg{r}{v}{\rho}$ & Register assignment updating $r$ to value $v$ \\
     \addlinespace
     $\getat{l}{m}$ & Read cell at location $l$ \\
     $\setat{l}{v}{m}$ & Update allocated cell at $l$ to value $v$ \\
-    $\allocat{l}{v}{m}$ & Allocate fresh cell $l \notin \text{dom}(m)$
+    $\allocat{l}{v}{m}$ & Allocate fresh cell $l \notin \dom{m}$
     initialized with value $v$ \\
     $\freeat{l}{m}$ & Deallocate active cell at $l$,
     setting its status to $\Freed$ \\
@@ -270,17 +268,17 @@ from accesses to unallocated memory.
 
 \begin{figure}[htb]
   \begin{gather*}
-    \begin{prooftree}
-      \hypo{\pcatis{f}{pc}{\Inop{pc'}}}
-      \infer1[\textsc{Step-Nop}]{
-        \step{P}{
-          (\sigma, \State{f}{pc}{\rho}, m)
-        }{
-          (\sigma, \State{f}{pc'}{\rho}, m)
-        }
-      }
-    \end{prooftree}
-    \\[1em]
+    % \begin{prooftree}
+    %   \hypo{\pcatis{f}{pc}{\Inop{pc'}}}
+    %   \infer1[\textsc{Step-Nop}]{
+    %     \step{P}{
+    %       (\sigma, \State{f}{pc}{\rho}, m)
+    %     }{
+    %       (\sigma, \State{f}{pc'}{\rho}, m)
+    %     }
+    %   }
+    % \end{prooftree}
+    % \\[1em]
     \begin{prooftree}
       \hypo{\pcatis{f}{pc}{\Iop{dst}{op}{\vec{r}}{pc'}}}
       \hypo{\getreg{\vec{r}}{\rho} = \vec{v}}
@@ -293,38 +291,39 @@ from accesses to unallocated memory.
         }
       }
     \end{prooftree}
-    \\[1em]
-    \begin{prooftree}
-      \hypo{\pcatis{f}{pc}{\Iload{dst}{addr}{pc'}}}
-      \hypo{\getreg{addr}{\rho} = \VPtr{l}}
-      \hypo{\getat{l}{m} = \Allocated{v}}
-      \infer3[\textsc{Step-Load}]{
-        \step{P}{
-          (\sigma, \State{f}{pc}{\rho}, m)
-        }{
-          (\sigma, \State{f}{pc'}{\setreg{dst}{v}{\rho}}, m)
-        }
-      }
-    \end{prooftree}
-    \\[1em]
-    \begin{prooftree}
-      \hypo{\pcatis{f}{pc}{\Istore{addr}{src}{pc'}}}
-      \hypo{\getreg{addr}{\rho} = \VPtr{l}}
-      \hypo{\getreg{src}{\rho} = v}
-      \hypo{\getat{l}{m} = \Allocated{\_}}
-      \infer4[\textsc{Step-Store}]{
-        \step{P}{
-          (\sigma, \State{f}{pc}{\rho}, m)
-        }{
-          (\sigma, \State{f}{pc'}{\rho}, \setat{l}{v}{m})
-        }
-      }
-    \end{prooftree}
+    % \\[1em]
+    % \begin{prooftree}
+    %   \hypo{\pcatis{f}{pc}{\Iload{dst}{addr}{pc'}}}
+    %   \hypo{\getreg{addr}{\rho} = \VPtr{l}}
+    %   \hypo{\getat{l}{m} = \Allocated{v}}
+    %   \infer3[\textsc{Step-Load}]{
+    %     \step{P}{
+    %       (\sigma, \State{f}{pc}{\rho}, m)
+    %     }{
+    %       (\sigma, \State{f}{pc'}{\setreg{dst}{v}{\rho}}, m)
+    %     }
+    %   }
+    % \end{prooftree}
+    % \\[1em]
+    % \begin{prooftree}
+    %   \hypo{\pcatis{f}{pc}{\Istore{addr}{src}{pc'}}}
+    %   \hypo{\getreg{addr}{\rho} = \VPtr{l}}
+    %   \hypo{\getreg{src}{\rho} = v}
+    %   \hypo{\getat{l}{m} = \Allocated{\_}}
+    %   \infer4[\textsc{Step-Store}]{
+    %     \step{P}{
+    %       (\sigma, \State{f}{pc}{\rho}, m)
+    %     }{
+    %       (\sigma, \State{f}{pc'}{\rho}, \setat{l}{v}{m})
+    %     }
+    %   }
+    % \end{prooftree}
     \\[1em]
     \begin{prooftree}
       \hypo{\pcatis{f}{pc}{\Ialloc{dst}{pc'}}}
-      \hypo{l \notin \text{dom}(m)}
-      \infer2[\textsc{Step-Alloc}]{
+      \hypo{l \notin \dom{m}}
+      \hypo{v \in \val}
+      \infer3[\textsc{Step-Alloc}]{
         \step{P}{
           (\sigma, \State{f}{pc}{\rho}, m)
         }{
@@ -347,18 +346,18 @@ from accesses to unallocated memory.
         }
       }
     \end{prooftree}
-    \\[1em]
-    \begin{prooftree}
-      \hypo{\pcatis{f}{pc}{\Icond{cond}{pc_{\true}}{pc_{\false}}}}
-      \hypo{\getreg{cond}{\rho} = \VBool{b}}
-      \infer2[\textsc{Step-Cond}]{
-        \step{P}{
-          (\sigma, \State{f}{pc}{\rho}, m)
-        }{
-          (\sigma, \State{f}{(b \;?\; pc_{\true} : pc_{\false})}{\rho}, m)
-        }
-      }
-    \end{prooftree}
+    % \\[1em]
+    % \begin{prooftree}
+    %   \hypo{\pcatis{f}{pc}{\Icond{cond}{pc_{\true}}{pc_{\false}}}}
+    %   \hypo{\getreg{cond}{\rho} = \VBool{b}}
+    %   \infer2[\textsc{Step-Cond}]{
+    %     \step{P}{
+    %       (\sigma, \State{f}{pc}{\rho}, m)
+    %     }{
+    %       (\sigma, \State{f}{(b \;?\; pc_{\true} : pc_{\false})}{\rho}, m)
+    %     }
+    %   }
+    % \end{prooftree}
     \\[1em]
     \begin{prooftree}
       \hypo{\pcatis{f}{pc}{\Icall{dst}{fn}{\vec{r}}{pc'}}}
@@ -376,13 +375,13 @@ from accesses to unallocated memory.
     \end{prooftree}
     \\[1em]
     \begin{prooftree}
-      \hypo{|\vec{v}| = |\textsf{fn\_regs}(f)|}
-      \hypo{\rho = \initregs{\textsf{fn\_regs}(f)}{\vec{v}}}
+      \hypo{|\vec{v}| = |\fnregs(f)|}
+      \hypo{\rho = \initregs{\fnregs(f)}{\vec{v}}}
       \infer2[\textsc{Step-Entry}]{
         \step{P}{
           (\sigma, \CallState{f}{\vec{v}}, m)
         }{
-          (\sigma, \State{f}{\textsf{fn\_entrypoint}(f)}{\rho}, m)
+          (\sigma, \State{f}{\fnentry(f)}{\rho}, m)
         }
       }
     \end{prooftree}
@@ -409,12 +408,12 @@ from accesses to unallocated memory.
       }
     \end{prooftree}
   \end{gather*}
-  \caption{Small-step operational semantics of RTL.}
+  \caption{Selected rules of the small-step operational semantics of RTL.}
   \label{fig:rtl-semantics}
 \end{figure}
 
-The step relation $\step{P}{s}{s'}$ is defined by the inference rules presented
-in \cref{fig:rtl-semantics}.
+The step relation $\step{P}{s}{s'}$ is defined by inference rules,
+of which are presented in \cref{fig:rtl-semantics}.
 Execution of a function progresses through three main phases
 ($\textsf{CallState} \to \textsf{State} \to \textsf{ReturnState}$):
 \begin{enumerate}
@@ -431,7 +430,8 @@ Execution of a function progresses through three main phases
         to be executed,
         referenced by $pc$ in $f$.
         We note that evaluation of some instructions is partial.
-        For instance in the \textsc{Step-Op} rule,
+        For instance,
+        in the \textsc{Step-Op} rule,
         if $\evalop{op}{\vec{v}}$ returns $\None$, the execution is stuck.
 
   \item When the function reaches a return instruction,
@@ -468,58 +468,54 @@ we establish lemmas showing that function executions can be analyzed in
 isolation with an empty call stack $\sigma = []$,
 and then embedded into arbitrary execution contexts.
 
-Operational steps are preserved when extending the call stack
-by an arbitrary frame list $\Sigma$:
-\begin{lemma}[Stack Lifting]
-\label{lem:rtl-lift-step}
-For all call stacks $\sigma, \sigma', \Sigma$,
-control states $ps, pt$,
-and memories $m, m'$:
-\begin{align*}
-  \step{P}{(\sigma, ps, m)}{(\sigma', pt, m')}
-  & \implies
-  \step{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{(\sigma' \mathbin{+\!+} \Sigma, pt, m')},
-  \\
-  \steps{P}{(\sigma, ps, m)}{(\sigma', pt, m')}
-  & \implies
-  \steps{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{(\sigma' \mathbin{+\!+} \Sigma, pt, m')}.
-\end{align*}
-\end{lemma}
+% Operational steps are preserved when extending the call stack
+% by an arbitrary frame list $\Sigma$:
+% \begin{lemma}[Stack Lifting]
+% \label{lem:rtl-lift-step}
+% For all call stacks $\sigma, \sigma', \Sigma$,
+% control states $ps, pt$,
+% and memories $m, m'$:
+% \begin{align*}
+%   \step{P}{(\sigma, ps, m)}{(\sigma', pt, m')}
+%   & \implies
+%   \step{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{(\sigma' \mathbin{+\!+} \Sigma, pt, m')},
+%   \\
+%   \steps{P}{(\sigma, ps, m)}{(\sigma', pt, m')}
+%   & \implies
+%   \steps{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{(\sigma' \mathbin{+\!+} \Sigma, pt, m')}.
+% \end{align*}
+% \end{lemma}
 
-Conversely,
-the unlifting lemma shows that transitions performed in a populated
-stack context reflect reductions of the local frame:
-\begin{lemma}[Stack Unlifting]
-\label{lem:rtl-unlift-step}
-For all call stacks $\sigma, \Sigma$,
-control states $ps$,
-memories $m$,
-and target configurations $t''$:
+% Conversely,
+% the unlifting lemma shows that transitions performed in a populated
+% stack context reflect reductions of the local frame:
+% \begin{lemma}[Stack Unlifting]
+% \label{lem:rtl-unlift-step}
+% For all call stacks $\sigma, \Sigma$,
+% control states $ps$,
+% memories $m$,
+% and target configurations $t''$:
 
-If $(\sigma, ps, m)$ is not a final value
-and $\step{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{t''}$,
-then there exist a local stack $\sigma'$,
-control state $pt$,
-and memory $m'$ such that:
-\begin{equation*}
-  t'' = (\sigma' \mathbin{+\!+} \Sigma, pt, m')
-  \quad \text{and} \quad
-  \step{P}{(\sigma, ps, m)}{(\sigma', pt, m')}.
-\end{equation*}
-\end{lemma}
+% If $(\sigma, ps, m)$ is not a final value
+% and $\step{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{t''}$,
+% then there exist a local stack $\sigma'$,
+% control state $pt$,
+% and memory $m'$ such that:
+% \begin{equation*}
+%   t'' = (\sigma' \mathbin{+\!+} \Sigma, pt, m')
+%   \quad \text{and} \quad
+%   \step{P}{(\sigma, ps, m)}{(\sigma', pt, m')}.
+% \end{equation*}
+% \end{lemma}
 
-These lemmas provide the foundation for modular verification in our logic.
+% These lemmas provide the foundation for modular verification in our logic.
 When verifying a function call,
-the callee is verified in isolation starting from an empty call stack
+the callee is verified starting from an empty call stack
 $([], \CallState{f}{\vec{v}}, m)$.
 Once the callee reduces to $([], \ReturnState{v}, m')$,
-\cref{lem:rtl-lift-step} lifts the derivation back into the caller's stack context,
+the derivation is lifted back into the caller's stack context,
 reconnecting the callee's execution with the caller's continuation.
 
 \end{document}
-
-% Local Variables:
-% TeX-engine: luatex
-% End:
 
 % LocalWords:  Coinductive coinductive asymmetricity arities

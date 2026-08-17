@@ -2,88 +2,39 @@
 % Macros for Relational Separation Logic and RTL Compiler Verification
 % ==============================================================================
 
-% Operational Semantics and Reductions
+% ------------------------------------------------------------------------------
+% 1. General Logic, Base Types, and Data Structures
+% ------------------------------------------------------------------------------
+\newcommand{\Prop}{\textsf{Prop}} % Maybe \mathbb{P} ?
+\newcommand{\true}{\textsf{true}}
+\newcommand{\false}{\textsf{false}}
+\newcommand{\Some}[1]{\textsf{Some}\left(#1\right)}
+\newcommand{\None}{\textsf{None}}
+
+\newcommand{\List}[1]{\textsf{List}\left(#1\right)}
+\newcommand{\Stream}[1]{\textsf{Stream}\left(#1\right)}
+\newcommand{\listT}[1]{\textsf{list}~{#1}}
+
+% ------------------------------------------------------------------------------
+% 2. Operational Semantics, Reductions, and Behavioral Predicates
+% ------------------------------------------------------------------------------
 \newcommand{\step}[3]{#1 \vdash #2 \twoheadrightarrow #3}
 \newcommand{\steps}[3]{#1 \vdash #2 \twoheadrightarrow^{\ast} #3}
 \newcommand{\psteps}[3]{#1 \vdash #2 \twoheadrightarrow^{+} #3}
 \newcommand{\nstep}[4]{#1 \vdash #2 \underset{#3}{\twoheadrightarrow} #4}
 
 \newcommand{\isval}[1]{\textsf{is\_value}\left(#1\right)}
-\newcommand{\bfinal}[3]{\textsf{both\_final}_{#1}\left(#2, #3\right)}
 \newcommand{\canp}[2]{\textsf{can\_progress}_{#1}\left(#2\right)}
 \newcommand{\stuck}[2]{\textsf{stuck}_{#1}\left(#2\right)}
-\newcommand{\Some}[1]{\textsf{Some}\left(#1\right)}
-\newcommand{\None}{\textsf{None}}
 
-% Behavioral Predicates
 \newcommand{\Spec}{\textsf{Spec}}
 \newcommand{\Safe}[1]{\textsf{Safe}(#1)}
 \newcommand{\Term}[2]{\textsf{Terminating}(#1, #2)}
 \newcommand{\Div}{\textsf{Diverging}}
 \newcommand{\Undef}{\textsf{Undefined}}
+\newcommand{\behord}{\leqslant_{\text{beh}}}
 
-% Data Structures
-\newcommand{\List}[1]{\textsf{List}\left(#1\right)}
-\newcommand{\Stream}[1]{\textsf{Stream}\left(#1\right)}
-
-% Simulation Relations
-\newcommand{\isim}[3]{#1 \lesssim #2 \; \{#3\}}
-\newcommand{\fsim}[5]{#1 \leftindex[I]_{#2}\lesssim_{#3} #4 \; \{#5\}}
-\newcommand{\incirc}[1]{\raisebox{.5pt}{\textcircled{\raisebox{-.9pt}{#1}}}}
-
-% Value Types and Constructors
-\newcommand{\val}{\textsf{val}}
-\newcommand{\loc}{\textsf{loc}}
-\newcommand{\VInt}[1]{\textsf{VInt}\left(#1\right)}
-\newcommand{\VBool}[1]{\textsf{VBool}\left(#1\right)}
-\newcommand{\VPtr}[1]{\textsf{VPtr}\left(#1\right)}
-\newcommand{\VUndef}{\textsf{VUndef}}
-
-% Memory Cell Types and Constructors
-\newcommand{\cell}{\textsf{cell}}
-\newcommand{\Allocated}[1]{\textsf{Allocated}\left(#1\right)}
-\newcommand{\Freed}{\textsf{Freed}}
-\newcommand{\memory}{\textsf{memory}}
-
-% Relational Value Similarity
-\newcommand{\sameval}[3]{#2 \mathrel{\bowtie}_{#1} #3}
-
-% Regmap Operations
-\newcommand{\getreg}[2]{\ensuremath{#2[#1]}}
-\newcommand{\setreg}[3]{\ensuremath{#3[#1 \mapsto #2]}}
-
-% Memory Operations
-\newcommand{\getat}[2]{\ensuremath{#2[#1]}}
-\newcommand{\setat}[3]{\ensuremath{#3[#1 \mapsto \Allocated{#2}]}}
-\newcommand{\allocat}[3]{\ensuremath{#3 \uplus \{#1 \mapsto \Allocated{#2}\}}}
-\newcommand{\freeat}[2]{\ensuremath{#2[#1 \mapsto \Freed]}}
-
-% State and Stack Constructors
-\newcommand{\State}[3]{\textsf{State}\left(#1, #2, #3\right)}
-\newcommand{\CallState}[2]{\textsf{CallState}\left(#1, #2\right)}
-\newcommand{\ReturnState}[1]{\textsf{ReturnState}\left(#1\right)}
-\newcommand{\Stackframe}[4]{\textsf{Stackframe}\left(#1, #2, #3, #4\right)}
-\newcommand{\pcstate}{\textsf{pcstate}}
-\newcommand{\rtlstate}{\textsf{rtl\_state}}
-
-% RTL Instruction Set (single-line representations)
-\newcommand{\Inop}[1]{\mathtt{nop} \to #1}
-\newcommand{\Iop}[4]{#1 \coloneqq #2\; #3 \to #4}
-\newcommand{\Iload}[3]{#1 \coloneqq {!#2} \to #3}
-\newcommand{\Istore}[3]{{!#1} \coloneqq #2 \to #3}
-\newcommand{\Ialloc}[2]{#1 \coloneqq \mathtt{alloc}() \to #2}
-\newcommand{\Ifree}[2]{\mathtt{free}\; #1 \to #2}
-\newcommand{\Icond}[3]{\mathtt{if}\; #1\; \mathtt{then}\; #2\; \mathtt{else}\; #3}
-\newcommand{\Icall}[4]{#1 \coloneqq \mathtt{call}\; #2(#3) \to #4}
-\newcommand{\Iret}[1]{\mathtt{ret}\; #1}
-\newcommand{\Ireturn}[1]{\mathtt{ret}\; #1}
-
-% RTL Helpers
-\newcommand{\evalop}[2]{\textsf{eval\_op}\left(#1, #2\right)}
-\newcommand{\findfun}[2]{\textsf{find\_fun}\left(#1, #2\right)}
-\newcommand{\initregs}[2]{\textsf{init\_regs}\left(#1, #2\right)}
-
-% Custom Operators
+% Skewed Refinement Operator
 \makeatletter
 \newcommand{\slantsqsubseteq}{\mathrel{\mathpalette\draw@slantsqsubseteq\relax}}
 \newcommand{\draw@slantsqsubseteq}[2]{%
@@ -104,20 +55,121 @@
 }
 \makeatother
 
+% ------------------------------------------------------------------------------
+% 3. Simulation Relations and Utilities
+% ------------------------------------------------------------------------------
+\newcommand{\lsim}[2]{#1 \sim_{l} #2}
+\newcommand{\esim}[3]{#1 \sim_{e}^{#2} #3}
+\newcommand{\isim}[3]{#1 \lesssim #2 \; \{#3\}}
+\newcommand{\fsim}[5]{#1 \leftindex[I]_{#2}\lesssim_{#3} #4 \; \{#5\}}
+\newcommand{\bfinal}[3]{\textsf{both\_final}_{#1}\left(#2, #3\right)}
+\newcommand{\incirc}[1]{\raisebox{.5pt}{\textcircled{\raisebox{-.9pt}{#1}}}}
 
-\newcommand{\Prop}{\textsf{Prop}} % Maybe \mathbb{P} ?
-\newcommand{\reg}{\textsf{reg}}
-\newcommand{\mem}{\textsf{memory}}
-\newcommand{\regbank}{\textsf{regbank}}
-\newcommand{\listT}[1]{\textsf{list}~{#1}}
-\newcommand{\node}{\textsf{node}}
-\newcommand{\instr}{\textsf{instr}}
+% ------------------------------------------------------------------------------
+% 4. RTL Language: Types and Identifiers
+% ------------------------------------------------------------------------------
 \newcommand{\ident}{\textsf{ident}}
-\newcommand{\pcatis}[3]{#1[#2] = \langle#3\rangle}
-\newcommand{\true}{\textsf{true}}
-\newcommand{\false}{\textsf{false}}
+\newcommand{\node}{\textsf{node}}
+\newcommand{\reg}{\textsf{reg}}
+\newcommand{\regbank}{\textsf{regbank}}
+\newcommand{\loc}{\textsf{loc}}
+\newcommand{\val}{\textsf{val}}
+\newcommand{\cell}{\textsf{cell}}
+\newcommand{\mem}{\textsf{memory}}
+\newcommand{\memory}{\textsf{memory}}
+\newcommand{\instr}{\textsf{instr}}
+\newcommand{\pcstate}{\textsf{pcstate}}
+\newcommand{\rtlstate}{\textsf{rtl\_state}}
+\newcommand{\rtlfun}{\textsf{rtl\_function}}
 
-% Relational Separation Logic Macros
+\newcommand{\fnname}{\textsf{fn\_name}}
+\newcommand{\fnregs}{\textsf{fn\_regs}}
+\newcommand{\fnentry}{\textsf{fn\_entrypoint}}
+\newcommand{\fncode}{\textsf{fn\_code}}
+
+% ------------------------------------------------------------------------------
+% 5. RTL Language: Values and Memory Cells
+% ------------------------------------------------------------------------------
+\newcommand{\VInt}[1]{\textsf{VInt}\left(#1\right)}
+\newcommand{\VBool}[1]{\textsf{VBool}\left(#1\right)}
+\newcommand{\VPtr}[1]{\textsf{VPtr}\left(#1\right)}
+\newcommand{\VUndef}{\textsf{VUndef}}
+
+\newcommand{\Allocated}[1]{\textsf{Allocated}\left(#1\right)}
+\newcommand{\Freed}{\textsf{Freed}}
+
+% ------------------------------------------------------------------------------
+% 6. RTL Language: States and Stackframes
+% ------------------------------------------------------------------------------
+\newcommand{\State}[3]{\textsf{State}\left(#1, #2, #3\right)}
+\newcommand{\CallState}[2]{\textsf{CallState}\left(#1, #2\right)}
+\newcommand{\ReturnState}[1]{\textsf{ReturnState}\left(#1\right)}
+\newcommand{\Stackframe}[4]{\textsf{Stackframe}\left(#1, #2, #3, #4\right)}
+
+% ------------------------------------------------------------------------------
+% 7. RTL Language: Register, Memory, and Map Operations
+% ------------------------------------------------------------------------------
+\newcommand{\dom}[1]{\text{dom}(#1)}
+\newcommand{\getreg}[2]{\ensuremath{#2[#1]}}
+\newcommand{\setreg}[3]{\ensuremath{#3[#1 \mapsto #2]}}
+
+\newcommand{\getat}[2]{\ensuremath{#2[#1]}}
+\newcommand{\setat}[3]{\ensuremath{#3[#1 \mapsto \Allocated{#2}]}}
+\newcommand{\allocat}[3]{\ensuremath{#3 \uplus \{#1 \mapsto \Allocated{#2}\}}}
+\newcommand{\freeat}[2]{\ensuremath{#2[#1 \mapsto \Freed]}}
+
+\newcommand{\pcatis}[3]{#1[#2] = \langle#3\rangle}
+
+% ------------------------------------------------------------------------------
+% 8. RTL Language: Operators and Evaluation Helpers
+% ------------------------------------------------------------------------------
+\newcommand{\Oadd}{\mathtt{Add}}
+\newcommand{\Osub}{\mathtt{Sub}}
+\newcommand{\Omul}{\mathtt{Mul}}
+\newcommand{\Odiv}{\mathtt{Div}}
+\newcommand{\Oincr}{\mathtt{Incr}}
+\newcommand{\Odecr}{\mathtt{Decr}}
+\newcommand{\Omove}{\mathtt{Move}}
+\newcommand{\Oeqz}{\mathtt{EqZ}}
+\newcommand{\Oimmint}[1]{\mathtt{ImmInt}(#1)}
+\newcommand{\Oimmbool}[1]{\mathtt{ImmBool}(#1)}
+
+\newcommand{\evalop}[2]{\textsf{eval\_op}\left(#1, #2\right)}
+\newcommand{\findfun}[2]{\textsf{find\_fun}\left(#1, #2\right)}
+\newcommand{\initregs}[2]{\textsf{init\_regs}\left(#1, #2\right)}
+
+% ------------------------------------------------------------------------------
+% 9. RTL Instruction Set Syntax
+% ------------------------------------------------------------------------------
+\newcommand{\Inop}[1]{\mathtt{nop} \to #1}
+\newcommand{\Iop}[4]{#1 \coloneqq #2\; #3 \to #4}
+\newcommand{\Iload}[3]{#1 \coloneqq {!#2} \to #3}
+\newcommand{\Istore}[3]{{!#1} \coloneqq #2 \to #3}
+\newcommand{\Ialloc}[2]{#1 \coloneqq \mathtt{alloc}() \to #2}
+\newcommand{\Ifree}[2]{\mathtt{free}\; #1 \to #2}
+\newcommand{\Icond}[3]{\mathtt{if}\; #1\; \mathtt{then}\; #2\; \mathtt{else}\; #3}
+\newcommand{\Icall}[4]{#1 \coloneqq \mathtt{call}\; #2(#3) \to #4}
+\newcommand{\Iret}[1]{\mathtt{ret}\; #1}
+\newcommand{\Ireturn}[1]{\mathtt{ret}\; #1}
+
+% ------------------------------------------------------------------------------
+% 10. Relational Separation Logic: Assertions and Memory Predicates
+% ------------------------------------------------------------------------------
+\newcommand{\sameval}[3]{#2 \mathrel{\bowtie}_{#1} #3}
+\newcommand{\ptrt}[2]{#1 \to_{\text{t}} #2}
+\newcommand{\ptrs}[2]{#1 \to_{\text{s}} #2}
+\newcommand{\freet}[1]{\textsf{free}_{\text{t}}\left(#1\right)}
+\newcommand{\frees}[1]{\textsf{free}_{\text{s}}\left(#1\right)}
+\newcommand{\meminj}[2]{\textsf{meminj}_{#2}\left(#1\right)}
+
+\newcommand{\sameargs}[3]{\textsf{same\_args}_{#1}\left(#2, #3\right)}
+\newcommand{\samer}[3]{\textsf{samer}_{#1}\left(#2, #3\right)}
+\newcommand{\sameargsf}[1]{\textsf{same\_args}_{#1}}
+\newcommand{\samerf}[1]{\textsf{samer}_{#1}}
+
+% ------------------------------------------------------------------------------
+% 11. Relational Separation Logic: Connectives and Hoare Quadruples
+% ------------------------------------------------------------------------------
 \newcommand{\rProp}{\textsf{rProp}}
 \newcommand{\purel}[1]{\ulcorner #1 \urcorner}
 \newcommand{\emp}{\textsf{emp}}
@@ -126,12 +178,17 @@
 \newcommand{\wand}{\mathrel{-\mkern-6mu\ast}}
 \newcommand{\ent}{\vdash}
 \newcommand{\boxm}{\Box}
-\newcommand{\ptrt}[2]{#1 \to_{\text{t}} #2}
-\newcommand{\ptrs}[2]{#1 \to_{\text{s}} #2}
-\newcommand{\freet}[1]{\textsf{free}_{\text{t}}\left(#1\right)}
-\newcommand{\frees}[1]{\textsf{free}_{\text{s}}\left(#1\right)}
-\newcommand{\meminj}[2]{\textsf{meminj}_{#2}\left(#1\right)}
-\newcommand{\sameargs}[3]{\textsf{same\_args}\left(#1, #2, #3\right)}
-\newcommand{\samer}[3]{\textsf{samer}\left(#1, #2, #3\right)}
 \newcommand{\hoareq}[4]{\{#1\}\; #2 \lesssim #3\; \{#4\}}
 \newcommand{\bigast}{\mathop{\raisebox{-2pt}{\Large$\ast$}}\displaylimits}
+
+% ------------------------------------------------------------------------------
+% 12. Transformations and Case Studies
+% ------------------------------------------------------------------------------
+\newcommand{\findnextpc}[3]{\textsf{find\_next\_pc}\left(#1, #2, #3\right)}
+\newcommand{\findnextpcf}{\textsf{find\_next\_pc}}
+\newcommand{\tunnelnop}[2]{\textsf{tunnel\_nop}\left(#1, #2\right)}
+\newcommand{\tunnelnopf}{\textsf{tunnel\_nop}}
+
+\newcommand{\fact}{\textsf{fact}}
+\newcommand{\factbad}{\textsf{fact\_bad}}
+\newcommand{\factgood}{\textsf{fact\_good}}

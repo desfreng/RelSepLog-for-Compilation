@@ -3,26 +3,352 @@
 \begin{document}
 
 \section{Case Studies}
+\label{sec:case-studies}
 
-% Proposed Length: 1.5 pages
-\subsection{Local \& Instruction-Level Optimizations}
-% Rocq verification of micro-optimizations in RTL/Optimisation/Simple.v:
-% 1. Loop Load Hoisting: hoisting invariant load instructions out of loop bodies.
-% 2. Redundant Check Elimination via UB: removing (isZ src) checks following division using source_op_exploit.
-% 3. Constant Propagation across Calls: framing constant register states across call boundaries.
-% 4. Lock-step proofs for simple instruction-level replacements.
+To evaluate the relational separation logic developed in this work,
+we present three case studies:
+a local transformation exploiting undefined behavior,
+a loop transformation hoisting an invariant load,
+and a control-flow optimization eliminating redundant jump chains.
 
-% Proposed Length: 1.5 pages
-\subsection{Global Control-Flow Optimizations: Branch Tunneling}
-% Rocq verification of Branch Tunneling in RTL/Optimisation/RemoveNop.v:
-% Optimization definition remove_nop_fun using fuel-based find_next_pc and redirect_instr.
-% Coinductive simulation invariant remove_nop_sim_inv parameterized by memory injection mem_inj I \emptyset.
-% Soundness proof theorem remove_nop_soundness mechanized with Iris tactics (iIntros, iApply, iFrame, iExists, iInduction).
+\subsection{Undefined Behavior Exploitation}
+\label{sec:case-study-ub}
+
+We begin with a local program transformation that eliminates a redundant
+zero-check after an arithmetic division.
+Consider the source and target code fragments in \cref{fig:case-study-ub}.
+
+\begin{figure}[htp]
+  \centering
+  \begin{equation*}
+    \begin{array}{r@{\;\colon\;}l c r@{\;\colon\;}l}
+      \multicolumn{2}{c}{\textbf{Source Program}}
+      & \hspace{2cm}
+      & \multicolumn{2}{c}{\textbf{Target Program}}
+      \\
+      \midrule
+      1 & \Iop{r_1}{\Odiv}{[r_n, r_d]}{2}
+      & \quad\implies\quad
+      & 1 & \Iop{r_1}{\Odiv}{[r_n, r_d]}{2}
+      \\
+      2 & \Iop{r_b}{\Oeqz}{[r_d]}{3}
+      &
+      & 2 & \Iop{r_b}{\Oimmbool{\false}}{}{3}
+      \\
+      3 & \dots
+      &
+      & 3 & \dots
+    \end{array}
+  \end{equation*}
+  \caption{Exploiting division undefined behavior to simplify a zero test.}
+  \label{fig:case-study-ub}
+\end{figure}
+
+In the source program,
+instruction 1 divides the content of $r_n$ by $r_d$,
+storing the quotient in $r_1$.
+Instruction 2 tests whether the divisor $r_d$ is zero via $\Oeqz$,
+storing the resulting boolean in $r_b$.
+In the target program,
+instruction 2 replaces this test with an immediate assignment of $\false$.
+
+The soundness of this transformation relies on the asymmetric nature of our
+simulation relation.
+When reasoning about instruction 1,
+we apply the rule \textsc{Source-Op-Exploit}.
+Because stuck source executions satisfy the simulation relation by
+\textsc{FSourceStuck},
+the rule provides the hypothesis that the operation succeeds:
+$\evalop{\Odiv}{[\rho_s(r_n), \rho_s(r_d)]} = \Some{v}$.
+Under our operational semantics,
+division succeeds only when the divisor $\rho_s(r_d) = \VInt{z_d}$
+satisfies $z_d \neq 0$.
+Assuming that target and source register banks agree initially,
+the target division executes identically,
+advancing both programs to $pc = 2$.
+
+At program point 2,
+the source program tests register $r_d$ for equality to zero.
+Because $\getreg{r_d}{\rho_s} = \VInt{z_d}$ with $z_d \neq 0$,
+this evaluation deterministically yields $\false$.
+In the target program,
+the immediate load executes via \textsc{Target-Op}
+and writes $\false$ into $r_b$ without inspecting $r_d$.
+Both programs reach $pc = 3$ in matching register and memory states,
+establishing the soundness of this transformation.
+
+\subsection{Load Hoisting}
+\label{sec:case-study-hoisting}
+
+We next examine a transformation hoisting a load out of a loop.
+\Cref{fig:fact-programs} displays two versions of a factorial function
+$\textsf{fact}(n, addr)$.
+The function initializes the memory cell at $addr$ to $1$,
+and computes the factorial of $n$.
+
+\begin{figure}[htp]
+  \centering
+  \begin{equation*}
+    \begin{array}{r@{\;\colon\;}l c r@{\;\colon\;}l}
+      \multicolumn{2}{c}{\textbf{Source Function } (\textsf{fact\_bad})}
+      & \hspace{2cm}
+      & \multicolumn{2}{c}{\textbf{Target Function } (\textsf{fact\_good})}
+      \\
+      \midrule
+      0 & \Iop{r_{res}}{\Oimmint{1}}{}{1}
+      &
+      & 0 & \Iop{r_{res}}{\Oimmint{1}}{}{1}
+      \\
+      1 & \Istore{r_{addr}}{r_{res}}{2}
+      &
+      & 1 & \Istore{r_{addr}}{r_{res}}{2}
+      \\
+      \multicolumn{2}{c}{}
+      &
+      & 2 & \Iop{r_{one}}{\Oimmint{1}}{}{3}
+      \\
+      2 & \Iop{r_{cond}}{\Oeqz}{[r_n]}{3}
+      &
+      & 3 & \Iop{r_{cond}}{\Oeqz}{[r_n]}{4}
+      \\
+      3 & \Icond{r_{cond}}{7}{4}
+      &
+      & 4 & \Icond{r_{cond}}{7}{5}
+      \\
+      4 & \Iop{r_{res}}{\Omul}{[r_{res}, r_n]}{5}
+      &
+      & 5 & \Iop{r_{res}}{\Omul}{[r_{res}, r_n]}{6}
+      \\
+      5 & \Iload{r_{one}}{r_{addr}}{6}
+      &
+      & \multicolumn{2}{c}{}
+      \\
+      6 & \Iop{r_n}{\Osub}{[r_n, r_{one}]}{2}
+      &
+      & 6 & \Iop{r_n}{\Osub}{[r_n, r_{one}]}{3}
+      \\
+      7 & \Iret{r_{res}}
+      &
+      & 7 & \Iret{r_{res}}
+    \end{array}
+  \end{equation*}
+  \caption{Source and target factorial functions illustrating load hoisting.}
+  \label{fig:fact-programs}
+\end{figure}
+
+In the unoptimized function \textsf{fact\_bad},
+the loop body performs a redundant heap load at $pc = 5$ on each iteration,
+reading the constant $1$ stored at $r_{addr}$ to decrement $r_n$.
+The optimized function \textsf{fact\_good} hoists the load into the prelude.
+It further replaces the memory access with an immediate assignment of $1$
+into register $r_{one}$.
+
+To prove the soundness of this transformation,
+we prove the following relational Hoare quadruple for all heap bijections $I$:
+\begin{equation}
+  \label{eq:hoisting-hoare}
+  \hoareq{\sameargsf{I}}{\textsf{fact\_good}}{\textsf{fact\_bad}}{\samerf{I}}
+\end{equation}
+where $\sameargsf{I}$ and $\samerf{I}$
+relate input arguments and return values under an extendable heap bijection:
+\begin{align*}
+  \sameargs{I}{\vec{v}_t}{\vec{v}_s}
+  & \coloneqq
+    \purel{\textsf{Forall2}(\sameval{I}{}{}, \vec{v}_t, \vec{v}_s)}
+    \sep \meminj{I}{\emptyset}
+  \\
+  \samer{I}{v_t}{v_s}
+  & \coloneqq
+    \exists I',\;
+    \purel{I \subseteq I'} \sep
+    \purel{\sameval{I'}{v_t}{v_s}} \sep
+    \meminj{I'}{\emptyset}
+\end{align*}
+The precondition $\sameargs{I}{\vec{v}_t}{\vec{v}_s}$
+asserts that input arguments are pairwise related under $I$,
+alongside an unexploited memory injection $\meminj{I}{\emptyset}$.
+The postcondition $\samer{I}{v_t}{v_s}$ guarantees that return values remain
+related under a monotonically extended bijection $I' \supseteq I$,
+with the memory injection $\meminj{I'}{\emptyset}$ fully restored.
+Allowing the bijection to grow monotonically accounts for any fresh memory
+allocations performed during execution.
+
+The proof of \cref{eq:hoisting-hoare} begins by stepping through the prelude.
+Both programs initialize $r_{res}$ to $1$.
+Applying \textsc{Source-Store-Exploit} extracts $(l_t, l_s)$ from
+$\meminj{I}{\emptyset}$,
+yielding $\ptrs{l_s}{\VInt{1}}$ and advancing the source to $pc_s = 2$.
+Applying \textsc{Target-Store} then executes the target store,
+producing $\ptrt{l_t}{\VInt{1}}$.
+Finally,
+the target initializes $r_{one}$ via \textsc{Target-Op}
+and reaches $pc_t = 3$,
+establishing the following loop invariant:
+\begin{itemize}
+  \item The target program is executing \textsf{fact\_good}
+        at program counter $pc_t = 3$ with register bank $\rho_t$.
+  \item The source program is executing \textsf{fact\_bad}
+        at program counter $pc_s = 2$ with register bank $\rho_s$.
+  \item The register banks agree on the counter and accumulator:
+        $\sameval{I}{\rho_t(r_n)}{\rho_s(r_n)}$
+        and $\sameval{I}{\rho_t(r_{res})}{\rho_s(r_{res})}$.
+  \item The registers $r_{addr}$ hold related pointer values:
+        $\rho_t(r_{addr}) = \VPtr{l_t}$
+        and $\rho_s(r_{addr}) = \VPtr{l_s}$
+        with $(l_t, l_s) \in I$.
+  \item The target register $r_{one}$ holds the constant $\VInt{1}$
+        in $\rho_t$.
+  \item The memory state satisfies
+        $\ptrt{l_t}{\VInt{1}} \sep \ptrs{l_s}{\VInt{1}} \sep
+        \meminj{I}{\{ (l_t, l_s) \}}$,
+        isolating the hoisted cell $(l_t, l_s)$
+        while the remaining heap is governed by the injection.
+\end{itemize}
+
+The proof then proceeds by coinduction,
+evaluating the zero-test $\Oeqz(r_n) = b$
+synchronously in both programs:
+\begin{description}
+  \item[Base case ({\normalfont $b = \true$}):]
+        Both programs branch to the return instruction at $pc = 7$.
+        The points-to assertions
+        $\ptrt{l_t}{\VInt{1}} \sep \ptrs{l_s}{\VInt{1}}$
+        are returned to the memory injection via the reintegration lemma,
+        restoring $\meminj{I}{\emptyset}$.
+        Both programs execute $\Iret{r_{res}}$,
+        satisfying the postcondition $\samerf{I}$ with $I' = I$.
+
+  \item[Step case ({\normalfont $b = \false$}):]
+        Both programs execute the multiplication
+        $r_{res} \coloneqq r_{res} \times r_n$.
+        At source $pc_s = 5$,
+        the source load $r_{one} \coloneqq {!r_{addr}}$ executes via
+        \textsc{Source-Load}
+        directly from $\ptrs{l_s}{\VInt{1}}$
+        without requiring memory exploitation.
+        Both programs then decrement $r_n \coloneqq r_n - r_{one}$,
+        preserving register agreement,
+        and branch back to the loop headers ($pc_t = 3$ and $pc_s = 2$).
+        This re-establishes the invariant,
+        closing the case by the coinductive hypothesis.
+\end{description}
+
+\subsection{Nop Tunneling}
+\label{sec:case-study-nop}
+
+We now consider an optimization on arbitrary control-flow graphs:
+nop tunneling.
+Intermediate compiler passes frequently introduce redundant jump
+instructions ($\Inop{pc}$).
+A sequence of consecutive jumps forms a \emph{nop chain}:
+\begin{equation*}
+  pc_0 \to pc_1 \to pc_2 \to \dots \to pc_k \to pc_{\text{final}}
+\end{equation*}
+where each node $pc_m$ ($0 \leqslant m < k$) contains $\Inop{pc_{m+1}}$,
+and $pc_{\text{final}}$ is the first non-nop instruction.
+Nop tunneling short-circuits these chains by redirecting branch targets
+directly to $pc_{\text{final}}$,
+reducing instruction count and eliminating superfluous jump overhead.
+
+The transformation is defined in Rocq over an arbitrary RTL function $f$.
+To ensure termination,
+even in the presence of cyclic jump chains
+(such as an infinite loop $pc \colon \Inop{pc}$),
+the computation of the final successor of an instruction at $pc$
+is parameterized by a recursion depth $d \in \mathbb{N}$:
+\begin{equation*}
+  \begin{aligned}
+    \findnextpc{0}{f}{pc}
+    & \coloneqq pc \\
+    \findnextpc{1 + d}{f}{pc}
+    & \coloneqq
+      \begin{cases}
+        \findnextpc{d}{f}{pc'}
+        & \text{if } \pcatis{f}{pc}{\Inop{pc'}}
+        \\
+        pc
+        & \text{otherwise}
+      \end{cases}
+  \end{aligned}
+\end{equation*}
+The optimization $\tunnelnop{d}{f}$ maps $\findnextpcf$
+over every instruction in the control-flow graph of $f$,
+redirecting each successor label $pc$ to
+$\findnextpc{d}{f}{pc}$.
+The function entry point is updated in the same manner.
+To establish the soundness of nop tunneling for an arbitrary function $f$,
+we prove the following relational Hoare quadruple for all depths $d$
+and heap bijections $I$:
+\begin{equation}
+  \label{eq:nop-hoare}
+  \hoareq{\sameargsf{I}}{\tunnelnop{d}{f}}{f}{\samerf{I}}
+\end{equation}
+The proof relies on a coinductive simulation invariant.
+Given a fixed initial fuel $depth$,
+the invariant asserts that at any step of execution:
+\begin{itemize}
+  \item The target program is executing the optimized function
+        $\tunnelnop{depth}{f}$ at program counter $pc_t$
+        with register bank $\rho_t$.
+  \item The source program is executing the original function $f$
+        at program counter $pc_s$ with register bank $\rho_s$.
+  \item The target program counter is the tunneled successor of the source
+        program counter with remaining fuel $d$:
+        $pc_t = \findnextpc{d}{f}{pc_s}$.
+  \item The register banks agree on all registers:
+        $\forall r,\; \sameval{I}{\rho_t(r)}{\rho_s(r)}$.
+  \item The memory heaps are fully synchronized under a monotone bijection $I$:
+        $\meminj{I}{\emptyset}$.
+\end{itemize}
+
+The proof of \cref{eq:nop-hoare} proceeds by coinduction
+followed by an inner induction on the remaining fuel $d$:
+\begin{description}
+  \item[Base case ($d = 0$):]
+        When fuel is exhausted,
+        $\findnextpc{0}{f}{pc_s} = pc_s$,
+        so $pc_t = pc_s$.
+        The target and source are positioned at identical program points.
+        By case analysis on the instruction at $pc_s$,
+        both programs progress in lockstep for each instruction kind.
+        The next target program counter is the redirected label
+        $\findnextpc{depth}{f}{pc_s'}$,
+        which re-establishes the invariant with full fuel $d = depth$.
+        The coinductive hypothesis closes this case.
+
+  \item[Inductive step ($d > 0$):]
+        We inspect the source instruction at $pc_s$:
+        \begin{itemize}
+          \item If $pc_s$ maps to a jump $\Inop{pc_s'}$,
+                then $\findnextpc{1 + d'}{f}{pc_s} =
+                \findnextpc{d'}{f}{pc_s'}$.
+                The source executes the jump via \textsc{Source-Nop},
+                advancing to $pc_s'$.
+                The target remains at $pc_t$.
+                The inner induction hypothesis on $d'$ concludes this case.
+
+          \item If $pc_s$ does not refer to a jump instruction,
+                $\findnextpc{1 + d'}{f}{pc_s} = pc_s$,
+                so $pc_t = pc_s$.
+                As in the base case,
+                target and source progress in lockstep,
+                resetting fuel to $depth$ for successors.
+                The coinductive hypothesis closes this case.
+        \end{itemize}
+\end{description}
+
+When verifying function call instructions,
+the proof applies the synchronous \textsc{Both-Call} rule.
+Because the coinductive invariant is parameterized
+over arbitrary RTL functions,
+it can be instantiated directly for the callee.
+Therefore,
+the relational Hoare quadruple required by \textsc{Both-Call}
+is discharged without additional lemmas.
+This illustrates the modularity of our relational separation logic:
+function-level optimizations are verified in isolation
+and compose cleanly across whole-program call graphs.
 
 \end{document}
-
-% Local Variables:
-% TeX-engine: luatex
-% End:
 
 % LocalWords:  Coinductive coinductive asymmetricity arities

@@ -53,7 +53,7 @@ for instance after nested loop exchanges.
 Recent advances in formal verification address these shortcomings.
 Modern coinductive simulation techniques,
 such as those developed by \textcite{cho-23-stuttering}
-in the \emph{Stuttering For Free} framework
+in the \emph{Stuttering for Free} framework
 or implemented by \textcite{xia-20-itrees}
 within the \emph{Interaction Trees} library,
 simplify the reasoning about program pairs
@@ -78,7 +78,7 @@ within an idealized framework.
 \subsection*{Research Problem}
 
 This internship investigates whether recent developments
-in simulations relations and separation logic
+in simulation relations and separation logic
 can be integrated into a unified relational separation logic framework.
 To our knowledge,
 no existing verified compiler incorporates a relational separation logic
@@ -96,7 +96,7 @@ We developed a logical framework addressing the objectives of this internship.
 At its core,
 the framework relies on a coinductive simulation relation
 capable of matching execution steps of programs with different control flow.
-The simulation used is skewed,
+The simulation used is skewed:
 it permits exploiting undefined behaviors in the source program
 to enable further target-level optimizations.
 This simulation serves as the foundation of our verification framework,
@@ -136,7 +136,7 @@ execute matching instructions at the same time.
 \subsection*{Arguments Supporting Its Validity}
 
 We evaluated our framework by proving the correctness
-of two program transformations.
+of three program transformations.
 The first one is a branch tunneling pass that eliminates redundant control-flow jumps
 by collapsing chains of intermediate nodes.
 The second one is an instruction-level optimization pass that removes statically known
@@ -178,22 +178,19 @@ A second direction involves supporting multi-language verification.
 Our framework is parameterized to relate distinct source and target languages
 across translation passes,
 but the present formalization operates on a single intermediate language.
-Future effort will test the limit of our framework when translating
+Future effort will test the limits of our framework when translating
 programs from one language to another.
 
 Finally,
 we aim to increase the expressiveness of the underlying languages.
 While our logic already accommodates nondeterminism,
 it is not present in our current semantics of RTL.
-We plan to add it to work toward a language semantics with concurrent execution features.
+We plan to extend our language semantics with it
+to work toward concurrent execution features.
 Additionally,
 extending the framework from imperative languages to functional paradigms
 represents another potential direction for future work.
 
 \end{document}
-
-% Local Variables:
-% TeX-engine: luatex
-% End:
 
 % LocalWords:  Coinductive coinductive asymmetricity arities

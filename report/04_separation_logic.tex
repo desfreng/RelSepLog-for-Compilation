@@ -43,8 +43,8 @@ Iris provides expressive mechanisms for higher-order concurrent reasoning,
 including step-indexed models,
 higher-order ghost state,
 and user-defined resource algebras.
-For our setting these advanced
-features are not needed.
+For our setting,
+these advanced features are not needed.
 Instead,
 we formalize our relational separation logic directly
 as a shallow embedding in Rocq.
@@ -58,7 +58,7 @@ By convention,
 the first argument denotes the target memory $m_t$,
 and the second argument denotes the source memory $m_s$.
 An assertion $P \in \rProp$ represents a predicate that
-express ownership over the memory footprints of both programs,
+expresses ownership over the memory footprints of both programs,
 specifying the contents of sub-heaps of the target and source.
 
 \begin{figure}[htb]
@@ -93,8 +93,8 @@ specifying the contents of sub-heaps of the target and source.
     $P \sep Q$
     & $\begin{aligned}[t]
       \lambda m_t\, m_s.\; \exists m_t^P m_t^Q m_s^P m_s^Q,\;
-      & m_t = m_t^P \uplus m_t^Q \land m_s = m_s^P \uplus m_s^Q \land {} \\
-      & P(m_t^P, m_s^P) \land Q(m_t^Q, m_s^Q)
+      & m_t = m_t^P \uplus m_t^Q \land m_s = m_s^P \uplus m_s^Q  \\
+      & {} \land P(m_t^P, m_s^P) \land Q(m_t^Q, m_s^Q)
       \end{aligned}$
     & Separating conjunction \\
     $P \wand Q$
@@ -150,7 +150,7 @@ $P \sep Q \ent P$.
 In our linear formulation,
 proving $P \ent Q$ guarantees that every memory cell described by $P$
 is accounted for in $Q$.
-This strict resource forbid any memory leak.
+This strict resource discipline forbid any memory leak.
 
 To preserve the interactive proof engineering benefits of the
 Iris Proof Mode (MoSeL)~\parencite{krebbers-18-mosel},
@@ -258,10 +258,11 @@ and the exploited set $E$ is primarily governed by three lemmas:
         When allocating fresh memory cells,
         the fresh pair of addresses $(l_t, l_s)$
         can be added to the memory injection
-        provided their value are related by $\sameval{I}{}{}$.
+        provided their values are related by $\sameval{I}{}{}$.
 \end{itemize}
 
 \subsection{Relational Hoare Quadruples}
+\label{sec:rel-hoare}
 
 By combining the free simulation with relational separation logic,
 we define relational Hoare quadruples.
@@ -280,7 +281,15 @@ The formal definition is given by:
   \end{aligned}
 \end{equation*}
 where $P$ is a precondition relating the target and source argument vectors,
-and $Q$ is a postcondition refering to the returned values.
+and $Q$ is a postcondition referring to the returned values.
+The simulation is here lifted to an assertion in $\rProp$:
+\begin{equation*}
+  \fsim{t}{j}{i}{s}{\Phi}
+  \coloneqq
+  \lambda m_t\, m_s.\;
+  \fsim{(t, m_t)}{j}{i}{(s, m_s)}{\Phi}
+\end{equation*}
+
 
 The meaning of this quadruple is given by the free simulation:
 whenever the initial function arguments and heap states satisfy
@@ -293,16 +302,12 @@ the target execution diverges as well.
 If the source execution reaches a stuck state,
 the simulation relation grants the compiler complete freedom.
 
-The definition of the Hoare quadruple is enclosed guarded by a persistent modality $\boxm$
-to guaranty that the specification holds independently of heap ownership.
+The definition of the Hoare quadruple is guarded by a persistent modality $\boxm$
+to guarantee that the specification holds independently of heap ownership.
 As a consequence,
 a verified quadruple constitutes a duplicable resource that can be reused
 across multiple call sites throughout the program.
 
 \end{document}
-
-% Local Variables:
-% TeX-engine: luatex
-% End:
 
 % LocalWords:  Coinductive coinductive asymmetricity arities

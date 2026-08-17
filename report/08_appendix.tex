@@ -47,6 +47,80 @@ The proof proceeds by coinduction on the \emph{bisimilarity} relation:
         This immediately concludes the proof.
 \end{enumerate}
 
+\section{Free Simulation Example}
+\label{app:free-sim-example}
+
+To illustrate how the free simulation operates in practice,
+we consider a small imperative language with commands
+$\mathtt{skip} \mid c_1 ; c_2 \mid \mathtt{while}\; b\; \{ c \} \mid \mathtt{ret}\; v$,
+where $\mathtt{ret}\; v$ is a terminal configuration.
+The small-step reduction relation $c \twoheadrightarrow c'$ is defined by:
+\begin{align*}
+  \mathtt{skip} ; c
+  & \twoheadrightarrow c
+  \\
+  \mathtt{while}\; b\; \{ c \} ; k
+  & \twoheadrightarrow c ; \mathtt{while}\; b\; \{ c \} ; k
+  && (\text{if } b = \mathtt{true})
+  \\
+  \mathtt{while}\; b\; \{ c \} ; k
+  & \twoheadrightarrow k
+  && (\text{if } b = \mathtt{false})
+\end{align*}
+We instantiate the index domains with the natural numbers,
+$I = J = (\mathbb{N}, <)$,
+and define the target and source programs:
+\begin{align*}
+  P_t
+  & \coloneqq
+    \mathtt{while}\; (b)\; \{\mathtt{skip}\} ; \mathtt{ret}\; () \\
+  P_s
+  & \coloneqq
+    \mathtt{while}\; (b)\; \{\mathtt{skip} ; \mathtt{skip} ; \mathtt{skip}\} ;
+    \mathtt{ret}\; ()
+\end{align*}
+We wish to prove that $\fsim{P_t}{0}{0}{P_s}{=}$.
+We proceed by coinduction on the free simulation.
+This gives us the following coinductive hypothesis:
+\begin{equation*}
+  \forall j > 0,\; \forall i > 0,\quad \fsim{P_t}{j}{i}{P_s}{=}.
+\end{equation*}
+We then perform case analysis on the boolean condition $b$:
+\begin{itemize}
+  \item If $b = \mathtt{false}$,
+        both programs exit their loops in a single step:
+        $P_t \twoheadrightarrow \mathtt{ret}\; ()$
+        and $P_s \twoheadrightarrow \mathtt{ret}\; ()$.
+        Applying \textsc{FTargetSteps} and \textsc{FSourceSteps},
+        both configurations reach $\mathtt{ret}\; ()$,
+        which are final values returning $()$.
+        The goal is thus closed immediately by \textsc{FRelated}.
+
+  \item If $b = \mathtt{true}$,
+        using \textsc{FTargetSteps} the target loop unrolls:
+        $P_t \twoheadrightarrow \mathtt{skip} ; P_t$,
+        and the target index is updated to $j = 1$.
+        Again with \textsc{FTargetSteps},
+        the target reduces:
+        $\mathtt{skip} ; P_t \twoheadrightarrow P_t$,
+        and the target index is increased to $j = 2$.
+        The simulation goal becomes $\fsim{P_t}{2}{0}{P_s}{=}$.
+
+        The source loop then executes four steps:
+        first,
+        $P_s \twoheadrightarrow \mathtt{skip} ; \mathtt{skip} ; \mathtt{skip} ; P_s$,
+        updating the source index to $i = 1$
+        via \textsc{FSourceSteps};
+        next,
+        three successive applications of \textsc{FSourceSteps}
+        consume the three $\mathtt{skip}$ statements,
+        yielding index $i = 4$
+        and state $P_s$.
+        The simulation goal becomes $\fsim{P_t}{2}{4}{P_s}{=}$.
+
+        Having accumulated positive progress indices ($0 < 2$ and $0 < 4$),
+        we can apply the coinductive hypothesis to conclude the proof.
+\end{itemize}
 
 The complete derivation tree for the loop iteration case ($b = \mathtt{true}$)
 is displayed in \cref{fig:free-sim-example-derivation}.
@@ -69,12 +143,12 @@ is displayed in \cref{fig:free-sim-example-derivation}.
   \label{fig:free-sim-example-derivation}
 \end{figure}
 
+As illustrated by this example,
+the source and target programs can execute
+arbitrary numbers of asynchronous steps,
+at whatever pace is convenient,
+until matching invariants are reached.
 
-% Appendix ideam details the definition of meminj and its lemmas
 \end{document}
-
-% Local Variables:
-% TeX-engine: luatex
-% End:
 
 % LocalWords:  Coinductive coinductive asymmetricity arities

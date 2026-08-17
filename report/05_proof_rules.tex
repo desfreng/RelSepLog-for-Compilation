@@ -4,113 +4,285 @@
 
 \section{RTL Proof Rules}
 
-We have everything we need to
-prove things.
-- A simulation,
-- A logic,
-- A language.
-
-We can now extract from all of the above reasonings
-rules to conduct transformations soundness proofs.
+Having established a simulation relation,
+the semantics of the Register Transfer Language,
+and a separation logic over pairs of memories,
+we combine these components into a relational proof system.
+To facilitate the verification of code transformations,
+we establish a structured collection of relational proof rules
+operating directly on the simulation judgment $\fsim{t}{j}{i}{s}{\Phi}$.
+These rules are all proved sound with respect to the simulation relation
+and the RTL semantics.
 
 \subsection{Asynchronous Rules}
 
-Our simulation decouple the stepping of the Source and of the Target.
-So the rules are calls asynchronous, one stepping does nothing on the other.
+Our simulation relation decouples the execution of the target program
+from that of the source program.
+This separation yields asynchronous proof rules that advance one program
+while keeping the configuration of the other fixed.
 
-Moreover, in the simulation target and source are treated differently:
-- target is demonic. You need to consider all the next steps.
-- source is angelic. You choose which step to look at.
+Target proof rules express the conditions under which the target program
+can execute an instruction.
+The rules governing target execution of allocations and operations
+are displayed in \cref{fig:target-rules}.
+The source stepping rules mirror the target rules,
+operating on the source program counter,
+source registers,
+and source memory assertions.
 
-This translate in two set of rules:
+\begin{figure}[htp]
+  \centering
+  \begin{gather*}
+    \begin{prooftree}
+      \hypo{
+        \begin{matrix}
+          \evalop{\textsf{op}}{\vec{v}} = \Some{v}
+          \\[.2em]
+          \pcatis{f_t}{pc_t}{\Iop{dst}{\textsf{op}}{\vec{r}}{pc}}
+        \end{matrix}
+      }
+      \hypo{
+        \begin{matrix}
+          \getreg{\vec{r}}{\rho_t} = \vec{v}
+          \\[.2em]
+          \fsim{(\sigma_t, \State{f_t}{pc}{\setreg{dst}{v}{\rho_t}})}
+          {j'}{i}{s_s}{\Phi}
+        \end{matrix}
+      }
+      \infer2[\textsc{Target-Op}]{
+        \fsim{(\sigma_t, \State{f_t}{pc_t}{\rho_t})}{j}{i}{s_s}{\Phi}
+      }
+    \end{prooftree}
+    \\[1em]
+    \begin{prooftree}
+      \hypo{
+        \begin{matrix}
+          \pcatis{f_t}{pc_t}{\Ialloc{dst}{pc}}
+          \\[.2em]
+          \forall l\, v,\;
+          \ptrt{l}{v} \wand
+          \fsim{(\sigma_t, \State{f_t}{pc}{\setreg{dst}{\VPtr{l}}{\rho_t}})}
+          {j'}{i}{s_s}{\Phi}
+        \end{matrix}
+      }
+      \infer1[\textsc{Target-Alloc}]{
+        \fsim{(\sigma_t, \State{f_t}{pc_t}{\rho_t})}{j}{i}{s_s}{\Phi}
+      }
+    \end{prooftree}
+  \end{gather*}
+  \caption{
+    Asynchronous rules for the allocation and operations instruction in target program.
+  }
+  \label{fig:target-rules}
+\end{figure}
 
-The Targets Rules.
-They are simple.
-For each state on the target,
-they express in our relation logic what should be true
-to step to the current expression.
-the rules are given in figure ...
-
-% Figure ...
-% all the rule of the target  using ebproofs.
-% use the \fsim macro and all the separation logic macros too.
-
-The Source Rules.
-The standard rules
-are very similar to those expressed in the Target.
-See figure ...
-
-% Figure ...
-% all the rule of the source using ebproofs.
-% use the \fsim macro and all the separation logic macros too.
-
-A small difference: The non determinism of the allocation !
-In the source, we can chose the value stored in the cell (angelic!)
-but in the target, we only know that a value is stored in the cell,
-and no more (demonic!)
+A key semantic difference between target and source execution appears
+in the allocation rule \textsc{Target-Alloc} versus \textsc{Source-Alloc}.
+In our operational semantics,
+allocating a fresh memory cell non-deterministically initializes its content
+with an arbitrary value.
+Because the target is demonic,
+the continuation in \textsc{Target-Alloc} must hold universally for
+\emph{all} possible fresh locations $l$ and all initial values $v$.
+In contrast,
+because the source is angelic,
+when applying \textsc{Source-Alloc},
+the value of the allocated memory cell may be chosen existentially:
+\begin{equation*}
+  \begin{prooftree}
+    \hypo{
+      \begin{matrix}
+        v \in \val
+        \\[.2em]
+        \pcatis{f_s}{pc_s}{\Ialloc{dst}{pc}}
+        \\[.2em]
+        \forall l,\;
+        \ptrs{l}{v} \wand
+        \fsim{s_t}{j}{i'}
+        {(\sigma_s, \State{f_s}{pc}{\setreg{dst}{\VPtr{l}}{\rho_s}})}
+        {\Phi}
+      \end{matrix}
+    }
+    \infer1[\textsc{Source-Alloc}]{
+      \fsim{s_t}{j}{i}{(\sigma_s, \State{f_s}{pc_s}{\rho_s})}{\Phi}
+    }
+  \end{prooftree}
+\end{equation*}
 
 \subsection{Undefined Behavior Exploitation}
 
-Remember of the simulation.
-Is the source is stuck, then the simulation trivial holds.
-This thing can give us information !
-Indeed, to prove that $\fsim{t}{i}{j}{s}{\Phi}$ holds,
-knowing that s will execute an arithmetic op,
-then 2 cases are possible:
-- either this op fails. In this case EASY !:
-the source is stuck, and so the simulation holds.
-- either this op is successful.
-And you need to prove that the simulation holds knowing that this op is successful.
-
-So this lead to a family of exploit rules, see in fig ...
-
-% Figure ...
-% all the exploit rule of the source using ebproofs (with the exploited set empty).
-% use the \fsim macro and all the separation logic macros too.
-
-A small notes on memory rules.
-in separation logic,
-unless by allocation,
-you can't just make appear ressouces.
-So the exploit rules have a different approach:
-They require the memory bijection as argument
-and also a proof that the argument of the operation
-are related (and so, if they are pointers, then they are in the memory bijection)
-
-The exploit here consist on:
-- Knowing that the values are indeed pointers.
-- Using the meminj exploit this pair of location
-- And so doing the memory operation.
-
-So for the load, store and free,
-this give the fact that the pointers could only be alive in the meminj.
-After the step, if not a free, the pointer is still alive.
-Because the used pair is marked as exploited now,
-The user is responsible to put them back in the injection.
-
-
-\subsection{Synchronous Rule}
-
-Okay, this is cool because is open the way to
-synchronous rules with low requirements.
-
-We can merge the source exploit rules,
-with next the target rules with what we learn for the source
-and the restore the meminj automatically because the
-two program has made the ``same'' things.
-
+By the \textsc{FSourceStuck} rule, our free simulation is skewed.
+When the source program reaches a configuration from which no further
+transition is possible without being in a final state,
+the simulation property $\fsim{t}{j}{i}{s}{\Phi}$ holds directly.
+This property provides a powerful proof technique:
+whenever the source program is about to perform an operation,
+we can safely assume that the operation succeeds.
+If the operation were to fail,
+the source would be stuck,
+and the proof obligation would be instantly discharged.
 For instance,
-the both load and both store rules.
+the exploit rule \textsc{Source-Op-Exploit} allows the proof to assume
+that the operation succeeds and produces a value $v$:
+\begin{equation*}
+  \begin{prooftree}
+    \hypo{
+      \begin{matrix}
+        \getreg{\vec{r}}{\rho_s} = \vec{v}
+        \\[.2em]
+        \pcatis{f_s}{pc_s}{\Iop{dst}{\textsf{op}}{\vec{r}}{pc}}
+        \\[.2em]
+        \forall v,\;
+        \purel{\evalop{\textsf{op}}{\vec{v}} = \Some{v}}
+        \wand
+        \fsim{s_t}{j}{1+i}
+        {(\sigma_s, \State{f_s}{pc}{\setreg{dst}{v}{\rho_s}})}
+        {\Phi}
+      \end{matrix}
+    }
+    \infer1[\textsc{Source-Op-Exploit}]{
+      \fsim{s_t}{j}{i}{(\sigma_s, \State{f_s}{pc_s}{\rho_s})}{\Phi}
+    }
+  \end{prooftree}
+\end{equation*}
 
-Then the big one,
-the 
+\subsection{Exploiting Memory Operations}
 
+In separation logic,
+memory resources cannot be obtained without explicit allocation.
+However,
+when programs manipulate values related through a memory injection
+$\meminj{I}{E}$,
+heap assertions can be extracted directly
+from the global injection invariant.
 
+Suppose the source program is going
+to execute a load on an address $addr_s$
+that is related to a target address through $\sameval{I}{addr_t}{addr_s}$.
+Two deductions follow:
+\begin{enumerate}
+  \item \textbf{Pointer validity:}
+        If $addr_s$ is not a valid pointer $\VPtr{l_s}$,
+        the source memory access fails and becomes stuck.
+        Therefore,
+        from the relation $\sameval{I}{addr_t}{addr_s}$,
+        we deduce that $addr_s = \VPtr{l_s}$ and $addr_t = \VPtr{l_t}$
+        with $(l_t, l_s) \in I$.
+  \item \textbf{Active status:}
+        Opening the memory injection $\meminj{I}{\emptyset}$
+        via the exploitation lemma reveals that the cell pair $(l_t, l_s)$
+        is either actively allocated or already freed.
+        However,
+        if the location were freed,
+        attempting a load in the source would produce undefined behavior.
+        Thus,
+        the freed case is instantly discharged,
+        and the cell is guaranteed to be currently allocated.
+\end{enumerate}
+
+Because we exploited the location pair $(l_t, l_s) \in I$,
+the set $E$ in the returned memory injection is augmented.
+This reasoning is formalized in the rule \textsc{Source-Load-Exploit}
+shown in \cref{fig:source-load-exploit}.
+Similar exploitation principles apply to the remaining memory operations.
+
+\begin{figure}[htp]
+  \begin{equation*}
+    \begin{prooftree}
+      \hypo{
+        \begin{matrix}
+          \pcatis{f_s}{pc_s}{\Iload{dst}{src}{pc}}
+          \\[.2em]
+          {
+          \getreg{src}{\rho_s} = addr_s
+          \qquad
+          \sameval{I}{addr_t}{addr_s}
+          \qquad
+          \meminj{I}{\emptyset}
+          }
+          \\[.2em]
+          \left(
+          \begin{array}{@{}l@{}}
+            \forall l_t\, l_s\, v_t\, v_s,\;
+            addr_s = \VPtr{l_s} \land
+            addr_t = \VPtr{l_t} \implies {}
+            \\
+            \hspace{5em}
+            \ptrt{l_t}{v_t} \sep
+            \ptrs{l_s}{v_s} \sep
+            \purel{\sameval{I}{v_t}{v_s}} \sep
+            \meminj{I}{\{ (l_t, l_s)\}} \wand {}
+            \\
+            \hspace{5em}
+            \fsim{s_t}{j}{i'}
+            {(\sigma_s, \State{f_s}{pc}{\setreg{dst}{v_s}{\rho_s}})}{\Phi}
+          \end{array}
+          \right)
+        \end{matrix}
+      }
+      \infer1[\textsc{Source-Load-Exploit}]{
+        \fsim{s_t}{j}{i}{(\sigma_s, \State{f_s}{pc_s}{\rho_s})}{\Phi}
+      }
+    \end{prooftree}
+  \end{equation*}
+  \caption{Memory exploitation rule for source load instructions.}
+  \label{fig:source-load-exploit}
+\end{figure}
+
+\subsection{Synchronous Rules}
+
+While asynchronous and exploit rules provide flexibility for transformations
+that reorder or eliminate instructions,
+many compiler passes preserve the overall control flow of the program.
+For such passes,
+stepping target and source programs independently introduces redundant
+bookkeeping.
+By composing source exploit rules with target stepping rules,
+we obtain synchronous rules that execute matching instructions
+in lockstep.
+
+This is notably the case when reasoning about synchronous function calls.
+To ensure modularity,
+we avoid explicitly stepping through the execution of callee bodies.
+Instead,
+we rely on the Hoare quadruples introduced in \cref{sec:rel-hoare}.
+The synchronous call rule \textsc{Both-Call} enables replacing a pair of
+matching function calls by their relational specification.
+Its structure highlights the core benefits of our relational separation logic.
+
+Suppose both programs are about to execute a call:
+\begin{itemize}
+  \item the target calls function $f_t'$ with argument values $\vec{v}_t$,
+        where $\pcatis{f_t}{pc_t}{\Icall{dst_t}{f_t'}{\vec{a}_t}{pc_t'}}$
+        and $\getreg{\vec{a}_t}{\rho_t} = \vec{v}_t$;
+  \item the source calls function $f_s'$ with argument values $\vec{v}_s$,
+        where $\pcatis{f_s}{pc_s}{\Icall{dst_s}{f_s'}{\vec{a}_s}{pc_s'}}$
+        and $\getreg{\vec{a}_s}{\rho_s} = \vec{v}_s$;
+  \item a relational specification $\hoareq{P}{f_t'}{f_s'}{Q}$
+        has already been established for the called functions.
+\end{itemize}
+
+Under these conditions,
+the \textsc{Both-Call} rule proceeds as follows:
+\begin{enumerate}
+  \item The caller must prove that current heap resources satisfy
+        the relational precondition $P(\vec{v}_t, \vec{v}_s)$.
+  \item Instead of stepping through the internal instructions of $f_t'$
+        and $f_s'$,
+        the rule bypasses the callee bodies entirely.
+  \item Execution resumes at the return points $pc_t'$ and $pc_s'$
+        with the destination registers updated with return values,
+        satisfying the postcondition $Q(v_t, v_s)$.
+\end{enumerate}
+
+Because Hoare quadruples are enclosed in the persistent modality,
+they represent duplicable specifications
+that can be verified once per function,
+and reused across arbitrarily many call sites.
+This provides horizontal modularity:
+functions in a program can be compiled and verified independently,
+and their correctness guarantees compose cleanly through \textsc{Both-Call}.
 
 \end{document}
-
-% Local Variables:
-% TeX-engine: luatex
-% End:
 
 % LocalWords:  Coinductive coinductive asymmetricity arities

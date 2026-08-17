@@ -3,46 +3,140 @@
 \begin{document}
 
 \section{Related Work}
+\label{sec:related-work}
 
-% Proposed Length: 0.25 pages
-\subsection{Verified Compilers \& Simulation Frameworks}
-% Comparison with CompCert (Leroy) and CakeML (Tan et al.).
-% Contrasting traditional explicit-measure stuttering with coinductive step-indexed simulation in Rocq.
+We compare our approach with existing verified compilers,
+simulation techniques,
+and relational separation logics.
 
-% This leads to the \emph{safe backward simulation} property:
-% \begin{equation*}
-%   \Safe{s} \implies \forall b \in t, \, b \in s
-% \end{equation*}
-% \emph{Safe backward simulation} ensures specification preservation
-% whenever the source program is safe,
-% while granting the compiler freedom
-% to remove undefined operations in unsafe programs.
+\subsection{Verified Compilers}
+\label{sec:related-compilers}
 
-% In contrast to backward simulation,
-% a forward simulation asserts that every source behavior
-% is reproduced by the target program: $\forall b, b \in s \implies b \in t$.
-% Forward simulation can similarly be restricted to safe executions.
-% Forward simulations are often easier to prove in practice,
-% as reasoning proceeds along the execution steps of the source program.
+\paragraph{Non-Determinism}
+CompCert~\parencite{leroy-09-compcert} is a verified C compiler
+that establishes correctness by proving forward simulation diagrams
+for each compilation phase.
+When the target language is deterministic,
+a forward simulation implies a backward simulation,
+which guarantees semantic preservation.
+However,
+concurrent extensions such as CompCertTSO~\parencite{sevcik-11-compcerttso}
+introduce non-determinism into target executions,
+requiring backward simulations to be established directly.
+CakeML~\parencite{kumar-14-cakeml,tan-19-cakeml} avoids this complication
+by enforcing determinism throughout its source semantics
+and intermediate representations,
+disallowing concurrency and internal non-deterministic choice.
+In our framework,
+we directly establish a safe backward simulation.
+This enables our system to accommodate internal non-determinism
+in the target language.
+Nevertheless,
+our current RTL operational semantics features only limited non-determinism,
+specifically fresh memory allocation,
+with no support for concurrent primitives.
 
-% When both the source and target languages are deterministic,
-% forward simulation and backward simulation coincide.
-% This is how CompCert guarantees the specification preservation property.
-% It exploits target determinism to derive backward simulation
-% from a forward simulation proof.
-% However,
-% because our framework aims to accommodate non-deterministic execution,
-% we directly target a safe backward simulation property.
+\paragraph{Stuttering}
+CompCert handles stuttering by indexing simulation relations
+with an explicit well-founded order,
+which must strictly decrease on stuttering steps.
+CakeML uses a fuel-indexed operational semantics.
+Because evaluation in CakeML is deterministic,
+semantic preservation is established by case analysis
+on the existence of a sufficient fuel value to reach termination.
+In our approach,
+we address stuttering coinductively through
+a free simulation relation~\parencite{cho-23-stuttering}.
+This formulation avoids constructing explicit well-founded metrics
+or managing fuel bounds.
+
+\paragraph{Memory Models}
+CompCert uses a block-based memory model~\parencite{leroy-08-memory},
+in which program transformations that alter memory layouts
+are justified through global memory injections.
+These injections map source memory blocks to target blocks
+across the global heap.
+CakeML similarly tracks memory through a global mutable store,
+lowering this store to a flat linear array in the backend.
+In our work,
+we employ separation logic to reason locally
+about memory fragments and memory injection.
+Local heap assertions avoid reasoning globally
+about the entire memory state.
+We hope that this formulation will ease future proofs
+of transformations impacting memory.
+
+\paragraph{Modularity}
+CompCert is structured as a whole-program compiler
+with global call-stack invariants.
+To support verified separate compilation and modular linking,
+several extensions have been developed
+\parencite{stewart-15-compcomp,kang-16-light}.
+Similarly,
+while early CakeML proofs were whole-program,
+recent extensions support dynamic compilation
+primitives~\parencite{sewell-23-cakes}.
+In our framework,
+relational Hoare quadruples provide horizontal compositionality,
+allowing verified code components to be used independently.
+However,
+our current formalization operates within a single intermediate language,
+leaving compilation passes between distinct languages
+to future work.
+
+\subsection{Relational Separation Logics}
+\label{sec:related-logics}
+
+\paragraph{Logical Foundations}
+Simuliris~\parencite{gaher-22-simuliris} is a relational separation logic
+framework implemented within Iris~\parencite{jung-18-iris}.
+Recent work on Tail Modulo Cons (TMC) by \textcite{allain-25-tmc}
+similarly embeds a relational separation logic in Iris
+to verify the soundness of the TMC transformation
+for a functional language.
+Other relational frameworks built on Iris include ReLoC
+\parencite{frumin-21-reloc}
+for contextual refinement in concurrent languages,
+and Melocoton~\parencite{gueneau-23-melocoton}
+for verified interoperability between OCaml and C.
+
+While Iris provides substantial expressive power,
+its semantic model relies on complex constructions,
+such as step-indexed resource algebras and modal update operators.
+In our framework,
+we do not build upon the semantic model of Iris.
+Instead,
+we formulate our relational separation logic directly
+over concrete heap states and coinductive simulation relations.
+Our logical definitions remain direct while maintaining compatibility
+with MoSeL~\parencite{krebbers-18-mosel},
+the interactive separation logic proof mode.
+
+\paragraph{Program Representation and Control Flow}
+The nature of the underlying languages also distinguishes
+our work from prior relational separation logics.
+Both Simuliris and TMC target high-level languages
+with structured,
+syntax-directed control flow.
+In contrast,
+our framework supports a low-level register transfer language
+where programs are represented as control-flow graphs.
+This requires relational proof rules capable of handling
+unstructured control flow.
+
+\paragraph{Verified Transformations}
+The scope of verified program transformations also differs.
+Simuliris focuses on fine-grained concurrent optimizations,
+such as code motion and instruction reordering under weak memory models.
+TMC proves the correctness of a specialized source-to-source transformation,
+converting non-tail-recursive functions into tail-recursive loops
+by mutating newly allocated constructor fields.
+In our work,
+we evaluate our logic on backend compiler transformations
+over control-flow graphs,
+verifying optimizations that eliminate redundant jump chains.
 
 
-% Proposed Length: 0.25 pages
-\subsection{Relational Logics \& Program Transformation Verification}
-% Comparison with Simuliris (Gäher et al.), Tail Modulo Cons (Allain et al.), and Interaction Trees (Xia et al.).
-% Bringing relational separation logic directly to low-level assembly-like languages (RTL).
 \end{document}
 
-% Local Variables:
-% TeX-engine: luatex
-% End:
-
-% LocalWords:  Coinductive coinductive asymmetricity arities
+% LocalWords:  Coinductive coinductively coinductive asymmetricity arities

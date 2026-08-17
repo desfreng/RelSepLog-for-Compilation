@@ -1,9 +1,14 @@
 \documentclass[11pt,a4paper]{article}
-\usepackage[a4paper,margin=1.8cm]{geometry}
-\usepackage{showframe}
-
 \usepackage[american]{babel}
+\usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage[a4paper,hmargin=1.8cm,vmargin=1.4cm]{geometry}
+
+% \usepackage{showframe}
+\usepackage{lineno}
+\linenumbers
+% \usepackage{todonotes}
+
 
 \usepackage{microtype}
 \usepackage{csquotes}
@@ -36,7 +41,6 @@
 
 \addbibresource{ref.bib}
 
-\usepackage{todonotes}
 \usepackage{tikz}
 \usepackage{booktabs}
 
@@ -83,18 +87,15 @@
 \subfile{07_related_work.tex}
 
 \newpage
+
+\printbibliography[heading=bibintoc]
+
+\newpage
 \appendix
 
 \tableofcontents
 \newpage
 
-\printbibliography
-\newpage
-
 \subfile{08_appendix.tex}
 
 \end{document}
-
-% Local Variables:
-% TeX-engine: luatex
-% End:
