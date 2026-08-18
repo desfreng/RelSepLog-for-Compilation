@@ -32,7 +32,8 @@ we directly establish a safe backward simulation.
 This enables our system to accommodate internal non-determinism
 in the target language.
 Nevertheless,
-our current RTL operational semantics features only limited non-determinism,
+our current \muRTL{} operational semantics
+features only limited non-determinism,
 specifically fresh memory allocation,
 with no support for concurrent primitives.
 
@@ -108,7 +109,7 @@ we do not build upon the semantic model of Iris.
 Instead,
 we formulate our relational separation logic directly
 over concrete heap states and coinductive simulation relations.
-Our logical definitions remain direct while maintaining compatibility
+Our logic definitions remain direct while maintaining compatibility
 with MoSeL~\parencite{krebbers-18-mosel},
 the interactive separation logic proof mode.
 
@@ -119,7 +120,8 @@ Both Simuliris and TMC target high-level languages
 with structured,
 syntax-directed control flow.
 In contrast,
-our framework supports a low-level register transfer language
+our framework supports \muRTL{},
+a low-level register transfer language
 where programs are represented as control-flow graphs.
 This requires relational proof rules capable of handling
 unstructured control flow.

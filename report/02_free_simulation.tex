@@ -118,7 +118,7 @@ This parameterization enables the simulation to enforce
 relational invariants on memories at the end of execution.
 
 The rule \textsc{ISourceStuck} introduces more asymmetry to the relation.
-When the source program encounters undefined behavior
+When the source program encounters undefined behavior,
 it enters a stuck state in a non-final configuration.
 In this case,
 \textsc{ISourceStuck} immediately validates the simulation,
@@ -146,7 +146,8 @@ when coinductive reasoning is resumed.
 Removing this lock-step synchronization requirement
 leads to smaller invariants
 and more direct verification proofs~\parencite{cho-23-stuttering}.
-This decoupling is the core idea developed in the \emph{Stuttering for Free} framework.
+This decoupling is the core idea
+developed in the \emph{Stuttering for Free} framework.
 
 The \emph{free simulation},
 denoted $\fsim{t}{j}{i}{s}{\Phi}$,
@@ -220,7 +221,8 @@ Whenever a program takes a step,
 its corresponding step index is updated ($j'$ or $i'$).
 We note that $j'$ and $i'$ are not required to be
 immediate successors of $j$ and $i$.
-Instead the user is free to select any new index,
+Instead,
+the user is free to select any new index,
 smaller or larger.
 
 This flexibility does not compromise soundness.
@@ -235,7 +237,8 @@ demands that \textsc{FProgress} be applied infinitely often,
 which in turn requires indices to be repeatedly increased
 through \textsc{FTargetSteps} and \textsc{FSourceSteps}.
 This structure decouples stepping from coinductive synchronization,
-allowing multiple asynchronous transitions on either side to be matched flexibly.
+allowing multiple asynchronous transitions
+on either side to be matched flexibly.
 
 Moreover, performing coinductive reasoning over the free simulation
 is equivalent to the following principle:
@@ -267,7 +270,9 @@ This property is captured by index monotonicity:
   and any weaker postcondition $\Phi \implies \Phi'$,
   the simulation $\fsim{t}{j'}{i'}{s}{\Phi'}$ holds.
 \end{lemma}
-Next, the free simulation is sound with respect to the skewed behavioral refinement:
+Next,
+the free simulation is sound
+with respect to the skewed behavioral refinement:
 \begin{theorem}[Soundness of Free Simulation]
   \label{thm:fsim-soundness}
   Let $P_t$ and $P_s$ be programs.
@@ -286,16 +291,16 @@ and a skewed version of the explicit simulation
 This equivalence is established by chaining cyclic implications:
 \begin{equation*}
   \text{Explicit Simulation}
-  \overset{\text{\incirc{1}}}{\implies}
+  \overset{\text{\ding{172}}}{\implies}
   \text{Implicit Simulation}
-  \overset{\text{\incirc{2}}}{\implies}
+  \overset{\text{\ding{173}}}{\implies}
   \text{Free Simulation}
-  \overset{\text{\incirc{3}}}{\implies}
+  \overset{\text{\ding{174}}}{\implies}
   \text{Explicit Simulation}
 \end{equation*}
-The implications \incirc{1} and \incirc{2}
+The implications \ding{172} and \ding{173}
 proceed directly by simulation coinduction.
-The last implication \incirc{3} is the most intricate:
+The last implication \ding{174} is the most intricate:
 it requires synthesizing a well-founded stuttering measure
 from the derivation tree of the free simulation.
 A direct consequence of this equivalence is the index irrelevance theorem:
@@ -335,9 +340,9 @@ $\mathbb{B} = \{\false \prec \true\}$:
 Under the boolean order,
 $\textsf{false}$ indicates that a program has not yet taken a step,
 whereas $\textsf{true}$ signals that progress has occurred.
-This mean that,
+This means that,
 in theory,
-the free simulation proofs
+the free simulation proof
 does not strictly require tracking
 the exact step counts of individual programs,
 but only whether progress has occurred

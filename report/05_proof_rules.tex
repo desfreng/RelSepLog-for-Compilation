@@ -2,17 +2,17 @@
 
 \begin{document}
 
-\section{RTL Proof Rules}
+\section{\muRTL{} Proof Rules}
 
 Having established a simulation relation,
-the semantics of the Register Transfer Language,
+the semantics of \muRTL{},
 and a separation logic over pairs of memories,
 we combine these components into a relational proof system.
 To facilitate the verification of code transformations,
 we establish a structured collection of relational proof rules
 operating directly on the simulation judgment $\fsim{t}{j}{i}{s}{\Phi}$.
 These rules are all proved sound with respect to the simulation relation
-and the RTL semantics.
+and the \muRTL{} semantics.
 
 \subsection{Asynchronous Rules}
 
@@ -71,7 +71,8 @@ and source memory assertions.
     \end{prooftree}
   \end{gather*}
   \caption{
-    Asynchronous rules for the allocation and operations instruction in target program.
+    Asynchronous rules for allocation
+    and operation instructions in the target program.
   }
   \label{fig:target-rules}
 \end{figure}

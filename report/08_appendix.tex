@@ -14,7 +14,7 @@ defined coinductively by the following inference rule:
   \begin{prooftree}
     \hypo{n_1 = n_2}
     \hypo{s_1 \approx s_2}
-    \infer[double]2[Bisim-Step]{
+    \infer[coind]2[Bisim-Step]{
       \mathsf{scons}(n_1, s_1) \approx \mathsf{scons}(n_2, s_2)}
   \end{prooftree}
 \end{equation*}
@@ -42,7 +42,7 @@ The proof proceeds by coinduction on the \emph{bisimilarity} relation:
   \item We apply the coinductive rule \textsf{Bisim-Step}.
         The first premise $n = n$ holds trivially,
         leaving the second premise $s' \approx s'$ to be established.
-  \item Because the constructor Bisim-Step has been applied,
+  \item Because the constructor \textsf{Bisim-Step} has been applied,
         we can now legitimately invoke $\textsf{CoIH}$.
         This immediately concludes the proof.
 \end{enumerate}

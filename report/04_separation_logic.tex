@@ -5,7 +5,7 @@
 \section{Relational Separation Logic}
 
 Having defined our free simulation framework
-and instantiated it with the Register Transfer Language,
+and instantiated it with \muRTL{},
 we require a program logic to specify and verify relational properties
 of program executions.
 Reasoning about memory transformations using global heap predicates
@@ -150,7 +150,7 @@ $P \sep Q \ent P$.
 In our linear formulation,
 proving $P \ent Q$ guarantees that every memory cell described by $P$
 is accounted for in $Q$.
-This strict resource discipline forbid any memory leak.
+This strict resource discipline forbids any memory leak.
 
 To preserve the interactive proof engineering benefits of the
 Iris Proof Mode (MoSeL)~\parencite{krebbers-18-mosel},
@@ -231,7 +231,8 @@ or deallocates a specific pair of locations $(l_t, l_s) \in I$,
 we need to access the underlying points-to or freed assertion.
 However,
 removing $(l_t, l_s)$ from the mapping $I$ would shrink $I$,
-breaking its monotonicity and invalidating the value similarity of existing pointers.
+breaking its monotonicity
+and invalidating the value similarity of existing pointers.
 To overcome this difficulty,
 we introduce the \emph{exploited set} $E \subseteq I$.
 The set $E$ tracks the address pairs whose individual heap assertions
@@ -302,7 +303,8 @@ the target execution diverges as well.
 If the source execution reaches a stuck state,
 the simulation relation grants the compiler complete freedom.
 
-The definition of the Hoare quadruple is guarded by a persistent modality $\boxm$
+The definition of the Hoare quadruple
+is guarded by a persistent modality $\boxm$
 to guarantee that the specification holds independently of heap ownership.
 As a consequence,
 a verified quadruple constitutes a duplicable resource that can be reused

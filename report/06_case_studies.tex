@@ -250,7 +250,7 @@ Nop tunneling short-circuits these chains by redirecting branch targets
 directly to $pc_{\text{final}}$,
 reducing instruction count and eliminating superfluous jump overhead.
 
-The transformation is defined in Rocq over an arbitrary RTL function $f$.
+The transformation is defined in Rocq over an arbitrary \muRTL{} function $f$.
 To ensure termination,
 even in the presence of cyclic jump chains
 (such as an infinite loop $pc \colon \Inop{pc}$),
@@ -340,7 +340,7 @@ followed by an inner induction on the remaining fuel $d$:
 When verifying function call instructions,
 the proof applies the synchronous \textsc{Both-Call} rule.
 Because the coinductive invariant is parameterized
-over arbitrary RTL functions,
+over arbitrary \muRTL{} functions,
 it can be instantiated directly for the callee.
 Therefore,
 the relational Hoare quadruple required by \textsc{Both-Call}

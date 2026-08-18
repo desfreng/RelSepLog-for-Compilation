@@ -2,13 +2,15 @@
 
 \begin{document}
 
-\section{The Register Transfer Language (RTL)}
+\section{The Register Transfer Language (\muRTL{})}
 \label{sec:rtl}
 
 To evaluate our framework on realistic compiler intermediate
 representations,
-we formalize a low-level imperative language based on the
-Register Transfer Language (RTL) of CompCert~\parencite{leroy-09-compcert}.
+we formalize a low-level imperative language,
+\muRTL{},
+based on the Register Transfer Language (RTL)
+of CompCert~\parencite{leroy-09-compcert}.
 This language has two kinds of storage:
 local register banks attached to execution states,
 which act as local variables,
@@ -17,7 +19,7 @@ and a global shared heap memory.
 \subsection{Values, Registers, and Memory}
 \label{sec:rtl-val-mem}
 
-Computations in RTL manipulate first-order values.
+Computations in \muRTL{} manipulate first-order values.
 There are four kinds of values,
 where $\loc$ represents allocated heap locations:
 \begin{align*}
@@ -81,11 +83,11 @@ concrete target operations.
   \label{fig:same-val}
 \end{figure}
 
-In RTL,
+In \muRTL{},
 registers store values that can be actively manipulated in computations.
 They are referenced by an identifier $r \in \reg$.
 We do not restrict the number of registers.
-An RTL program can also interact with the heap.
+A \muRTL{} program can also interact with the heap.
 The heap is indexed by locations $l \in \loc$,
 and the program can read,
 write,
@@ -101,14 +103,14 @@ and compound statements.
 In structured languages,
 execution paths follow the hierarchical source code structure of the program.
 In contrast,
-RTL is an \emph{unstructured} language.
-Control flow in RTL is represented as an explicit directed graph whose nodes
+\muRTL{} is an \emph{unstructured} language.
+Control flow in \muRTL{} is represented as an explicit directed graph whose nodes
 $pc \in \node$ represent program points.
 Each instruction explicitly specifies the program points of its successors,
 eliminating the need for loop or block constructs.
-The instruction set and operator grammar of RTL are defined in
+The instruction set and operator grammar of \muRTL{} are defined in
 \cref{fig:rtl-grammar}.
-An RTL function $f$ is a record containing:
+A \muRTL{} function $f$ is a record containing:
 \begin{equation*}
   f \in \rtlfun \Coloneqq \left\{\,
   \begin{array}{l@{\quad}l}
@@ -129,7 +131,7 @@ with instructions.
 In the following,
 we write $\pcatis{f}{pc}{i}$ to assert that the code map of $f$ contains
 instruction $i$ at program point $pc$.
-An RTL program $P$ consists of a list of functions with a distinguished
+A \muRTL{} program $P$ consists of a list of functions with a distinguished
 entry function.
 We require that function names in the program are unique,
 and that the entry function is present.
@@ -187,13 +189,13 @@ and that the entry function is present.
     $fn \in \ident$,
     and $pc, pc_{\true}, pc_{\false} \in \node$.
   }
-  \caption{The syntax of RTL instructions and operators.}
+  \caption{The syntax of \muRTL{} instructions and operators.}
   \label{fig:rtl-grammar}
 \end{figure}
 
 \subsection{Small-Step Operational Semantics}
 
-The execution of an RTL program is formalized as a small-step operational
+The execution of a \muRTL{} program is formalized as a small-step operational
 transition system.
 The configurations are tuples $(\sigma, s, m)$,
 where $\sigma$ is a call stack,
@@ -408,12 +410,12 @@ from accesses to unallocated memory.
       }
     \end{prooftree}
   \end{gather*}
-  \caption{Selected rules of the small-step operational semantics of RTL.}
+  \caption{Selected rules of the small-step operational semantics of \muRTL{}.}
   \label{fig:rtl-semantics}
 \end{figure}
 
 The step relation $\step{P}{s}{s'}$ is defined by inference rules,
-of which are presented in \cref{fig:rtl-semantics}.
+selected rules of which are presented in \cref{fig:rtl-semantics}.
 Execution of a function progresses through three main phases
 ($\textsf{CallState} \to \textsf{State} \to \textsf{ReturnState}$):
 \begin{enumerate}
@@ -454,7 +456,8 @@ Execution of a function progresses through three main phases
 \end{enumerate}
 
 An execution state is final when the call stack is empty and the program is in
-a return state. The final value is the one stored in the control state.
+a return state.
+The final value is the one stored in the control state.
 
 \subsection{Stack Modularity and Execution Invariants}
 

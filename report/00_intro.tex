@@ -2,6 +2,8 @@
 
 \begin{document}
 
+\maketitle
+
 \subsection*{General Context}
 
 Modern software relies on high-level languages
@@ -19,19 +21,17 @@ strictly preserves program semantics.
 Unverified compilation passes risk introducing bugs
 or invalidating source-level formal proofs.
 
-Initial efforts in verified compilation established methodologies
+Initial efforts in verified compilation established foundational methodologies
 for proving semantic preservation.
-The CompCert compiler developed by \textcite{leroy-09-compcert}
+The CompCert compiler~\parencite{leroy-09-compcert}
 relies on simulation diagrams,
 establishing a correspondence between execution steps
 of the source and target programs
 while maintaining a state invariant.
-CakeML,
-a verified compiler for functional languages
-made by \textcite{tan-19-cakeml},
+CakeML~\parencite{tan-19-cakeml},
+a verified compiler for functional languages,
 combines simulation diagrams with equational reasoning
 to prove its correctness.
-
 Beyond general-purpose compilers,
 other verified compiler projects focus on specialized application domains.
 For instance,
@@ -41,155 +41,180 @@ whereas Jasmin~\parencite{almeida-17-jasmin}
 verifies a dedicated compiler
 for high-performance cryptographic software.
 
-Existing verification paradigms nevertheless exhibit limitations.
-On one hand,
-equational theories are often incomplete,
-especially when programs differ in their memory representations.
+Existing verification paradigms exhibit limitations.
+On the one hand,
+equational reasoning requires programs to be sufficiently similar.
+When two programs are written in different languages,
+use distinct memory representations,
+or follow different calling conventions,
+equality may no longer be applicable
+to state the soundness of the transformation.
+One must instead establish
+that target behaviors safely refine source behaviors.
 On the other hand,
 traditional simulation diagrams grow complex
-when program control flow structures diverge significantly,
-for instance after nested loop exchanges.
+because they require constructing a global invariant upfront.
+This invariant must relate entire machine configurations
+and whole memory states across all program points.
 
-Recent advances in formal verification address these shortcomings.
-Modern coinductive simulation techniques,
-such as those developed by \textcite{cho-23-stuttering}
-in the \emph{Stuttering for Free} framework
-or implemented by \textcite{xia-20-itrees}
-within the \emph{Interaction Trees} library,
-simplify the reasoning about program pairs
+Recent developments in formal methods
+provide techniques to address these issues.
+Modern coinductive simulation frameworks,
+such as the \emph{Stuttering for Free} framework by \textcite{cho-23-stuttering}
+or \emph{Interaction Trees}~\parencite{xia-20-itrees},
+simplify reasoning about program pairs
 whose execution steps do not correspond one-to-one.
-
 In parallel,
 \emph{relational separation logics}
-have emerged as a technique
-for local reasoning across dual executions,
-allowing memory resources to be tracked independently
-or partitioned between two programs.
+enable local reasoning across dual executions.
+They allow memory resources to be tracked,
+partitioned,
+and treated independently between source and target heaps,
+avoiding global memory injections.
 For instance,
-the \emph{Simuliris} framework by \textcite{gaher-22-simuliris}
+Simuliris~\parencite{gaher-22-simuliris}
 uses a relational separation logic
-to verify source-to-source program transformations.
-Recent work on the \emph{Tail Modulo Cons} optimization
-by \textcite{allain-25-tmc}
-employs relational separation logic
-to validate the soundness of the optimization
-within an idealized framework.
+to verify source-to-source program transformations,
+and \textcite{allain-25-tmc}
+employ relational separation logic
+to validate the Tail Modulo Cons optimization.
 
 \subsection*{Research Problem}
 
+In verified compilation,
+semantic preservation is ultimately characterized by a backward simulation.
+This ensures that every observable behavior of the target program
+is permitted by the source program.
+However,
+existing compilers such as CompCert and CakeML
+primarily establish forward simulations.
+Forward simulations are simpler to construct,
+but they only imply backward simulations
+when the target language is deterministic.
+Supporting target non-determinism,
+such as non-deterministic assignments or concurrency,
+requires establishing a backward simulation directly.
+
+Furthermore,
+existing verified compilers rely on global memory invariants
+and whole-program simulation relations.
+Using a relational separation logic offers a promising alternative:
+it allows transformations to be verified by reasoning locally
+about modified heap cells without considering the entire memory.
+
 This internship investigates whether recent developments
 in simulation relations and separation logic
-can be integrated into a unified relational separation logic framework.
+can be integrated into a relational separation logic framework.
 To our knowledge,
 no existing verified compiler incorporates a relational separation logic
 to prove the soundness of its optimization passes.
-Consequently,
-establishing such a framework would enable compositional compiler verification
-with improved scalability and fewer language restrictions.
 In short,
 this approach relaxes constraints present in existing systems,
 such as the determinism requirements imposed by CompCert and CakeML.
 
 \subsection*{Contributions}
 
-We developed a logical framework addressing the objectives of this internship.
+We developed a mechanized logic framework addressing these challenges.
 At its core,
-the framework relies on a coinductive simulation relation
-capable of matching execution steps of programs with different control flow.
-The simulation used is skewed:
-it permits exploiting undefined behaviors in the source program
-to enable further target-level optimizations.
-This simulation serves as the foundation of our verification framework,
-defining how source and target execution steps are related.
+we use a coinductive safe backward simulation relation.
+This frees our approach from determinism restrictions
+on the source and target languages.
+The simulation relation is asymmetric:
+it permits target executions to exploit undefined behaviors in the source,
+enabling optimizations that assume source execution does not get stuck.
 
 Building upon this simulation relation,
 we defined a relational separation logic
 that enables local reasoning over fragments of source and target heaps.
 The logic is parameterized by the operational semantics
-of the two languages under comparison.
-Our framework uses this logical layer to express
-and prove relational specifications between program pairs.
+of the source and target languages under comparison.
+Our framework uses this logic to specify
+and verify relational judgments between program components.
 
-We instantiated this generalized framework with a low-level language
-that mirrors the RTL language (Register Transfer Language),
-commonly used in compiler backends.
-We defined the small-step operational semantics for our version of RTL,
-with support for arithmetic operations,
-dynamic memory allocation and deallocation,
+We instantiated this framework with a low-level imperative language,
+\muRTL{},
+based on the Register Transfer Language used in CompCert.
+We formalized the operational semantics for this \muRTL{} dialect.
+It features constructs for arithmetic operations,
+dynamic heap allocation and deallocation,
 and function calls.
 
 Finally,
-we established a system of reasoning rules for RTL programs.
+we established a system of relational Hoare rules for \muRTL{} programs.
 This proof system comprises two distinct categories of rules.
-First,
-we proved the soundness of asynchronous rules,
-which deal with unilateral execution steps taken independently
-by either the source or the target.
-In particular,
-these rules enable target optimizations to exploit undefined behaviors
-in the source program.
-Second,
-we derived synchronous rules,
-which deal with joint execution steps when both source and target programs
-execute matching instructions at the same time.
+Asynchronous rules govern unilateral execution steps taken
+by either the source or the target program.
+These rules enable target-side optimizations by
+exploiting the absence of source undefined behavior.
+Synchronous rules govern joint execution steps when both programs
+advance simultaneously on matching instructions,
+such as synchronized function calls.
 
 \subsection*{Arguments Supporting Its Validity}
 
-We evaluated our framework by proving the correctness
-of three program transformations.
-The first one is a branch tunneling pass that eliminates redundant control-flow jumps
-by collapsing chains of intermediate nodes.
-The second one is an instruction-level optimization pass that removes statically known
-redundant operations.
-Finally, we used our logic to establish the soundness of localized transformations,
-such as hoisting a memory read instruction out of a loop body.
+We evaluated our framework by verifying the correctness
+of two concrete program transformations
+and two general compiler optimizations.
+For the concrete transformations,
+one exploits the absence of undefined behavior in the source
+to eliminate a redundant zero-check after a division,
+while the other hoists an invariant memory read out of a loop body.
+For the general optimizations,
+the first is a branch tunneling pass that eliminates redundant jumps
+across arbitrary control-flow graphs.
+The second,
+which is omitted from the detailed exposition of this report,
+optimizes redundant instructions,
+such as superfluous register copies.
 
-Beyond these practical case studies,
+Beyond these case studies,
 we established metatheoretic properties confirming framework soundness.
-We proved that the underlying simulation relation is sound,
-guaranteeing that it relates only programs exhibiting related behaviors.
+We proved that our relational separation logic soundly implies
+the underlying backward simulation relation,
+ensuring semantic preservation.
 Additionally,
-we proved our simulation formulation equivalent
-to established simulation definitions used in the
-literature~\parencites{allain-25-tmc,leroy-09-compcert,gaher-22-simuliris}.
+we proved that our simulation formulation,
+which is easier to work with,
+is equivalent
+to standard backward simulation definitions used in the
+literature~\parencites{leroy-09-compcert,gaher-22-simuliris,allain-25-tmc}.
 
 The entire framework has been mechanized
 in the Rocq proof assistant~\parencite{rocq}.
-All definitions and theorems are machine checked,
-relying on the \texttt{coinduction}
-Rocq library~\parencite{rocq-coinduction}
-and the Iris/stdpp~\parencite{jung-18-iris,rocq-stdpp}
-data structures.
-A subset of the formalization relies on two standard classical axioms,
-specifically the Law of Excluded Middle
-and Classical Choice.
+The development relies on the \texttt{coinduction} Rocq
+library~\parencite{rocq-coinduction}
+and the \texttt{stdpp} library~\parencite{rocq-stdpp}.
+Furthermore,
+our logic is compatible with the Iris proof mode~\parencite{krebbers-18-mosel}.
 
 \subsection*{Future Work}
 
 This work provides a first step for several research perspectives.
-While current case studies verify control flow transformations,
-future effort will target data flow optimizations,
-such as constant propagation
-and common subexpression elimination.
-Such passes will test the logical framework when memory states are altered
-by eliminated loads, stores or allocations.
+While current case studies focus on control-flow simplifications
+and local rewrites,
+future work will target data-flow optimizations.
+We plan to verify data-flow transformations ranging from constant propagation
+to more complex optimizations such as selective defunctionalization.
 
-A second direction involves supporting multi-language verification.
-Our framework is parameterized to relate distinct source and target languages
-across translation passes,
-but the present formalization operates on a single intermediate language.
-Future effort will test the limits of our framework when translating
-programs from one language to another.
+A second direction involves multi-language verification.
+Although our logic is parameterized to relate distinct languages,
+our current case studies operate within a single intermediate representation.
+Future work will apply the framework to translation passes
+between different intermediate languages.
 
 Finally,
-we aim to increase the expressiveness of the underlying languages.
-While our logic already accommodates nondeterminism,
-it is not present in our current semantics of RTL.
-We plan to extend our language semantics with it
-to work toward concurrent execution features.
-Additionally,
-extending the framework from imperative languages to functional paradigms
-represents another potential direction for future work.
+we aim to support richer language features.
+While our logic framework accommodates non-determinism,
+our current \muRTL{} semantics features only limited non-determinism
+from memory allocation.
+We plan to investigate languages featuring concurrency,
+structured control,
+first-class closures,
+or effect handlers.
+In the long term,
+these techniques could be applied to CompCert,
+notably to support concurrency,
+and pave the way toward a verified OCaml compiler.
 
 \end{document}
 
