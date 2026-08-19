@@ -7,272 +7,252 @@
 \subsection{Small-Step Operational Semantics}
 
 Giving a formal semantics to a programming language
-provides rigorous mathematical meaning to its programs.
+provides a rigorous meaning to its programs.
 Small-step operational semantics models computation
-as a sequence of elementary transitions.
-It describes how the internal state evolves under primitive operations
-rather than evaluating compound statements in a single step.
-This style directly captures non-termination
-as infinite transition sequences
-and allows intermediate execution states to be inspected.
+as a sequence of elementary transitions between program configurations.
+Rather than evaluating compound statements in a single step,
+it describes how internal configurations evolve under primitive operations.
+This style directly captures non-termination as infinite transition sequences
+and permits the inspection of intermediate configurations.
 
 Formally,
-a small-step operational semantics is defined as a transition system
-$(S, \twoheadrightarrow)$,
-where $S$ represents the set of program states
-and ${\twoheadrightarrow} \subseteq S \times S$
-denotes the binary reduction relation.
+a small-step operational semantics is defined by a transition system
+over a set of configurations $C$,
+equipped with a binary reduction relation
+$\twoheadrightarrow \;\subseteq C \times C$.
 In our framework,
-a state is a pair $(s, m)$ of an internal program state $s$ and a memory $m$.
-To allow transitions to inspect program code and function declarations,
-the reduction relation is parameterized by the global program $P$.
-We write $\step{P}{(s, m)}{(s', m')}$ to indicate that configuration $(s, m)$
-reduces in one step to $(s', m')$ under program $P$,
-and denote by $\twoheadrightarrow^{\ast}$ its reflexive transitive closure.
-We do not assume that this step relation is deterministic.
+a configuration $c$ is represented as a pair $c = (s, m) \in S \times M$,
+where $s \in S$ denotes an internal program state
+and $m \in M$ denotes a memory state.
+The structure of the internal state $s$ depends on the language under study:
+for instance,
+$s$ may be a term in a $\lambda$-calculus with substitution semantics,
+or,
+as in the \muRTL{} language introduced later in this report,
+a program,
+a call stack,
+a currently active function,
+a program counter,
+and an environment.
+
+The transition relation $\step{(s, m)}{(s', m')}$
+indicates that the configuration $(s, m)$ reduces in a single step
+to $(s', m')$.
+The global program code and declarations are implicitly fixed
+within the transition relation.
+We denote by $\steps{}{}$
+the reflexive-transitive closure of $\step{}{}$.
+The transition system need not be deterministic:
+a configuration may admit several outgoing transitions.
 
 To characterize execution endpoints,
-our framework incorporates a partial function \textsf{is\_value},
-which maps internal states to optional return values.
-A state $(s, m)$ is considered final
-when $\textsf{is\_value}(s)$ yields a value $v$.
-For such final states,
-no further reduction steps are possible under any memory in program $P$,
-signifying the formal end of execution.
+the semantics is parameterized by a set of observable values $\val$
+and a partial function \isfinalf.
+A configuration $c$ is \emph{final}
+when $\isfinal{c} = \Some{v, m}$ for some return value $v \in \val$
+and memory $m \in \mem$.
+For such final configurations,
+no further reduction steps are possible:
+if $\isfinal{c} = \Some{v, m}$,
+there exists no configuration $c'$
+such that $\step{c}{c'}$.
 
-The predicate $\canp{P}{s, m}$ indicates that $(s, m)$ can perform a
-transition in $P$,
-meaning that $\step{P}{(s, m)}{(s', m')}$ for some $s'$ and $m'$.
+We say that a configuration $c$ can make progress,
+written $\canp{c}$,
+if there exists a configuration $c'$
+such that $\step{c}{c'}$.
 Conversely,
-a configuration $(s, m)$ is \emph{stuck} in program $P$
-if it is not a final value state and cannot perform any step in $P$.
-Stuck states represent execution failures where the semantics is undefined.
-For instance,
-in an imperative language,
-a state becomes stuck when dereferencing an unallocated pointer address,
+we follow the convention that a configuration $c$ is \emph{stuck},
+written $\stuck{c}$,
+if it is not a final configuration
+and cannot perform any transition.
+Stuck configurations represent execution failures
+where the operational semantics is undefined.
+In an imperative setting,
+a configuration becomes stuck when dereferencing an unallocated pointer,
 dividing by zero,
-or branching to an invalid control-flow node identifier.
+or branching to an invalid control-flow node.
 
 \subsection{Program Behaviors}
 
 Equipped with a small-step operational semantics,
-we can formally classify the observable behaviors of a program state.
-Because our framework handles non-deterministic languages,
-a single initial state may give rise to multiple execution paths,
-and thus exhibit multiple behaviors.
-For a fixed program $P$,
-we classify execution paths into three distinct behaviors:
+we can formally classify the observable behaviors of a program execution.
+Because the transition system may be non-deterministic,
+an execution path starting from a configuration $c$
+can yield multiple outcomes.
+The syntax of observable behaviors $b$ is defined by the following grammar:
+\begin{equation*}
+  b \in \beh \Coloneqq \Term{v, m} \mid \Div \mid \Undef
+\end{equation*}
+where $v \in \val$ and $m \in \mem$.
+We write $b \in c$
+to say that the configuration $c$ exhibits the behavior $b$.
+We say that:
 \begin{itemize}
-  \item A state \emph{terminates} with value $v$ and final memory $m$
-        if execution reaches a final state $(s', m)$
-        such that $\isval{s'} = \Some{v}$.
+  \item $c$ \emph{terminates} with value $v$ and memory $m$
+        if there is a final configuration $c'$
+        such that $\steps{c}{c'}$ and $\isfinal{c'} = \Some{v, m}$.
 
-  \item A state \emph{diverges} if there exists an infinite reduction sequence
+  \item $c$ \emph{diverges} if there exists an infinite reduction sequence
         starting from it.
-        Note that we do not restrict divergence to strongly diverging states,
+        We do not restrict divergence to strongly diverging configurations,
         where every execution path is infinite.
 
-  \item A state exhibits \emph{undefined behavior}
-        if execution reaches a stuck state.
+  \item $c$ exhibits \emph{undefined behavior}
+        if there is a configuration $c'$
+        such that $\steps{c}{c'}$ and $\stuck{c'}$.
 \end{itemize}
 
-In the following,
-we write $b \in s$ to denote that behavior $b$ is exhibited by state $s$.
-We extend this notion to a complete program $P$
+The notion of behavior is extended to a complete program ($b \in P$)
 by considering the behaviors of its initial state.
-Having established these behavior categories,
-we prove that every state admits an outcome:
-
+Every configuration admits at least one observable outcome:
 \begin{lemma}
-For any program $P$,
-every state $s$ admits at least one behavior.
+For any configuration $c$,
+there exists a behavior $b$ such that $b \in c$.
 \end{lemma}
-
-% \begin{proof}
-% The proof relies on classical logic
-% by performing a case analysis
-% on whether state $s$ can reach an ending configuration.
-% If such an ending state exists,
-% we prove by induction on the multi-step reduction from $s$
-% that $s$ exhibits either a terminating or an undefined behavior.
-% Otherwise,
-% no reachable configuration can end,
-% and we establish that $s$ diverges.
-% \end{proof}
 
 \subsection{Program Refinement}
 
-The objective of a verified compiler is to guarantee that the correctness
-properties of a source program remain valid for the compiled executable.
-To ensure that compilation does not introduce bugs
-or invalidate source-level guarantees,
-the compiler must preserve semantic behavior.
-The presentation below follows the semantic preservation framework
-introduced by \textcite{leroy-09-compcert}.
+The objective of a verified compiler is to guarantee semantic preservation:
+the compiled target executable must faithfully preserve
+the behaviors of the source program.
+In verified compilation,
+semantic preservation is formalized as a \emph{behavioral refinement}
+between the compiled target program $T$ and the source program $S$.
 
-A program specification describes the acceptable observable outcomes
-of an execution.
-Formally,
-a specification $\Spec$ is a predicate over behaviors,
-written $\Spec(b)$.
-A meaningful specification must rule out any undefined behavior:
-$\forall b, \Spec(b) \implies b \neq \Undef$.
-We say that a program $S$ satisfies a specification $\Spec$,
-written $S \vDash \Spec$,
-if every behavior exhibited by $S$ satisfies the predicate:
-$\forall b, b \in S \implies \Spec(b)$.
-
-Given a source program $S$ and its compiled target executable $T$,
-the goal of compiler verification is to guarantee
-the \emph{specification preservation} property:
+A direct formulation is the \emph{rigid behavioral refinement},
+requiring every behavior of the target program
+to be an admitted behavior of the source program:
 \begin{equation}
-  \label{eq:spec-preservation}
-  S \vDash \Spec \implies T \vDash \Spec
-\end{equation}
-Proving specification preservation directly
-for each individual specification is impractical,
-as the compiler verification proof should remain independent
-of specific application requirements.
-To decouple compiler verification from specific application requirements,
-semantic preservation is established
-by proving a \emph{behavioral refinement}
-between the target program $T$ and source program $S$:
-\begin{equation}
-  \label{eq:beh-ref}
+  \label{eq:rigid-beh-ref}
   T \sqsubseteq S \coloneqq \forall b, b \in T \implies b \in S
 \end{equation}
-If this property holds,
-specification preservation~\eqref{eq:spec-preservation} follows immediately.
-This property allows the compiler
-to eliminate behaviors of the source program,
-such as resolving non-deterministic constructs by selecting a single outcome.
-
+Rigid refinement ensures that compilation never introduces spurious behaviors,
+while permitting the compiler to resolve non-deterministic choices
+present in the source.
 However,
-direct behavior refinement~\eqref{eq:beh-ref}
+the rigid behavioral refinement of \cref{eq:rigid-beh-ref}
 is overly restrictive for optimizing compilers.
-If a source program only exhibits undefined behavior,
+If a source program only exhibits undefined behaviors,
 an optimizing compiler may eliminate an erroneous code path
 or transform it into a benign execution for the target.
-Because meaningful specifications already exclude undefined behaviors,
-to guarantee the \emph{specification preservation}
-property~\eqref{eq:spec-preservation},
-it suffices to establish a \emph{skewed} behavioral inclusion.
 
-We first define a preorder relation on behaviors:
+To account for these optimization principles,
+compiler correctness relies on a \emph{flexible behavioral refinement}.
+We first equip behaviors with a preorder $\behord$,
+parameterized by a relation on values and memory $\vsim{}{}$:
 \begin{gather*}
   \begin{prooftree}
-    \hypo{}
-    \infer1[Beh-Term]{
-      \Term{v}{m} \behord \Term{v}{m}
-    }
-  \end{prooftree}\\[1em]
-  \begin{prooftree}
-    \hypo{}
-    \infer1[Beh-Div]{
-      \Div \behord \Div
+    \hypo{\vsim{(v_t, m_t)}{(v_s, m_s)}}
+    \infer1[\textsc{Beh-Term}]{
+      \Term{v_t, m_t} \behord \Term{v_s, m_s}
     }
   \end{prooftree}
   \qquad\qquad
   \begin{prooftree}
     \hypo{}
-    \infer1[Beh-Undef]{
+    \infer1[\textsc{Beh-Div}]{
+      \Div \behord \Div
+    }
+  \end{prooftree}
+  \\[1em]
+  \begin{prooftree}
+    \hypo{}
+    \infer1[\textsc{Beh-Undef}]{
       b_t \behord \Undef
     }
   \end{prooftree}
 \end{gather*}
 
-Under this preorder,
-terminating and diverging behaviors must be preserved identically,
-whereas an undefined behavior in the source can be refined by any target
-behavior $b_t$.
-We then define our notion of \emph{skewed behavior refinement}.
-We say that a target state $t$ refines a source state $s$,
-written $t \slantsqsubseteq s$,
-when:
-\begin{equation*}
-  t \slantsqsubseteq s
+These rules can be read as follows:
+\begin{itemize}
+  \item Producing a value $v_t$ and a memory $m_t$ in the compiled program
+        is justified by the possibility of producing a value
+        $v_s$ and a memory $m_s$ in the source program such that
+        $\vsim{(v_t, m_t)}{(v_s, m_s)}$.
+
+  \item Divergence in the compiled program
+        is justified by the possibility of divergence in the source program.
+
+  \item Any behavior $b_t$ in the compiled program
+        is justified by the possibility of undefined behavior in the source
+        program.
+\end{itemize}
+
+We then define the \emph{flexible behavioral refinement}
+between a target program $T$ and a source program $S$:
+\begin{equation}
+  \label{eq:flex-beh-ref}
+  T \slantsqsubseteq S
   \coloneqq
-  \forall b_t, b_t \in t \implies
+  \forall b_t, b_t \in T \implies
   \exists b_s,
-  b_s \in s \land b_t \behord b_s
-\end{equation*}
-This relation is lifted to programs ($T \slantsqsubseteq S$)
-by relating their initial states.
-When a program refines another,
-and because specifications rule out undefined behaviors,
-we obtain the \emph{specification preservation}
-property~\eqref{eq:spec-preservation}.
+  b_s \in S \land b_t \behord b_s
+\end{equation}
+This relation is similarly defined
+between configurations $t \slantsqsubseteq s$.
+Whenever $T \slantsqsubseteq S$ holds,
+every observable behavior produced by the compiled program $T$
+is validated by a matching behavior in the source program $S$
+with respect to the preorder $\behord$.
 
 \subsection{Simulation Relations}
 
-While the refinement relation $t \sqsubseteq s$
-is formulated globally in terms of whole-program behaviors,
-proving it directly over entire execution traces is impractical.
-Compilers perform local transformations whose correctness is best established
+While a refinement relation
+is formulated globally over whole-program behaviors,
+proving it directly over full execution traces is impractical.
+Compilers perform transformations whose correctness is best verified
 step by step.
 To bridge this gap,
 verified compilation relies on \emph{simulation relations},
-which establish an invariant relating intermediate operational states of the
-source and target programs.
-This can be done in two flavors:
+which maintain an invariant relating intermediate configurations
+of the source and target executions.
+Simulation relations are established in two flavors:
 
 \begin{description}
   \item[Backward simulation:]
-        each step taken by the target program must be matched by steps in the
-        source program.
-        Because it maps every target behavior back to a valid source execution,
-        a backward simulation directly establishes the refinement property
+        each execution step taken by the target program
+        must be matched by corresponding steps in the source program.
+        Because it maps every target execution path back to an admissible
+        source path,
+        a backward simulation directly establishes behavioral refinement
         $t \sqsubseteq s$.
+
   \item[Forward simulation:]
-        each step of the source program is matched by corresponding steps in the
-        target program.
+        each execution step taken by the source program
+        is matched by steps in the target program.
         Forward simulations are more convenient to establish
         as compiler passes transform source constructs into target code,
         making inductive invariant proofs follow the structure of source
         reductions directly.
 \end{description}
 
-% A priori,
-% a forward simulation proves that the target exhibits all behaviors of
-% the source,
-% which is the converse of refinement.
-% However,
-% when the target language is deterministic,
-% every target step is uniquely determined.
-% Under this hypothesis,
-% a forward simulation implies a backward simulation,
-% and therefore suffices to establish program refinement.
-% This is the path used by CompCert to verify
-% the soundness of its compilation passes.
-
 \subsection{Coinductive Predicates}
 
-Proving a simulation relation requires relating operational execution steps of
-the source and target programs.
+Proving a simulation relation requires relating execution steps
+of the target and source programs.
 When programs terminate,
 their execution consists of a finite sequence of reductions ending in a
-final state.
-Such finite behaviors are naturally formalized using
-\emph{inductive} predicates.
+final configuration.
+Such finite behaviors are formalized using \emph{inductive} predicates.
 However,
-many programs are designed to run indefinitely.
-For non-terminating executions,
-the reduction sequence is infinite and never reaches a terminal base case.
-Establishing the simulation inductively is impossible,
+programs that are designed to run indefinitely produce
+infinite reduction sequences
+that never encounter a terminal case.
+Establishing a simulation inductively for diverging executions is impossible,
 as it would require an infinite derivation tree,
 which inductive definitions forbid.
-To reason about infinite execution traces and divergence,
+To reason about infinite execution traces,
 we rely on \emph{coinductive} predicates.
 
 The presentation adopted below,
-which defines coinduction in terms of infinite derivation trees,
-is a simplification adapted to our setting.
-For a proper definition of coinduction and coinductive predicates,
+which interprets coinduction in terms of infinite derivation trees,
+is an intuitive presentation adapted to our setting.
+For foundational treatments of coinduction,
 we refer the reader to
 \textcites{milner-89-communication}{gimenez-98-tutorial}{pous-16-cawu}.
 Throughout this report,
-we define inductive and coinductive relations through sets of inference
-rules:
+we specify inductive and coinductive relations through inference rules:
 \begin{itemize}
   \item \emph{Inductive rules} are denoted with a single horizontal bar:
         \begin{equation*}
@@ -300,15 +280,15 @@ rules:
         \end{equation*}
         Here,
         $H_i$ are the premises and $\mathcal{C}$ is the coinductive conclusion.
-        They generalize \emph{inductive} rules to judgments admitting a
-        \emph{potentially infinite derivation tree}.
+        They generalize inductive rules to judgments admitting
+        \emph{potentially infinite derivation trees}.
 \end{itemize}
 
-For instance,
-defining finite lists of natural numbers uses induction,
+For example,
+finite lists are defined inductively,
 requiring every list to terminate at $\mathsf{nil}$.
 In contrast,
-infinite streams are defined by coinduction,
+infinite streams are defined coinductively,
 allowing endless constructor applications without base cases:
 \begin{equation*}
   \begin{prooftree}
@@ -329,23 +309,22 @@ allowing endless constructor applications without base cases:
   \end{prooftree}
 \end{equation*}
 
-These differences in derivation tree restrictions
-translate directly into distinct proof principles:
+These distinct derivation structures
+translate into distinct proof principles:
 \begin{itemize}
-  \item When proving a property over an inductive structure,
-        one reasons by induction.
-        We proceed by case analysis on the constructors of the inductive
-        term ($\mathsf{nil}$ and $\mathsf{cons}$ for lists).
-        The induction hypothesis may only be invoked on
-        \emph{strictly smaller subterms}.
-        This finite descent ensures that the proof eventually terminates at
-        a base case.
+  \item One reasons by \emph{induction}
+        when the \emph{hypothesis} is an inductive judgment.
+        The proof proceeds by case analysis
+        on the constructors of the finite derivation.
+        The induction hypothesis may only be applied to
+        \emph{strictly smaller subterms},
+        guaranteeing finite descent toward a base case.
 
-  \item Conversely,
-        when proving that a property holds coinductively,
-        one constructs an infinite derivation tree by coinduction.
-        The coinductive hypothesis refers to the entire conclusion,
-        but it can only be invoked \emph{underneath a constructor}
+  \item One reasons by \emph{coinduction}
+        when the \emph{goal} to be established is a coinductive judgment.
+        The proof constructs a potentially infinite derivation tree.
+        The coinductive hypothesis refers to the goal itself,
+        but it may only be invoked \emph{underneath a constructor}
         ($\mathsf{scons}$ for streams).
         This condition,
         known as \emph{productivity},
@@ -364,27 +343,45 @@ to facilitate reasoning with coinductive simulation invariants.
 
 \subsection{Simulation Schemes \& Stuttering}
 
+Throughout this section,
+we focus on direct program refinements $T \sqsubseteq S$.
 Equipped with coinductive predicates to handle potentially infinite
 executions,
-we can define a simulation relation to establish program refinements.
-Given a target program $P_t$
-and a source program $P_s$,
-a backward simulation relates a target state $t$
-to a source state $s$,
-ensuring that every execution step taken by the target program
-can be matched by the source program.
+we can define a simulation relation to establish such refinements.
+In general,
+the source and target languages may differ:
+target configurations $t$ evolve under $\step[t]{}{}$
+with finality test $\isfinalf[t]$,
+while source configurations $s$
+evolve under $\step[s]{}{}$
+with finality test $\isfinalf[s]$.
+A \emph{direct backward simulation} relates a target configuration $t$
+to a source configuration $s$,
+ensuring that every execution step of the target
+is matched by the source.
 
 For terminating executions,
-the simulation requires that final states yield identical observable values.
-Formally,
-if both states reach terminal configurations,
-they are related by the following base case:
+the simulation requires that final configurations yield related values
+and memories.
+We formalize this condition using the predicate $\bfinalf$.
+% \begin{equation}
+%   \label{eq:both-final}
+%   \bfinal{t}{s}
+%   \coloneqq \exists v_t\, v_s\, m_t\, m_s,\;
+%   \isfinal[t]{t} = \Some{v_t, m_t} \land
+%   \isfinal[s]{s} = \Some{v_s, m_s} \land
+%   \vsim{(v_t, m_t)}{(v_s, m_s)}
+% \end{equation}
+The assertion $\bfinal{t}{s}$
+holds when both target and source configurations have reached final states,
+producing values $v_t, v_s$ and memories $m_t, m_s$
+that satisfy $\vsim{(v_t, m_t)}{(v_s, m_s)}$.
+The lock-step termination condition is then expressed as:
 \begin{equation}
   \label{eq:lock-both-final}
   \begin{prooftree}
-    \hypo{\isval{t} = \Some{v}}
-    \hypo{\isval{s} = \Some{v}}
-    \infer2{\lsim{t}{s}}
+    \hypo{\bfinal{t}{s}}
+    \infer1{\lsim{t}{s}}
   \end{prooftree}
 \end{equation}
 
@@ -397,11 +394,11 @@ this condition is expressed coinductively:
 \begin{equation}
   \label{eq:lock-both-step}
   \begin{prooftree}
-    \hypo{\canp{P_t}{t}}
+    \hypo{\canp[t]{t}}
     \hypo{\forall t',
-      \step{P_t}{t}{t'} \implies
+      \step[t]{t}{t'} \implies
       \exists s',
-      \step{P_s}{s}{s'} \land \lsim{t'}{s'}
+      \step[s]{s}{s'} \land \lsim{t'}{s'}
     }
     \infer[coind]2{\lsim{t}{s}}
   \end{prooftree}
@@ -409,123 +406,151 @@ this condition is expressed coinductively:
 
 The relation $\sim_l$
 defined by \cref{eq:lock-both-final,eq:lock-both-step}
-is a \emph{lock-step} backward simulation:
+is a direct \emph{lock-step} backward simulation:
 the target and source programs advance at the exact same pace.
 Under non-determinism,
-the target and source states are treated asymmetrically:
+the target and source configurations are treated asymmetrically:
 \begin{itemize}
-  \item The target program exhibits \emph{demonic} non-determinism,
-        requiring the simulation to hold for all reachable successor states
+  \item The target program exhibits \emph{demonic} non-determinism:
+        the simulation must account for all reachable successor configurations
         $t'$.
-  \item The source program exhibits \emph{angelic} non-determinism,
-        meaning that the proof only needs to exhibit the existence of a
-        suitable matching successor state $s'$.
-\end{itemize}
-This asymmetry is precisely what establishes the behavior inclusion.
-We must account for all non-deterministic choices of the target
-and match each of them with an admissible path in the source.
 
-While lock-step simulations suffice for simple transformations that preserve
-step counts,
-realistic compiler passes break this correspondence.
-An optimization pass such as
-branch tunneling removes redundant jump operations,
-causing the source program to perform steps that have no counterpart in the
-target.
+  \item The source program exhibits \emph{angelic} non-determinism:
+        the proof only needs to exhibit the existence of a single matching
+        successor $s'$.
+\end{itemize}
+This asymmetry matches the quantification structure of the direct refinement:
+we must account for every non-deterministic path chosen by the target
+and justify it with an admissible path in the source.
+
+While lock-step simulations suffice for simple transformations
+that preserve step counts,
+realistic compiler passes break this one-to-one correspondence.
+An optimization pass such as branch tunneling
+removes redundant jump instructions,
+causing the source program to execute steps
+that have no counterpart in the target.
 Conversely,
 lowering transformations decompose a single high-level source instruction
 into multiple low-level target instructions,
-requiring the target to execute several steps before the source
-advances.
+requiring the target to execute several steps before the source advances.
 
 To accommodate passes that alter step counts,
 one must allow \emph{asynchronous} execution steps,
 where one program takes a step while the other remains stationary.
 Such a transition is called a \emph{stuttering} step.
-A first coinductive formulation might introduce the following
-stuttering rules:
+A naive coinductive formulation might introduce unrestricted stuttering rules:
 \begin{equation*}
   \begin{prooftree}
-    \hypo{\canp{P_t}{t}}
+    \hypo{\canp[t]{t}}
     \hypo{\forall t',
-      \step{P_t}{t}{t'} \implies t' \sim s
+      \step[t]{t}{t'} \implies t' \sim s
     }
     \infer[coind]2{t \sim s}
   \end{prooftree}
   \qquad\qquad
   \begin{prooftree}
-    \hypo{\step{P_s}{s}{s'}}
+    \hypo{\step[s]{s}{s'}}
     \hypo{t \sim s'}
     \infer[coind]2{t \sim s}
   \end{prooftree}
 \end{equation*}
 
 However,
-adding these rules to the lock-step simulation $\sim_{l}$
-invalidates the refinement between the target and the source.
-Without restriction,
-a target program could perform infinitely many stuttering steps without the
-source program ever progressing.
+adding these unconstrained rules invalidates the soundness
+of the simulation relation:
+one cannot prove that $t \sim s \implies t \sqsubseteq s$.
+Without restrictions,
+a target program could perform infinitely many stuttering steps
+without the source program ever progressing.
 Under such a definition,
-a trivially diverging target program could be related to any source state.
+an always diverging target program could be related to any source state.
+Conversely,
+a source program could perform infinitely many stuttering steps
+without the target program ever progressing.
+This would similarly allow relating any target program
+to a diverging source state.
 
-To guarantee that the target refines the source,
-stuttering must remain finite.
-This is achieved by equipping the simulation with a well-founded measure
-$(W, \prec)$.
+To ensure soundness,
+the stuttering must remain finite.
+This is achieved by equipping the simulation
+with a well-founded measure $(W, \prec)$.
 The relation is indexed by a measure $i \in W$,
 written $\esim{t}{i}{s}$.
 Whenever a stuttering step occurs,
 the index strictly decreases according to $\prec$.
 When both programs step simultaneously,
-progress is made and the measure may be freely reset.
+progress is established and the measure may be freely reset.
 
-Because stuttering is explicitly represented,
+Because stuttering is bounded by an explicit measure,
 this relation is called the \emph{explicit simulation}
 \parencite{cho-23-stuttering}.
 The inference rules defining it are given in
 \cref{fig:explicit-sim}.
+To streamline the notation for stuttering transitions,
+we write $\esim{t}{\prec i}{s}$ as syntactic sugar for:
+\begin{equation*}
+  \esim{t}{\prec i}{s} \coloneqq \exists i', i' \prec i \land \esim{t}{i'}{s}
+\end{equation*}
+
+The rules \textsc{ESourceSteps} and \textsc{ETargetSteps}
+govern asynchronous execution steps:
+\begin{itemize}
+  \item In \textsc{ESourceSteps},
+        the source program takes a step from $s$ to $s'$
+        while the target program stutters.
+        Due to angelic non-determinism in the source,
+        it suffices to exhibit a single matching successor $s'$
+        with a strictly decreased measure $\esim{t}{\prec i}{s'}$.
+
+  \item In \textsc{ETargetSteps},
+        the target $t$ must be able to make progress,
+        and because target non-determinism is demonic,
+        the simulation at a decreased measure $\esim{t'}{\prec i}{s}$
+        must be established for every transition $\step[t]{t}{t'}$.
+\end{itemize}
 Since $(W, \prec)$ is well-founded,
-an infinite sequence of stuttering steps is impossible.
-This guarantees that the explicit simulation implies behavior refinement.
+an infinite sequence of stuttering steps is impossible,
+guaranteeing that explicit simulation implies behavioral refinement.
+However,
+\textsc{EBothSteps} is the only rule
+that permits resetting the stuttering measure.
+This requires synchronizing the target and source steps that
+justify divergence,
+imposing a proof burden that we address in the following chapter.
 
 \begin{figure}[htb]
-  \begin{equation*}
+  \begin{gather*}
     \begin{prooftree}
-      \hypo{\isval{t} = \isval{s} = \Some{v}}
+      \hypo{\bfinal{t}{s}}
       \infer1[\textsc{ERelated}]{\esim{t}{i}{s}}
     \end{prooftree}
-    \qquad
+    \\[1em]
     \begin{prooftree}
-      \hypo{\step{P_s}{s}{s'}}
-      \hypo{i' \prec i}
-      \hypo{\esim{t}{i'}{s'}}
-      \infer3[\textsc{ESourceSteps}]{\esim{t}{i}{s}}
+      \hypo{\step[s]{s}{s'}}
+      \hypo{\esim{t}{\prec i}{s'}}
+      \infer[coind]2[\textsc{ESourceSteps}]{\esim{t}{i}{s}}
     \end{prooftree}
-  \end{equation*}
-  \begin{equation*}
+    \\[1em]
     \begin{prooftree}
-      \hypo{\canp{P_t}{t}}
+      \hypo{\canp[t]{t}}
       \hypo{\forall t',
-        \step{P_t}{t}{t'} \implies
-        \exists i',
-        i' \prec i \land \esim{t'}{i'}{s}
+        \step[t]{t}{t'} \implies
+        \esim{t'}{\prec i}{s}
       }
-      \infer2[\textsc{ETargetSteps}]{\esim{t}{i}{s}}
+      \infer[coind]2[\textsc{ETargetSteps}]{\esim{t}{i}{s}}
     \end{prooftree}
-  \end{equation*}
-  \begin{equation*}
+    \\[1em]
     \begin{prooftree}
-      \hypo{\canp{P_t}{t}}
+      \hypo{\canp[t]{t}}
       \hypo{\forall t',
-        \step{P_t}{t}{t'} \implies
-        \exists s',
-        \exists i',
-        \step{P_s}{s}{s'} \land \esim{t'}{i'}{s'}
+        \step[t]{t}{t'} \implies
+        \exists s', \exists i',
+        \step[s]{s}{s'} \land \esim{t'}{i'}{s'}
       }
       \infer[coind]2[\textsc{EBothSteps}]{\esim{t}{i}{s}}
     \end{prooftree}
-  \end{equation*}
+  \end{gather*}
   \caption{Derivation rules of the \emph{explicit simulation}.}
   \label{fig:explicit-sim}
 \end{figure}

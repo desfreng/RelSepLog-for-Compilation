@@ -11,6 +11,9 @@ Variant val : Type :=
 | VPtr (l : loc)
 | VUndef.
 
+Instance val_inhabited : Inhabited val :=
+  populate (VBool true).
+
 Definition related (I: loc_pair) l1 l2 :=
   (l2, l1) ∈ I.
 

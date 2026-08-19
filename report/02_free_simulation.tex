@@ -58,30 +58,30 @@ while the rule \textsc{IBothSteps} acts as the coinductive constructor.
     &
     &
     \begin{prooftree}
-      \hypo{\stuck{P_s}{s}}
+      \hypo{\stuck[s]{s}}
       \infer1[\textsc{ISourceStuck}]{\isim{t}{s}{\Phi}}
     \end{prooftree}
   \end{align*}
   \begin{equation*}
     \begin{prooftree}
-      \hypo{\step{P_s}{s}{s'}}
+      \hypo{\step[s]{s}{s'}}
       \hypo{\isim{t}{s'}{\Phi}}
       \infer2[\textsc{ISourceSteps}]{\isim{t}{s}{\Phi}}
     \end{prooftree}
   \end{equation*}
   \begin{equation*}
     \begin{prooftree}
-      \hypo{\canp{P_t}{t}}
-      \hypo{\forall t', \step{P_t}{t}{t'} \implies \isim{t'}{s}{\Phi}}
+      \hypo{\canp[t]{t}}
+      \hypo{\forall t', \step[t]{t}{t'} \implies \isim{t'}{s}{\Phi}}
       \infer2[\textsc{ITargetSteps}]{\isim{t}{s}{\Phi}}
     \end{prooftree}
   \end{equation*}
   \begin{equation*}
     \begin{prooftree}
-      \hypo{\canp{P_t}{t}}
+      \hypo{\canp[t]{t}}
       \hypo{\forall t',
-        \step{P_t}{t}{t'} \implies
-        \exists s', \step{P_s}{s}{s'} \land \isim{t'}{s'}{\Phi}}
+        \step[t]{t}{t'} \implies
+        \exists s', \step[s]{s}{s'} \land \isim{t'}{s'}{\Phi}}
       \infer[coind]2[\textsc{IBothSteps}]{\isim{t}{s}{\Phi}}
     \end{prooftree}
   \end{equation*}
@@ -90,30 +90,19 @@ while the rule \textsc{IBothSteps} acts as the coinductive constructor.
 \end{figure}
 
 The rule \textsc{IRelated} characterizes terminating executions.
-Instead of demanding syntactic equality between terminal values,
-it is parameterized by a postcondition $\Phi$
-that relates the final values and the concluding memory states
-of the target and source programs.
-The predicate $\textsf{both\_final}$ is defined as follows:
-\begin{gather*}
+Rather than requiring syntactic equality between terminal values,
+it instantiates the predicate $\textsf{both\_final}$
+defined in \cref{eq:both-final}
+with a general postcondition $\Phi$
+relating return values and concluding memory states:
+\begin{equation*}
   \Phi :
-  \textsf{val}_t \to
-  \textsf{val}_s \to
-  \textsf{mem} \to
-  \textsf{mem} \to
-  \textsf{Prop}
-  \\
-  \begin{aligned}
-    \bfinal{\Phi}{(t, m_t)}{(s, m_s)} \coloneqq
-    \exists v_t v_s,\;
-    &\isval{t} = \Some{v_t} \land \isval{s} = \Some{v_s} \land {} \\
-    &\Phi(v_t, v_s, m_t, m_s)
-  \end{aligned}
-\end{gather*}
-The assertion $\bfinal{\Phi}{t}{s}$
-holds when both target and source configurations have reached final states,
-producing values $v_t, v_s$ and memories $m_t, m_s$
-that satisfy $\Phi$.
+  \val_t \to
+  \val_s \to
+  \mem_t \to
+  \mem_s \to
+  \Prop
+\end{equation*}
 This parameterization enables the simulation to enforce
 relational invariants on memories at the end of execution.
 

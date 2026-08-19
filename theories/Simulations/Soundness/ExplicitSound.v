@@ -215,7 +215,7 @@ Section ESimSound.
   Qed.
 
   Theorem esim_sound Φ i t s:
-    t ≲[i] s {{ Φ }} -> refines Pt Ps Φ t s.
+    t ≲[i] s {{ Φ }} -> flex_refines Pt Ps Φ t s.
   Proof using Type.
     intros Hsim [] Hb.
     - eapply terminating_esim; now eauto.

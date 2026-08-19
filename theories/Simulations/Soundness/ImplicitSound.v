@@ -197,7 +197,7 @@ Section ISimSound.
   Qed.
 
   Theorem isim_sound Φ t s:
-    t ≲ s {{ Φ }} -> refines Pt Ps Φ t s.
+    t ≲ s {{ Φ }} -> flex_refines Pt Ps Φ t s.
   Proof using Type.
     intros Hsim [] Hb.
     - now apply terminating_isim with t.

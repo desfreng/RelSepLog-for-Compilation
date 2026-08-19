@@ -18,21 +18,62 @@
 % ------------------------------------------------------------------------------
 % 2. Operational Semantics, Reductions, and Behavioral Predicates
 % ------------------------------------------------------------------------------
-\newcommand{\step}[3]{#1 \vdash #2 \twoheadrightarrow #3}
-\newcommand{\steps}[3]{#1 \vdash #2 \twoheadrightarrow^{\ast} #3}
-\newcommand{\psteps}[3]{#1 \vdash #2 \twoheadrightarrow^{+} #3}
-\newcommand{\nstep}[4]{#1 \vdash #2 \underset{#3}{\twoheadrightarrow} #4}
 
-\newcommand{\isval}[1]{\textsf{is\_value}\left(#1\right)}
-\newcommand{\canp}[2]{\textsf{can\_progress}_{#1}\left(#2\right)}
-\newcommand{\stuck}[2]{\textsf{stuck}_{#1}\left(#2\right)}
+\NewDocumentCommand{\step}{o m m}{%
+  \IfNoValueTF{#1}%
+    {#2 \twoheadrightarrow #3}%
+    {#2 \twoheadrightarrow_{#1} #3}%
+}
+\NewDocumentCommand{\steps}{o m m}{%
+  \IfNoValueTF{#1}%
+    {#2 \twoheadrightarrow^{\ast} #3}%
+    {#2 \twoheadrightarrow^{\ast}_{#1} #3}%
+}
+\NewDocumentCommand{\psteps}{o m m}{%
+  \IfNoValueTF{#1}%
+    {#2 \twoheadrightarrow^{+} #3}%
+    {#2 \twoheadrightarrow^{+}_{#1} #3}%
+}
+\NewDocumentCommand{\nsteps}{o m m m}{%
+  \IfNoValueTF{#1}%
+    {#2 \underset{#3}{\twoheadrightarrow} #4}%
+    {#2 \underset{#3}{\twoheadrightarrow_{#1}} #4}%
+}
+
+\newcommand{\finalfunname}{\textsf{is\_final}}
+\newcommand{\canpfunname}{\textsf{can\_progress}}
+\newcommand{\stuckfunname}{\textsf{stuck}}
+
+\NewDocumentCommand{\isfinalf}{o}{%
+  \IfNoValueTF{#1}%
+    {\finalfunname}%
+    {\finalfunname_{#1}}%
+  }
+\NewDocumentCommand{\isfinal}{o m}{%
+  \IfNoValueTF{#1}%
+    {\finalfunname\left(#2\right)}%
+    {\finalfunname_{#1}\left(#2\right)}%
+}
+\NewDocumentCommand{\canp}{o m}{%
+  \IfNoValueTF{#1}%
+    {\canpfunname\left(#2\right)}%
+    {\canpfunname_{#1}\left(#2\right)}%
+}
+\NewDocumentCommand{\stuck}{o m}{%
+  \IfNoValueTF{#1}%
+    {\stuckfunname\left(#2\right)}%
+    {\stuckfunname_{#1}\left(#2\right)}%
+}
 
 \newcommand{\Spec}{\textsf{Spec}}
 \newcommand{\Safe}[1]{\textsf{Safe}(#1)}
-\newcommand{\Term}[2]{\textsf{Terminating}(#1, #2)}
+\newcommand{\Term}[1]{\textsf{Terminating}(#1)}
 \newcommand{\Div}{\textsf{Diverging}}
 \newcommand{\Undef}{\textsf{Undefined}}
 \newcommand{\behord}{\leqslant_{\text{beh}}}
+\newcommand{\beh}{\textsf{behavior}}
+
+\newcommand{\vsim}[2]{#1 \sim_v #2}
 
 % Skewed Refinement Operator
 \makeatletter
@@ -62,7 +103,8 @@
 \newcommand{\esim}[3]{#1 \sim_{e}^{#2} #3}
 \newcommand{\isim}[3]{#1 \lesssim #2 \; \{#3\}}
 \newcommand{\fsim}[5]{#1 \leftindex[I]_{#2}\lesssim_{#3} #4 \; \{#5\}}
-\newcommand{\bfinal}[3]{\textsf{both\_final}_{#1}\left(#2, #3\right)}
+\newcommand{\bfinalf}{\textsf{both\_final}}
+\newcommand{\bfinal}[2]{\bfinalf\left(#1, #2\right)}
 
 % ------------------------------------------------------------------------------
 % 4. RTL Language: Types and Identifiers

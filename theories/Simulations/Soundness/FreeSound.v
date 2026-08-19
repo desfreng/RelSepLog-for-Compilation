@@ -224,7 +224,7 @@ Section FSimSound.
 
   Theorem fsim_sound Φ t j s i:
     t <{ j, i }= s {{ Φ }} ->
-    refines Pt Ps Φ t s.
+    flex_refines Pt Ps Φ t s.
   Proof using Type.
     intros Hsim [] Hb.
     - eapply terminating_fsim; now eauto.

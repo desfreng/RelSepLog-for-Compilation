@@ -16,33 +16,50 @@ Section Behavior.
 
   Definition diverges : state Λ -> Prop := gfp diverges_.
 
-  Lemma diveges_sound : ∀ f,
+  Lemma diveges_sound f:
     (∀ n, P ⊨ f n ->> f (S n)) -> diverges (f 0).
   Proof using Type.
-    intros f Hf. cut (∀ n, diverges (f n)); auto.
+    intros Hf. cut (∀ n, diverges (f n)); auto.
     unfold diverges. coinduction R cih.
     intros n. exists (f (S n)); auto.
   Qed.
 
-  Lemma diverges_unroll : ∀ t,
+  Lemma diverges_unroll t:
     diverges t -> ∃ t', P ⊨ t ->> t' ∧ diverges t'.
   Proof using Type.
-    intros t H. unfold diverges in H. apply (gfp_fp diverges_) in H.
+    intros H. unfold diverges in H. apply (gfp_fp diverges_) in H.
     inv H. eexists; now eauto.
   Qed.
 
-  Lemma diverge_iff : ∀ s,
-    (∀ t, P ⊨ s ->>* t -> ∃ u, P ⊨ t ->> u) <->
-    ∀ t, P ⊨ s ->>* t -> diverges t.
+  Lemma diverges_roll t:
+    (∃ t', P ⊨ t ->> t' ∧ diverges t') -> diverges t.
   Proof using Type.
-    intros s. split.
-    - intros Hs. unfold diverges. coinduction R cih.
-      intros t Hrtc. destruct (Hs _ Hrtc) as [u Hstep].
-      exists u. split; auto.
-      apply cih. eapply rtc_r; eassumption.
-    - intros Hdiv t Hrtc. apply Hdiv in Hrtc.
-      destruct (diverges_unroll _ Hrtc) as [u []].
-      now exists u.
+    intros (t' & Hstep & Hdiv).
+    apply (gfp_fp diverges_). by econstructor.
+  Qed.
+
+  Lemma diverge_iff t :
+    diverges t <-> (∃ t', P ⊨ t ->> t' ∧ diverges t').
+  Proof using Type.
+    split.
+    - by apply diverges_unroll.
+    - by apply diverges_roll.
+  Qed.
+
+  Definition strong_diverge (t: state Λ) : Prop :=
+    ∀ t', P ⊨ t ->>* t' -> can_progress P t'.
+
+  Lemma strong_div_always_div t :
+    strong_diverge t ->
+    ∀ t', P ⊨ t ->>* t' -> diverges t'.
+  Proof using Type.
+    unfold diverges.
+    coinduction C CIH.
+    intros H t' Hrtc.
+    assert (can_progress P t') as (u & Hstep) by now apply H.
+    exists u. split; first done.
+    apply CIH; first done.
+    by eapply rtc_r.
   Qed.
 
   Variant behavior :=
@@ -173,9 +190,21 @@ Section Refinement.
   | BehOrderUndef bt :
       behavior_order Φ bt Undef.
 
+  Variant behavior_equal Φ : @behavior Λt -> @behavior Λs -> Prop :=
+  | BehEqTerm vt vs mt ms :
+      Φ vt vs mt ms -> behavior_equal Φ (Terminating vt mt) (Terminating vs ms)
+  | BehEqDiv :
+      behavior_equal Φ Diverging Diverging
+  | BehEqUndef :
+      behavior_equal Φ Undef Undef.
+
   Notation "a '⊑{' Φ '}' b" :=
     (behavior_order Φ a b)
       (at level 70, format "a  '⊑{' Φ '}'  b", no associativity).
+
+  Notation "a '≡{' Φ '}' b" :=
+    (behavior_equal Φ a b)
+      (at level 70, format "a  '≡{' Φ '}'  b", no associativity).
 
   (* A definition of state refinement: *)
   (*    - if the target terminates on (v, m), *)
@@ -183,8 +212,11 @@ Section Refinement.
   (*    - if the target diverges, *)
   (*    the source must either diverges or be stuck. *)
   (*    - if the target is stuck, the source should also be stuck. *)
-  Definition refines Φ (t: state Λt) (s: state Λs) : Prop :=
+  Definition flex_refines Φ (t: state Λt) (s: state Λs) : Prop :=
     ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ⊑{Φ} b'.
+
+  Definition rigid_refines Φ (t: state Λt) (s: state Λs) : Prop :=
+    ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ≡{Φ} b'.
 End Refinement.
 
 Section SpecPreserving.
@@ -201,7 +233,7 @@ Section SpecPreserving.
   Definition eq_rel (vt vs: value Λ) (mt ms: memory) : Prop := vt = vs ∧ mt = ms.
 
   Lemma refine_implies_meaningful_spec_preserve t s:
-    refines P P eq_rel t s -> ∀ S, meaningful S -> spec_preserved S s t.
+    flex_refines P P eq_rel t s -> ∀ S, meaningful S -> spec_preserved S s t.
   Proof using Type.
     intros Href S Hmean Hspec b Hb.
     apply Href in Hb as (b' & Hb & Hord).

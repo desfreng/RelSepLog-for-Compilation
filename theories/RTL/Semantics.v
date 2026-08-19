@@ -29,7 +29,7 @@ Inductive pcstate : Type :=
 
 Definition rtl_state : Type := list stackframe * pcstate.
 
-Inductive rtl_step (P: rtl_program) : rtl_state * memory -> rtl_state * memory -> Prop :=
+Variant rtl_step (P: rtl_program) : rtl_state * memory -> rtl_state * memory -> Prop :=
 | exec_Inop: ∀ σ m ρ f pc pc',
   f@pc is <<{ nop -> pc' }>> ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m)
@@ -60,10 +60,10 @@ Inductive rtl_step (P: rtl_program) : rtl_state * memory -> rtl_state * memory -
   set_at addr v m = Some m' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ, m')
 
-| exec_Ialloc : ∀ σ m ρ f pc dst pc' ρ' m' addr v,
+| exec_Ialloc : ∀ σ m ρ f pc dst pc' ρ' m' l v,
   f@pc is <<{ dst := alloc () -> pc' }>> ->
-  alloc_at addr v m = Some m' ->
-  ⟦dst ⇐ VPtr addr⟧ρ = ρ' ->
+  alloc_at l v m = Some m' ->
+  ⟦dst ⇐ VPtr l⟧ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m')
 
 | exec_Ifree : ∀ σ m ρ f pc src pc' m' addr,
@@ -101,9 +101,49 @@ Definition is_rtl_final (s: rtl_state) : option (val) :=
   | _ => None
   end.
 
+Lemma rtl_final_no_step s v:
+  is_rtl_final s = Some v ->
+  ∀ m p s', ~rtl_step p (s, m) s'.
+Proof.
+  intros H ? ? ? Hstep.
+  destruct s as [[] []]; inv H. inv Hstep.
+Qed.
+
+Lemma rtl_memory_mono p s m s' m':
+  rtl_step p (s, m) (s', m') ->
+  dom m ⊆ dom m'.
+Proof.
+  intros Hstep.
+  inv Hstep as [ | | | | | ? ? ? ? ? ? ? ? ? ? ? ? Hm | | | | | ]; try done.
+  - by erewrite update_at_dom.
+  - apply alloc_at_dom in Hm as <-.
+    by set_solver.
+  - by erewrite update_at_dom.
+Qed.
+
+Lemma can_step_mono p s m t mm:
+  rtl_step p (s, m) t ->
+  ∃ t, rtl_step p (s, m ∪ mm) t.
+Proof.
+  intros H. inv H; try by do 2 econstructor.
+  - eexists.
+    eapply exec_Iload; try done.
+    by apply get_at_mono.
+  - eexists.
+    eapply exec_Istore; try done.
+    by apply update_at_mono.
+  - destruct (can_alloc (m ∪ mm) inhabitant) as (l' & m'' & Hm).
+    by do 2 econstructor.
+  - eexists.
+    eapply exec_Ifree; try done.
+    by apply update_at_mono.
+Qed.
+
 Lemma rtl_mixin_lang : LangMixin rtl_step is_rtl_final.
 Proof.
-  constructor. intros [[] []] ? H ? ? ? Hstep; inv H. inv Hstep.
+  constructor.
+  - by apply rtl_final_no_step.
+  - by eapply can_step_mono.
 Qed.
 
 Definition rtl_lang : lang := Lang _ _ _ _ _ rtl_mixin_lang.

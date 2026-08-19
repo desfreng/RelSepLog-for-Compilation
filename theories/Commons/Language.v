@@ -9,10 +9,12 @@ Section lang_mixin.
   Context (is_value : istate -> option value).
 
   Record LangMixin := {
-      mixin_final_no_step:
-      ∀ s v,
-        is_value s = Some v ->
-        ∀ m p s', ~step_rel p (s, m) s';
+      mixin_final_no_step s v:
+        is_value s = Some v -> ∀ m p s', ~step_rel p (s, m) s';
+
+      mixin_can_step_mono p s m t mm:
+        step_rel p (s, m) t ->
+        (∃ t', step_rel p (s, m ∪ mm) t')
     }.
 End lang_mixin.
 
@@ -48,8 +50,7 @@ Definition is_final {Λ : lang} (s: state Λ) :=
 
 Section LangProp.
   Context {Λ: lang} (P: prog Λ).
-  Implicit Type s : state Λ.
-  Implicit Type v : value Λ.
+  Implicit Types (s : state Λ) (v : value Λ) (ss: istate Λ).
 
   Lemma is_final_Some s v m:
     is_final s = Some (v, m)
@@ -122,19 +123,64 @@ Section LangProp.
     by eapply final_no_step.
   Qed.
 
-  Lemma is_final_mem_ignore ps m m1 m2 v :
-    is_final (ps, m1) = Some (v, m) ->
-    is_final (ps, m2) = Some (v, m2).
+  Lemma is_final_mem_ignore ss m m1 m2 v :
+    is_final (ss, m1) = Some (v, m) ->
+    is_final (ss, m2) = Some (v, m2).
   Proof using Type.
     intros (? & He & Hfin)%is_final_Some.
     inv He. simpl. by rewrite Hfin.
   Qed.
 
-  Lemma is_final_mem_same ps m m' v :
-    is_final (ps, m) = Some (v, m') ->
+  Lemma is_final_mem_same ss m m' v :
+    is_final (ss, m) = Some (v, m') ->
     m = m'.
   Proof using Type.
     intros (? & He & Hfin)%is_final_Some. by inv He.
+  Qed.
+
+  Lemma can_progress_mono ss m mm:
+    can_progress (ss, m) ->
+    can_progress (ss, m ∪ mm).
+  Proof using Type.
+    intros (t & Hstep).
+    eapply (mixin_can_step_mono _ _ (lang_mixin Λ)) in Hstep as (t' & Hstep).
+    by eexists.
+  Qed.
+
+  Lemma stuck_anti_mono ss m mm:
+    stuck (ss, m ∪ mm) ->
+    stuck (ss, m).
+  Proof using Type.
+    intros [(? & ? & Heq & Hval)%is_final_None Hnprog].
+    split.
+    - inv Heq. apply is_final_None. by eexists _, _.
+    - intro Hp. apply Hnprog, can_progress_mono, Hp.
+  Qed.
+
+  Definition super_stuck '(ss, m) :=
+    is_value ss = None ∧ ∀ mm, ~can_progress (ss, m ∪ mm).
+
+  Lemma super_stuck_is_stuck s :
+    super_stuck s -> stuck s.
+  Proof using Type.
+    destruct s as [ss m].
+    intros [Hval Hnprog].
+    split.
+    - apply is_final_None. by eexists _, _.
+    - intros H. apply Hnprog with ∅.
+      unfold memory. by rewrite map_union_empty.
+  Qed.
+
+  Lemma super_stuck_mono ss m mm:
+    super_stuck (ss, m) ->
+    super_stuck (ss, m ∪ mm).
+  Proof using Type.
+    intros [Hval Hnprog].
+    split; first done.
+    intros mm' Hprog.
+    unfold memory in *.
+    rewrite <-map_union_assoc in Hprog.
+    by eapply Hnprog.
   Qed.
 End LangProp.
 

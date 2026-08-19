@@ -109,3 +109,87 @@ Proof.
     + by rewrite (insert_union_r m ∅).
     + by apply map_union_empty.
 Qed.
+
+Lemma get_at_mono addr m v:
+  get_at addr m = Some v ->
+  ∀ mm, get_at addr (m ∪ mm) = Some v.
+Proof.
+  unfold get_at, memory.
+  intros Hget mm.
+  case_match eqn:Haddr; try congruence.
+  case_match eqn:Hlookup; try congruence.
+  case_match eqn:Hcell; try congruence.
+  inv Hget.
+  by apply (lookup_union_Some_l m mm) in Hlookup as ->.
+Qed.
+
+Lemma update_at_mono addr m v m':
+  update_at addr v m = Some m' ->
+  ∀ mm, update_at addr v (m ∪ mm) = Some (m' ∪ mm).
+Proof.
+  unfold update_at, memory.
+  intros Hget mm.
+  case_match eqn:Haddr; try congruence.
+  case_match eqn:Hlookup; try congruence.
+  case_match eqn:Hcell; try congruence.
+  inv Hget.
+  apply (lookup_union_Some_l m mm) in Hlookup as ->.
+  f_equal. by apply insert_union_l.
+Qed.
+
+Lemma alloc_at_mono l m v m':
+  alloc_at l v m = Some m' ->
+  ∀ mm,
+  m' ##ₘ mm ->
+  alloc_at l v (m ∪ mm) = Some (m' ∪ mm).
+Proof.
+  unfold alloc_at, memory.
+  intros Hget mm Hdij.
+  case_match eqn:Hlookup; try congruence.
+  inv Hget.
+  apply map_disjoint_insert_l in Hdij as [HnIn Hdij].
+  case_match eqn:Hin.
+  - apply lookup_union_Some in Hin as []; try congruence. done.
+  - f_equal. by apply insert_union_l.
+Qed.
+
+Lemma update_at_dom addr v m m':
+  update_at addr v m = Some m' ->
+  dom m = dom m'.
+Proof.
+  unfold update_at, memory in *.
+  intros H.
+  case_match eqn:Haddr; try congruence.
+  case_match eqn:Hlookup; try congruence.
+  case_match eqn:Hcell; try congruence.
+  inv H.
+  symmetry.
+  by eapply dom_insert_lookup_L.
+Qed.
+
+Lemma alloc_at_dom l v m m':
+  alloc_at l v m = Some m' ->
+  {[ l ]} ∪ dom m = dom m'.
+Proof.
+  unfold alloc_at, memory in *.
+  intros H.
+  case_match eqn:Hlookup; try congruence.
+  inv H. by rewrite dom_insert_L.
+Qed.
+
+Lemma alloc_at_not_in l v m m':
+  alloc_at l v m = Some m' -> m !! l = None.
+Proof.
+  unfold alloc_at, memory in *.
+  intros H.
+  by case_match eqn:Hlookup.
+Qed.
+
+Lemma can_alloc m v: ∃ l, is_Some (alloc_at l v m).
+Proof.
+  pose (l := fresh (dom m)).
+  exists l.
+  unfold alloc_at.
+  assert (m !! l = None) as -> by (apply not_elem_of_dom, is_fresh).
+  done.
+Qed.
