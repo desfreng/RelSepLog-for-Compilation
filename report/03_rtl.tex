@@ -57,7 +57,7 @@ We note that the rule \textsc{Val-Undef} is asymmetric:
 whenever the source program produces an undefined value $\VUndef$,
 it can be related to any value $v_t$ produced by the target program.
 This asymmetry allows the compiler to replace undefined source computations with
-concrete target operations.
+more defined target operations.
 
 \begin{figure}[htp]
   \begin{equation*}
@@ -375,23 +375,23 @@ Execution of a function progresses through three main phases
 \begin{enumerate}
   \item In the beginning,
         the state is a call state $\CallState{f}{\vec{v}}$.
-        We use the rule \textsc{Step-Entry}
-        to step into the body of the function at its entry point.
+        Rule \textsc{Step-Entry} steps into the body of the function
+        at its entry point.
         This initializes the register bank with the values given for the input
         registers of $f$.
         The resulting state is an active state $\State{f}{pc_0}{\rho}$.
 
-  \item Then we use the instruction rules to execute the body of the function.
-        These rules can only apply if they correspond to the next instruction
+  \item Instruction rules then execute the body of the function.
+        These rules apply only when they correspond to the next instruction
         to be executed,
         referenced by $pc$ in $f$.
-        We note that evaluation of some instructions is partial.
-        For instance,
+        The evaluation of some instructions is partial:
         in the \textsc{Step-Op} rule,
-        if $\evalop{op}{\vec{v}}$ returns $\None$, the execution is stuck.
+        if $\evalop{\textsf{op}}{\vec{v}}$ returns $\None$,
+        the execution is stuck.
 
   \item When the function reaches a return instruction,
-        the rule \textsc{Step-Ret} is applied.
+        rule \textsc{Step-Ret} applies.
         It evaluates its return register and enters a return state
         $\ReturnState{v}$.
 
@@ -402,7 +402,7 @@ Execution of a function progresses through three main phases
         and branching to the next $pc$.
 
   \item When a function call occurs,
-        the rule \textsc{Step-Call} is used.
+        rule \textsc{Step-Call} applies.
         The caller evaluates the argument registers,
         pushes a fresh stack frame recording its continuation point $pc'$ and
         register bank $\rho$,

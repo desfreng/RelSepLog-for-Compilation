@@ -153,12 +153,12 @@ where $\sameargsf{I}$ and $\samerf{I}$
 relate input arguments and return values under an extendable heap bijection:
 \begin{align*}
   \sameargs{I}{\vec{v}_t}{\vec{v}_s}
-  & \coloneqq
+  & \triangleq
     \purel{\textsf{Forall2}(\sameval{I}{}{}, \vec{v}_t, \vec{v}_s)}
     \sep \meminj{I}{\emptyset}
   \\
   \samer{I}{v_t}{v_s}
-  & \coloneqq
+  & \triangleq
     \exists I',\;
     \purel{I \subseteq I'} \sep
     \purel{\sameval{I'}{v_t}{v_s}} \sep
@@ -205,7 +205,7 @@ establishing the following loop invariant:
         while the remaining heap is governed by the injection.
 \end{itemize}
 
-Because the programs contain a loop and may diverge (when $n < 0$)
+Because the programs contain a loop and may diverge (when $n < 0$),
 the proof proceeds by coinduction.
 Our logic framework establishes semantic equivalence regardless of
 termination.
@@ -263,9 +263,9 @@ is parameterized by a recursion depth $d \in \mathbb{N}$:
 \begin{equation*}
   \begin{aligned}
     \findnextpc{0}{f}{pc}
-    & \coloneqq pc \\
+    & \triangleq pc \\
     \findnextpc{1 + d}{f}{pc}
-    & \coloneqq
+    & \triangleq
       \begin{cases}
         \findnextpc{d}{f}{pc'}
         & \text{if } \pcatis{f}{pc}{\Inop{pc'}}

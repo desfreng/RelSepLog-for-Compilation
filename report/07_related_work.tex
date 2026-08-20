@@ -20,8 +20,8 @@ When the target language is deterministic,
 a forward simulation implies a backward simulation,
 which guarantees semantic preservation.
 However,
-concurrent extensions such as CompCertTSO~\parencite{sevcik-11-compcerttso}
-introduce non-determinism into target executions,
+extensions such as shared memory concurrency
+introduce internal non-determinism into target executions,
 requiring backward simulations to be established directly.
 CakeML~\parencite{kumar-14-cakeml,tan-19-cakeml} avoids this complication
 by enforcing determinism throughout its source semantics
@@ -136,7 +136,7 @@ by mutating newly allocated constructor fields.
 In our work,
 we evaluate our logic on backend compiler transformations
 over control-flow graphs,
-verifying optimizations that eliminate redundant jump chains.
+such as the optimization that eliminates redundant jump chains.
 
 
 \end{document}

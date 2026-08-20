@@ -13,8 +13,7 @@ model checking,
 or static analysis,
 to establish correctness guarantees.
 Hardware executes machine code produced by compilers,
-which translate source programs through intermediate representations
-down to assembly.
+which translate source programs through intermediate representations.
 Consequently,
 source-level correctness guarantees remain meaningful only if compilation
 strictly preserves program semantics.
@@ -62,7 +61,7 @@ provide techniques to address these issues.
 Modern coinductive simulation frameworks,
 such as the \emph{Stuttering for Free} framework by \textcite{cho-23-stuttering}
 or \emph{Interaction Trees}~\parencite{xia-20-itrees},
-simplify reasoning about program pairs
+simplify reasoning about pairs of programs
 whose execution steps do not correspond one-to-one.
 In parallel,
 \emph{relational separation logics}
@@ -70,7 +69,7 @@ enable local reasoning across dual executions.
 They allow memory resources to be tracked,
 partitioned,
 and treated independently between source and target heaps,
-avoiding global memory injections.
+avoiding reasoning on global memory injections.
 For instance,
 Simuliris~\parencite{gaher-22-simuliris}
 uses a relational separation logic
@@ -104,7 +103,8 @@ about modified heap cells without considering the entire memory.
 
 This internship investigates whether recent developments
 in simulation relations and separation logic
-can be integrated into a relational separation logic framework.
+can be integrated into a relational separation logic framework
+and used to verify compilers.
 To our knowledge,
 no existing verified compiler incorporates a relational separation logic
 to prove the soundness of its optimization passes.
@@ -149,7 +149,7 @@ These rules enable target-side optimizations by
 exploiting the absence of source undefined behavior.
 Synchronous rules govern joint execution steps when both programs
 advance simultaneously on matching instructions,
-such as synchronized function calls.
+such as two calls to the same function.
 
 \subsection*{Arguments Supporting Its Validity}
 
@@ -157,7 +157,7 @@ We evaluated our framework by verifying the correctness
 of two concrete program transformations
 and two general compiler optimizations.
 For the concrete transformations,
-one exploits the absence of undefined behavior in the source
+the first exploits the absence of undefined behavior in the source
 to eliminate a redundant zero-check after a division,
 while the other hoists an invariant memory read out of a loop body.
 For the general optimizations,

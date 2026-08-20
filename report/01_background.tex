@@ -125,7 +125,7 @@ requiring every behavior of the target program
 to be an admitted behavior of the source program:
 \begin{equation}
   \label{eq:rigid-beh-ref}
-  T \sqsubseteq S \coloneqq \forall b, b \in T \implies b \in S
+  T \sqsubseteq S \triangleq \forall b, b \in T \implies b \in S
 \end{equation}
 Rigid refinement ensures that compilation never introduces spurious behaviors,
 while permitting the compiler to resolve non-deterministic choices
@@ -184,7 +184,7 @@ between a target program $T$ and a source program $S$:
 \begin{equation}
   \label{eq:flex-beh-ref}
   T \slantsqsubseteq S
-  \coloneqq
+  \triangleq
   \forall b_t, b_t \in T \implies
   \exists b_s,
   b_s \in S \land b_t \behord b_s
@@ -250,7 +250,8 @@ which interprets coinduction in terms of infinite derivation trees,
 is an intuitive presentation adapted to our setting.
 For foundational treatments of coinduction,
 we refer the reader to
-\textcites{milner-89-communication}{gimenez-98-tutorial}{pous-16-cawu}.
+\textcites{milner-89-communication}{sangiorgi-12-bisimulation}%
+{gimenez-98-tutorial}{pous-16-cawu}.
 Throughout this report,
 we specify inductive and coinductive relations through inference rules:
 \begin{itemize}
@@ -294,8 +295,8 @@ These inference rules can be read in a goal-directed manner:
 To establish $\text{Goal}$,
 one validates the side conditions $P$
 and updates the proof goal to $\text{Goal}'$.
-When $\text{Goal}'$ is an implication $H \implies \text{Goal}''$
-hypothesis $H$ is assumed in the context to establish $\text{Goal}''$.
+When $\text{Goal}'$ is an implication $H \implies \text{Goal}''$,
+the hypothesis $H$ is assumed in the context to establish $\text{Goal}''$.
 To combine inductive and coinductive reasoning within the same definition,
 a relation $R$ is defined as the greatest fixed point%
 \footnote{The relationship between greatest fixed points and coinduction
@@ -350,7 +351,7 @@ translate into distinct proof principles:
         ($\mathsf{scons}$ for streams).
         This condition,
         known as \emph{productivity},
-        prevents using the coinductive hypothesis to build circular proof
+        prohibits using the coinductive hypothesis to build circular proof
         trees.
 \end{itemize}
 
@@ -380,10 +381,10 @@ A \emph{backward simulation} relates a target configuration $t$
 to a source configuration $s$,
 ensuring that every execution step of the target
 is matched by the source.
-Simulation are here parameterized by a postcondition $\Phi$,
+Simulations are parameterized by a postcondition $\Phi$,
 which specifies the invariant expected between the final values and
 memories when both programs terminate\footnote{
-  It is the $\Phi$ used in the rule beh order.
+  This corresponds to the relation $\Phi$ in the behavioral preorder $\behord$.
 }
 
 For terminating executions,
@@ -512,7 +513,7 @@ the stuttering must remain finite.
 This is achieved by equipping the simulation
 with a well-founded measure $(W, \prec)$.
 The relation is indexed by a measure $i \in W$,
-written $\esim{t}{i}{s}$.
+written $\esim{t}{i}{s}{\Phi}$.
 Whenever a stuttering step occurs,
 the index strictly decreases according to $\prec$.
 When both programs step simultaneously,
@@ -523,10 +524,10 @@ this relation is called the \emph{explicit simulation}
 \parencite{cho-23-stuttering}.
 The inference rules defining it are given in
 \cref{fig:explicit-sim}.
-To streamline the notation for stuttering transitions,
+To simplify the notation for stuttering transitions,
 we write $\esim{t}{\prec i}{s}{\Phi}$ as syntactic sugar for:
 \begin{equation*}
-  \esim{t}{\prec i}{s}{\Phi} \coloneqq \exists i', i' \prec i \land \esim{t}{i'}{s}{\Phi}
+  \esim{t}{\prec i}{s}{\Phi} \triangleq \exists i', i' \prec i \land \esim{t}{i'}{s}{\Phi}
 \end{equation*}
 
 The rules \textsc{ESourceSteps} and \textsc{ETargetSteps}

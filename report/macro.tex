@@ -5,7 +5,7 @@
 % ------------------------------------------------------------------------------
 % 1. General Logic, Base Types, and Data Structures
 % ------------------------------------------------------------------------------
-\newcommand{\Prop}{\textsf{Prop}} % Maybe \mathbb{P} ?
+\newcommand{\Prop}{\textsf{Prop}}
 \newcommand{\true}{\textsf{true}}
 \newcommand{\false}{\textsf{false}}
 \newcommand{\Some}[1]{\textsf{Some}\left(#1\right)}
@@ -28,16 +28,6 @@
   \IfNoValueTF{#1}%
     {#2 \twoheadrightarrow^{\ast} #3}%
     {#2 \twoheadrightarrow^{\ast}_{#1} #3}%
-}
-\NewDocumentCommand{\psteps}{o m m}{%
-  \IfNoValueTF{#1}%
-    {#2 \twoheadrightarrow^{+} #3}%
-    {#2 \twoheadrightarrow^{+}_{#1} #3}%
-}
-\NewDocumentCommand{\nsteps}{o m m m}{%
-  \IfNoValueTF{#1}%
-    {#2 \underset{#3}{\twoheadrightarrow} #4}%
-    {#2 \underset{#3}{\twoheadrightarrow_{#1}} #4}%
 }
 
 \newcommand{\finalfunname}{\textsf{is\_final}}
@@ -65,8 +55,6 @@
     {\stuckfunname_{#1}\left(#2\right)}%
 }
 
-\newcommand{\Spec}{\textsf{Spec}}
-\newcommand{\Safe}[1]{\textsf{Safe}(#1)}
 \newcommand{\Term}[1]{\textsf{Terminating}(#1)}
 \newcommand{\Div}{\textsf{Diverging}}
 \newcommand{\Undef}{\textsf{Undefined}}
@@ -115,9 +103,7 @@
 \newcommand{\val}{\textsf{val}}
 \newcommand{\cell}{\textsf{cell}}
 \newcommand{\mem}{\textsf{memory}}
-\newcommand{\memory}{\textsf{memory}}
 \newcommand{\instr}{\textsf{instr}}
-\newcommand{\rtlstate}{\textsf{rtl\_state}}
 \newcommand{\rtlfun}{\textsf{rtl\_function}}
 
 \newcommand{\fnname}{\textsf{fn\_name}}
@@ -188,7 +174,6 @@
 \newcommand{\Icond}[3]{\mathtt{if}\; #1\; \mathtt{then}\; #2\; \mathtt{else}\; #3}
 \newcommand{\Icall}[4]{#1 \coloneqq \mathtt{call}\; #2(#3) \to #4}
 \newcommand{\Iret}[1]{\mathtt{ret}\; #1}
-\newcommand{\Ireturn}[1]{\mathtt{ret}\; #1}
 
 % ------------------------------------------------------------------------------
 % 10. Relational Separation Logic: Assertions and Memory Predicates
@@ -217,16 +202,11 @@
 \newcommand{\ent}{\vdash}
 \newcommand{\boxm}{\Box}
 \newcommand{\hoareq}[4]{\{#1\}\; #2 \lesssim #3\; \{#4\}}
-\newcommand{\bigast}{\mathop{\raisebox{-2pt}{\Large$\ast$}}\displaylimits}
 
 % ------------------------------------------------------------------------------
 % 12. Transformations and Case Studies
 % ------------------------------------------------------------------------------
-\newcommand{\findnextpc}[3]{\textsf{find\_next\_pc}\left(#1, #2, #3\right)}
 \newcommand{\findnextpcf}{\textsf{find\_next\_pc}}
-\newcommand{\tunnelnop}[2]{\textsf{tunnel\_nop}\left(#1, #2\right)}
+\newcommand{\findnextpc}[3]{\findnextpcf\left(#1, #2, #3\right)}
 \newcommand{\tunnelnopf}{\textsf{tunnel\_nop}}
-
-\newcommand{\fact}{\textsf{fact}}
-\newcommand{\factbad}{\textsf{fact\_bad}}
-\newcommand{\factgood}{\textsf{fact\_good}}
+\newcommand{\tunnelnop}[2]{\tunnelnopf\left(#1, #2\right)}

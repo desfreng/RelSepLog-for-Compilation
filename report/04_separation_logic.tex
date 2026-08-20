@@ -15,7 +15,7 @@ we develop a relational separation logic.
 
 \subsection{Separation Logic}
 
-Separation logic~\parencite{chargueraud-20-sl} provides
+Separation logic~\parencites{reynolds-02-sl}{chargueraud-20-sl} provides
 a modular foundation for reasoning about programs that manipulate memory.
 In classical Hoare logic,
 assertions describe properties of the entire heap.
@@ -50,7 +50,7 @@ We define the type of relational propositions,
 denoted $\rProp$,
 as a binary relation over memories:
 \begin{equation*}
-  \rProp \coloneqq \mem \to \mem \to \Prop
+  \rProp \triangleq \mem \to \mem \to \Prop
 \end{equation*}
 By convention,
 the first argument denotes the target memory $m_t$,
@@ -73,15 +73,15 @@ specifying the contents of target and source sub-heaps.
     $\emp$
     & $\lambda m_t\, m_s.\; m_t = \emptyset \land m_s = \emptyset$
     & Empty memory heaps \\
-    $P \land Q$
-    & $\lambda m_t\, m_s.\; P(m_t, m_s) \land Q(m_t, m_s)$
-    & Conjunction \\
-    $P \lor Q$
-    & $\lambda m_t\, m_s.\; P(m_t, m_s) \lor Q(m_t, m_s)$
-    & Disjunction \\
-    $P \to Q$
-    & $\lambda m_t\, m_s.\; P(m_t, m_s) \implies Q(m_t, m_s)$
-    & Implication \\
+    % $P \land Q$
+    % & $\lambda m_t\, m_s.\; P(m_t, m_s) \land Q(m_t, m_s)$
+    % & Conjunction \\
+    % $P \lor Q$
+    % & $\lambda m_t\, m_s.\; P(m_t, m_s) \lor Q(m_t, m_s)$
+    % & Disjunction \\
+    % $P \to Q$
+    % & $\lambda m_t\, m_s.\; P(m_t, m_s) \implies Q(m_t, m_s)$
+    % & Implication \\
     $\forall x,\, P(x)$
     & $\lambda m_t\, m_s.\; \forall x,\, P(x)(m_t, m_s)$
     & Universal quantification \\
@@ -132,8 +132,7 @@ The connectives satisfy the standard algebraic properties of separation logic:
           which is defined only when its operand domains are disjoint.},
         assigning one part to $P$
         and the other part to $Q$.
-        Because the sub-heaps must be strictly disjoint,
-        this operator prevents duplicate resource ownership.
+        This operator enforces unique ownership of resources.
 
   \item The persistent modality $\boxm P$ asserts that $P$ holds on empty heaps.
         Because a persistent assertion requires no memory resources,
@@ -161,32 +160,7 @@ while executing directly on our shallow relational model.
 
 Building on our memory model (\cref{fig:mem-and-reg}),
 we introduce primitive memory assertions for target and source states.
-We define relational points-to and freed assertions:
-\begin{align*}
-  \ptrt{l}{v}
-  &
-    \coloneqq
-    \lambda m_t\, m_s.\;
-    m_t = \{ l \mapsto \Allocated{v} \} \land m_s = \emptyset
-  \\
-  \ptrs{l}{v}
-  &
-    \coloneqq
-    \lambda m_t\, m_s.\;
-    m_t = \emptyset \land m_s = \{ l \mapsto \Allocated{v} \}
-  \\
-  \freet{l}
-  &
-    \coloneqq
-    \lambda m_t\, m_s.\;
-    m_t = \{ l \mapsto \Freed \} \land m_s = \emptyset
-  \\
-  \frees{l}
-  &
-    \coloneqq
-    \lambda m_t\, m_s.\;
-    m_t = \emptyset \land m_s = \{ l \mapsto \Freed \}
-\end{align*}
+Relational points-to and freed assertions are defined in \cref{fig:rel-assertion}.
 The predicate $\ptrt{l}{v}$ asserts that location $l$ in the target heap
 contains value $v$,
 while requiring the source heap to be empty.
@@ -195,6 +169,36 @@ $\ptrs{l}{v}$ asserts ownership of an allocated cell in the source heap.
 The predicates $\freet{l}$ and $\frees{l}$ assert ownership
 of deallocated memory cells in the target and source heaps,
 respectively.
+
+\begin{figure}
+  \begin{align*}
+    \ptrt{l}{v}
+    &
+      \triangleq
+      \lambda m_t\, m_s.\;
+      m_t = \{ l \mapsto \Allocated{v} \} \land m_s = \emptyset
+    \\
+    \ptrs{l}{v}
+    &
+      \triangleq
+      \lambda m_t\, m_s.\;
+      m_t = \emptyset \land m_s = \{ l \mapsto \Allocated{v} \}
+    \\
+    \freet{l}
+    &
+      \triangleq
+      \lambda m_t\, m_s.\;
+      m_t = \{ l \mapsto \Freed \} \land m_s = \emptyset
+    \\
+    \frees{l}
+    &
+      \triangleq
+      \lambda m_t\, m_s.\;
+      m_t = \emptyset \land m_s = \{ l \mapsto \Freed \}
+  \end{align*}
+  \caption{Primitive relational points-to and free assertions.}
+  \label{fig:rel-assertion}
+\end{figure}
 
 Memory allocations in the target and source programs
 do not necessarily yield identical physical addresses.
@@ -208,7 +212,7 @@ This mapping $I$ parameterizes the value similarity relation
 $\sameval{I}{v_t}{v_s}$ (\cref{fig:same-val}).
 Allocating fresh memory in target or source does not extend $I$ immediately.
 Instead,
-the \cref{lem:inj-extension} allows adding
+\cref{lem:inj-extension} allows adding
 the fresh address pair to $I$ at convenience.
 Because the mapping grows monotonically,
 existing value relations are preserved:
@@ -223,7 +227,7 @@ we draw upon the principles introduced by \textcite{gaher-22-simuliris}
 in \emph{Simuliris},
 and define the memory injection predicate $\meminj{I}{E}$.
 The parameter $E \subseteq I$ designates a set of active exceptions,
-which is empty ($\emptyset$) by default.
+which is empty by default.
 The predicate $\meminj{I}{\emptyset}$ asserts collective ownership
 over all memory cells registered in $I$.
 Specifically,
@@ -287,7 +291,7 @@ to a source function $f_s$.
 The formal definition is given by:
 \begin{equation*}
   \begin{aligned}
-    \hoareq{P}{f_t}{f_s}{Q} \coloneqq
+    \hoareq{P}{f_t}{f_s}{Q} \triangleq
     \boxm \Big(
     \forall \vec{v}_t\, \vec{v}_s,\;
     P(\vec{v}_t, \vec{v}_s) \wand
@@ -300,7 +304,7 @@ and $Q$ is a postcondition specifying the returned values.
 The simulation is lifted to an assertion in $\rProp$:
 \begin{equation*}
   \fsim{t}{j}{i}{s}{\Phi}
-  \coloneqq
+  \triangleq
   \lambda m_t\, m_s.\;
   \fsim{(t, m_t)}{j}{i}{(s, m_s)}{\Phi}
 \end{equation*}
