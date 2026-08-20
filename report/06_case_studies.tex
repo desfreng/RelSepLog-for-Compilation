@@ -90,9 +90,9 @@ and computes the factorial of $n$.
   \centering
   \begin{equation*}
     \begin{array}{r@{\;\colon\;}l c r@{\;\colon\;}l}
-      \multicolumn{2}{c}{\textbf{Source Function } (\textsf{fact\_bad})}
+      \multicolumn{2}{c}{\textbf{Source Function } (\textsf{fact\_slow})}
       & \hspace{2cm}
-      & \multicolumn{2}{c}{\textbf{Target Function } (\textsf{fact\_good})}
+      & \multicolumn{2}{c}{\textbf{Target Function } (\textsf{fact\_fast})}
       \\
       \midrule
       0 & \Iop{r_{res}}{\Oimmint{1}}{}{1}
@@ -136,10 +136,10 @@ and computes the factorial of $n$.
   \label{fig:fact-programs}
 \end{figure}
 
-In the unoptimized function \textsf{fact\_bad},
+In the unoptimized function \textsf{fact\_slow},
 the loop body performs a redundant heap load at $pc = 5$ on each iteration,
-reading the constant $1$ stored at $r_{addr}$ to decrement $r_n$.
-The optimized function \textsf{fact\_good} hoists the load into the prelude.
+reading the constant $1$ stored at the address in $r_{addr}$ to decrement $r_n$.
+The optimized function \textsf{fact\_fast} hoists the load into the prelude.
 It further replaces the memory access with an immediate assignment of $1$
 into register $r_{one}$.
 
@@ -147,7 +147,7 @@ To prove the soundness of this transformation,
 we prove the following relational Hoare quadruple for all heap bijections $I$:
 \begin{equation}
   \label{eq:hoisting-hoare}
-  \hoareq{\sameargsf{I}}{\textsf{fact\_good}}{\textsf{fact\_bad}}{\samerf{I}}
+  \hoareq{\sameargsf{I}}{\textsf{fact\_fast}}{\textsf{fact\_slow}}{\samerf{I}}
 \end{equation}
 where $\sameargsf{I}$ and $\samerf{I}$
 relate input arguments and return values under an extendable heap bijection:
@@ -166,9 +166,9 @@ relate input arguments and return values under an extendable heap bijection:
 \end{align*}
 The precondition $\sameargs{I}{\vec{v}_t}{\vec{v}_s}$
 asserts that input arguments are pairwise related under $I$,
-alongside an unexploited memory injection $\meminj{I}{\emptyset}$.
-The postcondition $\samer{I}{v_t}{v_s}$ guarantees that return values remain
-related under a monotonically extended bijection $I' \supseteq I$,
+alongside a complete ($E = \emptyset$) memory injection $\meminj{I}{\emptyset}$.
+The postcondition $\samer{I}{v_t}{v_s}$ guarantees that return values
+are related under an extended bijection $I' \supseteq I$,
 with the memory injection $\meminj{I'}{\emptyset}$ fully restored.
 Allowing the bijection to grow monotonically accounts for any fresh memory
 allocations performed during execution.
@@ -185,9 +185,9 @@ the target initializes $r_{one}$ via \textsc{Target-Op}
 and reaches $pc_t = 3$,
 establishing the following loop invariant:
 \begin{itemize}
-  \item The target program is executing \textsf{fact\_good}
+  \item The target program is executing \textsf{fact\_fast}
         at program counter $pc_t = 3$ with register bank $\rho_t$.
-  \item The source program is executing \textsf{fact\_bad}
+  \item The source program is executing \textsf{fact\_slow}
         at program counter $pc_s = 2$ with register bank $\rho_s$.
   \item The register banks agree on the counter and accumulator:
         $\sameval{I}{\rho_t(r_n)}{\rho_s(r_n)}$
@@ -205,9 +205,12 @@ establishing the following loop invariant:
         while the remaining heap is governed by the injection.
 \end{itemize}
 
-The proof then proceeds by coinduction,
-evaluating the zero-test $\Oeqz(r_n) = b$
-synchronously in both programs:
+Because the programs contain a loop and may diverge (when $n < 0$)
+the proof proceeds by coinduction.
+Our logic framework establishes semantic equivalence regardless of
+termination.
+Evaluating the zero-test $\Oeqz(r_n) = b$
+synchronously in both programs yields two cases:
 \begin{description}
   \item[Base case ({\normalfont $b = \true$}):]
         Both programs branch to the return instruction at $pc = 7$.
@@ -236,7 +239,8 @@ synchronously in both programs:
 \subsection{Nop Tunneling}
 \label{sec:case-study-nop}
 
-We now consider an optimization on arbitrary control-flow graphs:
+We now consider an optimization on arbitrary control-flow graphs present in
+CompCert~\parencite{leroy-09-backend}:
 nop tunneling.
 Intermediate compiler passes frequently introduce redundant jump
 instructions ($\Inop{pc}$).

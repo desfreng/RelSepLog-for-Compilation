@@ -113,6 +113,7 @@ this approach relaxes constraints present in existing systems,
 such as the determinism requirements imposed by CompCert and CakeML.
 
 \subsection*{Contributions}
+\label{sec:contributions}
 
 We developed a mechanized logic framework addressing these challenges.
 At its core,
@@ -192,15 +193,25 @@ our logic is compatible with the Iris proof mode~\parencite{krebbers-18-mosel}.
 This work provides a first step for several research perspectives.
 While current case studies focus on control-flow simplifications
 and local rewrites,
-future work will target data-flow optimizations.
-We plan to verify data-flow transformations ranging from constant propagation
-to more complex optimizations such as selective defunctionalization.
+future work will target data-flow optimizations,
+ranging from constant propagation
+to more complex transformations such as selective defunctionalization.
 
-A second direction involves multi-language verification.
+A second direction involves multi-language verification
+and language independence.
 Although our logic is parameterized to relate distinct languages,
 our current case studies operate within a single intermediate representation.
 Future work will apply the framework to translation passes
 between different intermediate languages.
+More generally,
+we aim to keep the relational separation logic as language-independent as
+possible.
+
+Another objective is full-scale integration into CompCert.
+A key question is whether our relational verification technique can be
+applied incrementally,
+starting with a single compilation pass
+and progressively extending to other passes across the pipeline.
 
 Finally,
 we aim to support richer language features.
@@ -212,9 +223,9 @@ structured control,
 first-class closures,
 or effect handlers.
 In the long term,
-these techniques could be applied to CompCert,
-notably to support concurrency,
-and pave the way toward a verified OCaml compiler.
+these techniques could be applied to extend CompCert with new optimizations
+and shared-memory concurrency,
+paving the way toward a verified OCaml compiler.
 
 \end{document}
 

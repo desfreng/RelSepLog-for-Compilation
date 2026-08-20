@@ -61,11 +61,11 @@ CakeML similarly tracks memory through a global mutable store,
 lowering this store to a flat linear array in the backend.
 In our work,
 we employ separation logic to reason locally
-about memory fragments and memory injection.
+about memory fragments and memory injections.
 Local heap assertions avoid reasoning globally
 about the entire memory state.
-We hope that this formulation will ease future proofs
-of transformations impacting memory.
+We anticipate that this formulation will facilitate future proofs
+of transformations that modify memory.
 
 \paragraph{Modularity}
 CompCert is structured as a whole-program compiler
@@ -79,11 +79,10 @@ recent extensions support dynamic compilation
 primitives~\parencite{sewell-23-cakes}.
 In our framework,
 relational Hoare quadruples provide horizontal compositionality,
-allowing verified code components to be used independently.
-However,
-our current formalization operates within a single intermediate language,
-leaving compilation passes between distinct languages
-to future work.
+allowing verified code components to be reasoned about independently.
+This property is particularly useful when stating the invariant
+of the nop-tunneling pass,
+in contrast to the whole-program simulation invariants used in CompCert.
 
 \subsection{Relational Separation Logics}
 \label{sec:related-logics}
@@ -123,8 +122,9 @@ In contrast,
 our framework supports \muRTL{},
 a low-level register transfer language
 where programs are represented as control-flow graphs.
-This requires relational proof rules capable of handling
-unstructured control flow.
+Because arbitrary control-flow graphs can contain unstructured loops,
+reasoning about execution steps relies heavily on coinduction,
+necessitating proof rules that interact cleanly with coinductive reasoning.
 
 \paragraph{Verified Transformations}
 The scope of verified program transformations also differs.

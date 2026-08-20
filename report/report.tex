@@ -3,8 +3,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[a4paper,
-hmargin=1.8cm,
-vmargin={1cm, 2cm}]{geometry}
+hmargin=1cm,
+vmargin={1cm, 1.6cm}]{geometry}
 
 \usepackage{showframe}
 \usepackage{lineno}
@@ -39,9 +39,15 @@ vmargin={1cm, 2cm}]{geometry}
 \usepackage{enumitem}
 
 \usepackage{xurl}
-\usepackage[backend=biber,style=numeric]{biblatex}
+\usepackage[style=alphabetic,maxalphanames=4,maxbibnames=9,backend=biber]{biblatex}
 
 \addbibresource{ref.bib}
+
+\ExecuteBibliographyOptions{doi=false,url=false}
+\newbibmacro{string+url}[1]{\iffieldundef{url}{#1}{\href{\thefield{url}}{#1}}}
+\DeclareFieldFormat{title}{\usebibmacro{string+url}{\mkbibemph{#1}}}
+\DeclareFieldFormat[article,inproceedings,unpublished,incollection]%
+{title}{\usebibmacro{string+url}{\mkbibquote{#1}}}
 
 \usepackage{tikz}
 \usepackage{booktabs}
@@ -88,6 +94,10 @@ vmargin={1cm, 2cm}]{geometry}
 
 \subfile{07_related_work.tex}
 
+\section{Future Work}
+Due to space constraints,
+refer to page~\pageref{sec:contributions}
+for a summary of contributions and a discussion of further work.
 \newpage
 
 \printbibliography[heading=bibintoc]

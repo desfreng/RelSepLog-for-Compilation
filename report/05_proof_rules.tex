@@ -23,7 +23,7 @@ while keeping the configuration of the other fixed.
 
 Target proof rules express the conditions under which the target program
 can execute an instruction.
-The rules governing target execution of allocations and operations
+The rules governing target execution of load, allocations and operations
 are displayed in \cref{fig:target-rules}.
 The source stepping rules mirror the target rules,
 operating on the source program counter,
@@ -38,35 +38,51 @@ and source memory assertions.
         \begin{matrix}
           \evalop{\textsf{op}}{\vec{v}} = \Some{v}
           \\[.2em]
-          \pcatis{f_t}{pc_t}{\Iop{dst}{\textsf{op}}{\vec{r}}{pc}}
+          \pcatis{f}{pc}{\Iop{dst}{\textsf{op}}{\vec{r}}{pc'}}
         \end{matrix}
       }
       \hypo{
         \begin{matrix}
-          \getreg{\vec{r}}{\rho_t} = \vec{v}
+          \getreg{\vec{r}}{\rho} = \vec{v}
           \\[.2em]
-          \fsim{(\sigma_t, \State{f_t}{pc}{\setreg{dst}{v}{\rho_t}})}
-          {j'}{i}{s_s}{\Phi}
+          \fsim{(\sigma, \State{f}{pc'}{\setreg{dst}{v}{\rho}})}
+          {j'}{i}{c}{\Phi}
         \end{matrix}
       }
       \infer2[\textsc{Target-Op}]{
-        \fsim{(\sigma_t, \State{f_t}{pc_t}{\rho_t})}{j}{i}{s_s}{\Phi}
+        \fsim{(\sigma, \State{f}{pc}{\rho})}{j}{i}{c}{\Phi}
       }
     \end{prooftree}
     \\[1em]
     \begin{prooftree}
       \hypo{
         \begin{matrix}
-          \pcatis{f_t}{pc_t}{\Ialloc{dst}{pc}}
+          \pcatis{f}{pc}{\Iload{dst}{src}{pc'}}\qquad
+          \getreg{src}{\rho} = \VPtr{l}\qquad
+          \ptrt{l}{v}
+          \\[.2em]
+          \ptrt{l}{v} \wand \fsim{(\sigma, \State{f}{pc'}{\setreg{dst}{v}{\rho}})}
+          {j'}{i}{c}{\Phi}
+        \end{matrix}
+      }
+      \infer1[\textsc{Target-Load}]{
+        \fsim{(\sigma, \State{f}{pc}{\rho})}{j}{i}{c}{\Phi}
+      }
+    \end{prooftree}
+    \\[1em]
+    \begin{prooftree}
+      \hypo{
+        \begin{matrix}
+          \pcatis{f}{pc}{\Ialloc{dst}{pc'}}
           \\[.2em]
           \forall l\, v,\;
           \ptrt{l}{v} \wand
-          \fsim{(\sigma_t, \State{f_t}{pc}{\setreg{dst}{\VPtr{l}}{\rho_t}})}
-          {j'}{i}{s_s}{\Phi}
+          \fsim{(\sigma, \State{f}{pc'}{\setreg{dst}{\VPtr{l}}{\rho}})}
+          {j'}{i}{c}{\Phi}
         \end{matrix}
       }
       \infer1[\textsc{Target-Alloc}]{
-        \fsim{(\sigma_t, \State{f_t}{pc_t}{\rho_t})}{j}{i}{s_s}{\Phi}
+        \fsim{(\sigma, \State{f}{pc}{\rho})}{j}{i}{c}{\Phi}
       }
     \end{prooftree}
   \end{gather*}
@@ -93,19 +109,17 @@ the value of the allocated memory cell may be chosen existentially:
   \begin{prooftree}
     \hypo{
       \begin{matrix}
-        v \in \val
-        \\[.2em]
-        \pcatis{f_s}{pc_s}{\Ialloc{dst}{pc}}
+        v \in \val \qquad \pcatis{f}{pc}{\Ialloc{dst}{pc'}}
         \\[.2em]
         \forall l,\;
         \ptrs{l}{v} \wand
-        \fsim{s_t}{j}{i'}
-        {(\sigma_s, \State{f_s}{pc}{\setreg{dst}{\VPtr{l}}{\rho_s}})}
+        \fsim{c}{j}{i'}
+        {(\sigma, \State{f}{pc'}{\setreg{dst}{\VPtr{l}}{\rho}})}
         {\Phi}
       \end{matrix}
     }
     \infer1[\textsc{Source-Alloc}]{
-      \fsim{s_t}{j}{i}{(\sigma_s, \State{f_s}{pc_s}{\rho_s})}{\Phi}
+      \fsim{c}{j}{i}{(\sigma, \State{f}{pc}{\rho})}{\Phi}
     }
   \end{prooftree}
 \end{equation*}
@@ -113,15 +127,12 @@ the value of the allocated memory cell may be chosen existentially:
 \subsection{Undefined Behavior Exploitation}
 
 By the \textsc{FSourceStuck} rule, our free simulation is skewed.
-When the source program reaches a configuration from which no further
-transition is possible without being in a final state,
+When the source program reaches a stuck configuration,
 the simulation property $\fsim{t}{j}{i}{s}{\Phi}$ holds directly.
 This property provides a powerful proof technique:
-whenever the source program is about to perform an operation,
-we can safely assume that the operation succeeds.
-If the operation were to fail,
-the source would be stuck,
-and the proof obligation would be instantly discharged.
+whenever the source program is about to step,
+we can safely assume that the configuration is not stuck.
+Otherwise the proof obligation would be instantly discharged.
 For instance,
 the exploit rule \textsc{Source-Op-Exploit} allows the proof to assume
 that the operation succeeds and produces a value $v$:
@@ -129,20 +140,19 @@ that the operation succeeds and produces a value $v$:
   \begin{prooftree}
     \hypo{
       \begin{matrix}
-        \getreg{\vec{r}}{\rho_s} = \vec{v}
-        \\[.2em]
-        \pcatis{f_s}{pc_s}{\Iop{dst}{\textsf{op}}{\vec{r}}{pc}}
+        \getreg{\vec{r}}{\rho} = \vec{v} \qquad
+        \pcatis{f}{pc}{\Iop{dst}{\textsf{op}}{\vec{r}}{pc'}}
         \\[.2em]
         \forall v,\;
         \purel{\evalop{\textsf{op}}{\vec{v}} = \Some{v}}
         \wand
-        \fsim{s_t}{j}{1+i}
-        {(\sigma_s, \State{f_s}{pc}{\setreg{dst}{v}{\rho_s}})}
+        \fsim{c}{j}{i'}
+        {(\sigma, \State{f}{pc'}{\setreg{dst}{v}{\rho}})}
         {\Phi}
       \end{matrix}
     }
     \infer1[\textsc{Source-Op-Exploit}]{
-      \fsim{s_t}{j}{i}{(\sigma_s, \State{f_s}{pc_s}{\rho_s})}{\Phi}
+      \fsim{c}{j}{i}{(\sigma, \State{f}{pc}{\rho})}{\Phi}
     }
   \end{prooftree}
 \end{equation*}
@@ -157,34 +167,48 @@ $\meminj{I}{E}$,
 heap assertions can be extracted directly
 from the global injection invariant.
 
-Suppose the source program is going
-to execute a load on an address $addr_s$
-that is related to a target address through $\sameval{I}{addr_t}{addr_s}$.
-Two deductions follow:
+To justify the soundness of the \textsc{Source-Load-Exploit} rule
+presented in \cref{fig:source-load-exploit},
+suppose the source program is about to execute a load on an address $v$
+that is related to a target value $w$ through $\sameval{I}{w}{v}$.
+The proof sketch proceeds in two steps:
 \begin{enumerate}
   \item \textbf{Pointer validity:}
-        If $addr_s$ is not a valid pointer $\VPtr{l_s}$,
-        the source memory access fails and becomes stuck.
-        Therefore,
-        from the relation $\sameval{I}{addr_t}{addr_s}$,
-        we deduce that $addr_s = \VPtr{l_s}$ and $addr_t = \VPtr{l_t}$
-        with $(l_t, l_s) \in I$.
+        By case analysis,
+        if $v$ is not a valid pointer $\VPtr{l}$,
+        the source becomes stuck
+        and the proof is immediate via \textsc{FSourceStuck}.
+        Otherwise,
+        $v = \VPtr{l}$,
+        and $\sameval{I}{w}{v}$ ensures that $w = \VPtr{l'}$
+        with $(l', l) \in I$.
   \item \textbf{Active status:}
         Opening the memory injection $\meminj{I}{\emptyset}$
-        via the exploitation lemma reveals that the cell pair $(l_t, l_s)$
+        via the extraction \cref{lem:inj-extraction}
+        reveals that the pair $(l', l)$
         is either actively allocated or already freed.
-        However,
-        if the location were freed,
-        attempting a load in the source would produce undefined behavior.
+        If the location were freed,
+        attempting a load in the source would produce a stuck configuration.
         Thus,
         the freed case is instantly discharged,
         and the cell is guaranteed to be currently allocated.
 \end{enumerate}
 
-Because we exploited the location pair $(l_t, l_s) \in I$,
-the set $E$ in the returned memory injection is augmented.
-This reasoning is formalized in the rule \textsc{Source-Load-Exploit}
-shown in \cref{fig:source-load-exploit}.
+From a user perspective,
+this rule exhibits an interesting asymmetry.
+In standard separation logic,
+and in our \textsc{Target-Load} rule,
+executing a load demands an existing points-to assertion in the context.
+In contrast,
+\textsc{Source-Load-Exploit} does not consume any points-to assertion.
+Instead,
+it extracts and provides both points-to assertions
+$\ptrt{l'}{a} \sep \ptrs{l}{b}$
+from the global invariant $\meminj{I}{\emptyset}$,
+adding $(l', l)$ to the exception set.
+For clarity,
+\cref{fig:source-load-exploit} displays a simplified rule
+where the exception set is initially empty.
 Similar exploitation principles apply to the remaining memory operations.
 
 \begin{figure}[htp]
@@ -192,37 +216,37 @@ Similar exploitation principles apply to the remaining memory operations.
     \begin{prooftree}
       \hypo{
         \begin{matrix}
-          \pcatis{f_s}{pc_s}{\Iload{dst}{src}{pc}}
+          \pcatis{f}{pc}{\Iload{dst}{src}{pc'}}
           \\[.2em]
           {
-          \getreg{src}{\rho_s} = addr_s
+          \getreg{src}{\rho} = v
           \qquad
-          \sameval{I}{addr_t}{addr_s}
+          \sameval{I}{w}{v}
           \qquad
           \meminj{I}{\emptyset}
           }
           \\[.2em]
           \left(
           \begin{array}{@{}l@{}}
-            \forall l_t\, l_s\, v_t\, v_s,\;
-            addr_s = \VPtr{l_s} \land
-            addr_t = \VPtr{l_t} \implies {}
+            \forall l'\, l\, a\, b,\;
+            v = \VPtr{l} \land
+            w = \VPtr{l'} \implies {}
             \\
             \hspace{5em}
-            \ptrt{l_t}{v_t} \sep
-            \ptrs{l_s}{v_s} \sep
-            \purel{\sameval{I}{v_t}{v_s}} \sep
-            \meminj{I}{\{ (l_t, l_s)\}} \wand {}
+            \ptrt{l'}{a} \sep
+            \ptrs{l}{b} \sep
+            \purel{\sameval{I}{a}{b}} \sep
+            \meminj{I}{\{ (l', l)\}} \wand {}
             \\
             \hspace{5em}
-            \fsim{s_t}{j}{i'}
-            {(\sigma_s, \State{f_s}{pc}{\setreg{dst}{v_s}{\rho_s}})}{\Phi}
+            \fsim{c}{j}{i'}
+            {(\sigma, \State{f}{pc'}{\setreg{dst}{b}{\rho}})}{\Phi}
           \end{array}
           \right)
         \end{matrix}
       }
       \infer1[\textsc{Source-Load-Exploit}]{
-        \fsim{s_t}{j}{i}{(\sigma_s, \State{f_s}{pc_s}{\rho_s})}{\Phi}
+        \fsim{c}{j}{i}{(\sigma, \State{f}{pc}{\rho})}{\Phi}
       }
     \end{prooftree}
   \end{equation*}
@@ -244,7 +268,7 @@ in lockstep.
 
 This is notably the case when reasoning about synchronous function calls.
 To ensure modularity,
-we avoid explicitly stepping through the execution of callee bodies.
+we avoid explicitly stepping through the execution of the callees.
 Instead,
 we rely on the Hoare quadruples introduced in \cref{sec:rel-hoare}.
 The synchronous call rule \textsc{Both-Call} enables replacing a pair of
@@ -270,16 +294,16 @@ the \textsc{Both-Call} rule proceeds as follows:
         the relational precondition $P(\vec{v}_t, \vec{v}_s)$.
   \item Instead of stepping through the internal instructions of $f_t'$
         and $f_s'$,
-        the rule bypasses the callee bodies entirely.
+        the rule bypasses the calls entirely.
   \item Execution resumes at the return points $pc_t'$ and $pc_s'$
         with the destination registers updated with return values,
         satisfying the postcondition $Q(v_t, v_s)$.
 \end{enumerate}
 
-Because Hoare quadruples are enclosed in the persistent modality,
+Because Hoare quadruples are enclosed in the persistence modality,
 they represent duplicable specifications
 that can be verified once per function,
-and reused across arbitrarily many call sites.
+and reused across many call sites.
 This provides horizontal modularity:
 functions in a program can be compiled and verified independently,
 and their correctness guarantees compose cleanly through \textsc{Both-Call}.

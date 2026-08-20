@@ -140,10 +140,10 @@ or transform it into a benign execution for the target.
 To account for these optimization principles,
 compiler correctness relies on a \emph{flexible behavioral refinement}.
 We first equip behaviors with a preorder $\behord$,
-parameterized by a relation on values and memory $\vsim{}{}$:
+parameterized by a relation on values and memory $\Phi$:
 \begin{gather*}
   \begin{prooftree}
-    \hypo{\vsim{(v_t, m_t)}{(v_s, m_s)}}
+    \hypo{\Phi(v_t, v_s, m_t, m_s)}
     \infer1[\textsc{Beh-Term}]{
       \Term{v_t, m_t} \behord \Term{v_s, m_s}
     }
@@ -169,7 +169,7 @@ These rules can be read as follows:
   \item Producing a value $v_t$ and a memory $m_t$ in the compiled program
         is justified by the possibility of producing a value
         $v_s$ and a memory $m_s$ in the source program such that
-        $\vsim{(v_t, m_t)}{(v_s, m_s)}$.
+        $\Phi(v_t, v_s, m_t, m_s)$.
 
   \item Divergence in the compiled program
         is justified by the possibility of divergence in the source program.
@@ -283,6 +283,28 @@ we specify inductive and coinductive relations through inference rules:
         They generalize inductive rules to judgments admitting
         \emph{potentially infinite derivation trees}.
 \end{itemize}
+These inference rules can be read in a goal-directed manner:
+\begin{equation*}
+  \begin{prooftree}
+    \hypo{P}
+    \hypo{\text{Goal}'}
+    \infer2{\text{Goal}}
+  \end{prooftree}
+\end{equation*}
+To establish $\text{Goal}$,
+one validates the side conditions $P$
+and updates the proof goal to $\text{Goal}'$.
+When $\text{Goal}'$ is an implication $H \implies \text{Goal}''$
+hypothesis $H$ is assumed in the context to establish $\text{Goal}''$.
+To combine inductive and coinductive reasoning within the same definition,
+a relation $R$ is defined as the greatest fixed point%
+\footnote{The relationship between greatest fixed points and coinduction
+  follows from the Knaster--Tarski theorem;
+  see \textcites{pous-16-cawu}{schafer-17-tower} for comprehensive treatments.}
+of an inductive operator.
+Inductive rules with a single bar require a finite proof tree
+for occurrences of $R$ in the premises,
+while coinductive rules with a double bar permit infinite derivations.
 
 For example,
 finite lists are defined inductively,
@@ -343,11 +365,10 @@ to facilitate reasoning with coinductive simulation invariants.
 
 \subsection{Simulation Schemes \& Stuttering}
 
-Throughout this section,
-we focus on direct program refinements $T \sqsubseteq S$.
 Equipped with coinductive predicates to handle potentially infinite
 executions,
-we can define a simulation relation to establish such refinements.
+we can define a simulation relation to establish
+program refinements: $T \slantsqsubseteq S$.
 In general,
 the source and target languages may differ:
 target configurations $t$ evolve under $\step[t]{}{}$
@@ -355,59 +376,40 @@ with finality test $\isfinalf[t]$,
 while source configurations $s$
 evolve under $\step[s]{}{}$
 with finality test $\isfinalf[s]$.
-A \emph{direct backward simulation} relates a target configuration $t$
+A \emph{backward simulation} relates a target configuration $t$
 to a source configuration $s$,
 ensuring that every execution step of the target
 is matched by the source.
+Simulation are here parameterized by a postcondition $\Phi$,
+which specifies the invariant expected between the final values and
+memories when both programs terminate\footnote{
+  It is the $\Phi$ used in the rule beh order.
+}
 
 For terminating executions,
 the simulation requires that final configurations yield related values
 and memories.
-We formalize this condition using the predicate $\bfinalf$.
-% \begin{equation}
-%   \label{eq:both-final}
-%   \bfinal{t}{s}
-%   \coloneqq \exists v_t\, v_s\, m_t\, m_s,\;
-%   \isfinal[t]{t} = \Some{v_t, m_t} \land
-%   \isfinal[s]{s} = \Some{v_s, m_s} \land
-%   \vsim{(v_t, m_t)}{(v_s, m_s)}
-% \end{equation}
-The assertion $\bfinal{t}{s}$
+We formalize this condition using the predicate $\bfinalf{\Phi}$.
+The assertion $\bfinal{\Phi}{t}{s}$
 holds when both target and source configurations have reached final states,
 producing values $v_t, v_s$ and memories $m_t, m_s$
-that satisfy $\vsim{(v_t, m_t)}{(v_s, m_s)}$.
-The lock-step termination condition is then expressed as:
-\begin{equation}
-  \label{eq:lock-both-final}
-  \begin{prooftree}
-    \hypo{\bfinal{t}{s}}
-    \infer1{\lsim{t}{s}}
-  \end{prooftree}
-\end{equation}
+that satisfy $\Phi(v_t, v_s, m_t, m_s)$.
+This termination condition is expressed in the rule
+\textsc{Lock-Final} in \cref{fig:lock-rules}.
+When the source program encounters undefined behavior,
+it enters a stuck state in a non-final configuration.
+In this case,
+\textsc{Lock-Stuck} in \cref{fig:lock-rules} immediately validates the simulation,
+leaving the target program free to perform arbitrary transitions or diverge.
+This asymmetry is allowed by the flexible refinement we want to prove.
 
 For non-final configurations,
 the relation must ensure that the target state is capable of progressing
 and that every transition it performs corresponds to an execution step
 in the source program.
 Because executions may be non-terminating,
-this condition is expressed coinductively:
-\begin{equation}
-  \label{eq:lock-both-step}
-  \begin{prooftree}
-    \hypo{\canp[t]{t}}
-    \hypo{\forall t',
-      \step[t]{t}{t'} \implies
-      \exists s',
-      \step[s]{s}{s'} \land \lsim{t'}{s'}
-    }
-    \infer[coind]2{\lsim{t}{s}}
-  \end{prooftree}
-\end{equation}
-
-The relation $\sim_l$
-defined by \cref{eq:lock-both-final,eq:lock-both-step}
-is a direct \emph{lock-step} backward simulation:
-the target and source programs advance at the exact same pace.
+this condition is expressed coinductively in rule \textsc{Lock-Step}
+in \cref{fig:lock-rules}.
 Under non-determinism,
 the target and source configurations are treated asymmetrically:
 \begin{itemize}
@@ -423,6 +425,40 @@ This asymmetry matches the quantification structure of the direct refinement:
 we must account for every non-deterministic path chosen by the target
 and justify it with an admissible path in the source.
 
+\begin{figure}[htb]
+  \begin{align*}
+    &
+      \begin{prooftree}
+        \hypo{\bfinal{\Phi}{t}{s}}
+        \infer1[\textsc{Lock-Final}]{\lsim{t}{s}{\Phi}}
+      \end{prooftree}
+    &
+    &
+      \begin{prooftree}
+        \hypo{\stuck[s]{s}}
+        \infer1[\textsc{Lock-Stuck}]{\lsim{t}{s}{\Phi}}
+      \end{prooftree}
+  \end{align*}
+  \begin{equation*}
+    \begin{prooftree}
+      \hypo{\canp[t]{t}}
+      \hypo{\forall t',
+        \step[t]{t}{t'} \implies
+        \exists s',
+        \step[s]{s}{s'} \land \lsim{t'}{s'}{\Phi}
+      }
+      \infer[coind]2[\textsc{Lock-Step}]{\lsim{t}{s}{\Phi}}
+    \end{prooftree}
+  \end{equation*}
+
+  \caption{Rules of the \emph{lock-step simulation}.}
+  \label{fig:lock-rules}
+\end{figure}
+
+The relation $\sim_l$
+defined in \cref{fig:lock-rules}
+is a \emph{lock-step} backward simulation:
+the target and source programs advance at the exact same pace.
 While lock-step simulations suffice for simple transformations
 that preserve step counts,
 realistic compiler passes break this one-to-one correspondence.
@@ -488,9 +524,9 @@ this relation is called the \emph{explicit simulation}
 The inference rules defining it are given in
 \cref{fig:explicit-sim}.
 To streamline the notation for stuttering transitions,
-we write $\esim{t}{\prec i}{s}$ as syntactic sugar for:
+we write $\esim{t}{\prec i}{s}{\Phi}$ as syntactic sugar for:
 \begin{equation*}
-  \esim{t}{\prec i}{s} \coloneqq \exists i', i' \prec i \land \esim{t}{i'}{s}
+  \esim{t}{\prec i}{s}{\Phi} \coloneqq \exists i', i' \prec i \land \esim{t}{i'}{s}{\Phi}
 \end{equation*}
 
 The rules \textsc{ESourceSteps} and \textsc{ETargetSteps}
@@ -501,12 +537,12 @@ govern asynchronous execution steps:
         while the target program stutters.
         Due to angelic non-determinism in the source,
         it suffices to exhibit a single matching successor $s'$
-        with a strictly decreased measure $\esim{t}{\prec i}{s'}$.
+        with a strictly decreased measure $\esim{t}{\prec i}{s'}{\Phi}$.
 
   \item In \textsc{ETargetSteps},
         the target $t$ must be able to make progress,
         and because target non-determinism is demonic,
-        the simulation at a decreased measure $\esim{t'}{\prec i}{s}$
+        the simulation at a decreased measure $\esim{t'}{\prec i}{s}{\Phi}$
         must be established for every transition $\step[t]{t}{t'}$.
 \end{itemize}
 Since $(W, \prec)$ is well-founded,
@@ -520,25 +556,34 @@ justify divergence,
 imposing a proof burden that we address in the following chapter.
 
 \begin{figure}[htb]
-  \begin{gather*}
-    \begin{prooftree}
-      \hypo{\bfinal{t}{s}}
-      \infer1[\textsc{ERelated}]{\esim{t}{i}{s}}
-    \end{prooftree}
-    \\[1em]
-    \begin{prooftree}
+  \begin{align*}
+    &
+      \begin{prooftree}
+        \hypo{\bfinal{\Phi}{t}{s}}
+        \infer1[\textsc{ERelated}]{\esim{t}{i}{s}{\Phi}}
+      \end{prooftree}
+    &
+    &
+      \begin{prooftree}
+        \hypo{\stuck[s]{s}}
+        \infer1[\textsc{EStuck}]{\esim{t}{i}{s}{\Phi}}
+      \end{prooftree}
+    &
+    &
+      \begin{prooftree}
       \hypo{\step[s]{s}{s'}}
-      \hypo{\esim{t}{\prec i}{s'}}
-      \infer[coind]2[\textsc{ESourceSteps}]{\esim{t}{i}{s}}
+      \hypo{\esim{t}{\prec i}{s'}{\Phi}}
+      \infer[coind]2[\textsc{ESourceSteps}]{\esim{t}{i}{s}{\Phi}}
     \end{prooftree}
-    \\[1em]
+  \end{align*}
+  \begin{gather*}
     \begin{prooftree}
       \hypo{\canp[t]{t}}
       \hypo{\forall t',
         \step[t]{t}{t'} \implies
-        \esim{t'}{\prec i}{s}
+        \esim{t'}{\prec i}{s}{\Phi}
       }
-      \infer[coind]2[\textsc{ETargetSteps}]{\esim{t}{i}{s}}
+      \infer[coind]2[\textsc{ETargetSteps}]{\esim{t}{i}{s}{\Phi}}
     \end{prooftree}
     \\[1em]
     \begin{prooftree}
@@ -546,9 +591,9 @@ imposing a proof burden that we address in the following chapter.
       \hypo{\forall t',
         \step[t]{t}{t'} \implies
         \exists s', \exists i',
-        \step[s]{s}{s'} \land \esim{t'}{i'}{s'}
+        \step[s]{s}{s'} \land \esim{t'}{i'}{s'}{\Phi}
       }
-      \infer[coind]2[\textsc{EBothSteps}]{\esim{t}{i}{s}}
+      \infer[coind]2[\textsc{EBothSteps}]{\esim{t}{i}{s}{\Phi}}
     \end{prooftree}
   \end{gather*}
   \caption{Derivation rules of the \emph{explicit simulation}.}

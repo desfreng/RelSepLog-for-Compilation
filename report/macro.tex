@@ -73,8 +73,6 @@
 \newcommand{\behord}{\leqslant_{\text{beh}}}
 \newcommand{\beh}{\textsf{behavior}}
 
-\newcommand{\vsim}[2]{#1 \sim_v #2}
-
 % Skewed Refinement Operator
 \makeatletter
 \newcommand{\slantsqsubseteq}{\mathrel{\mathpalette\draw@slantsqsubseteq\relax}}
@@ -99,12 +97,12 @@
 % ------------------------------------------------------------------------------
 % 3. Simulation Relations and Utilities
 % ------------------------------------------------------------------------------
-\newcommand{\lsim}[2]{#1 \sim_{l} #2}
-\newcommand{\esim}[3]{#1 \sim_{e}^{#2} #3}
+\newcommand{\lsim}[3]{#1 \sim_{l} #2 \; \{#3\}}
+\newcommand{\esim}[4]{#1 \sim_{e}^{#2} #3 \; \{#4\}}
 \newcommand{\isim}[3]{#1 \lesssim #2 \; \{#3\}}
 \newcommand{\fsim}[5]{#1 \leftindex[I]_{#2}\lesssim_{#3} #4 \; \{#5\}}
-\newcommand{\bfinalf}{\textsf{both\_final}}
-\newcommand{\bfinal}[2]{\bfinalf\left(#1, #2\right)}
+\newcommand{\bfinalf}[1]{\textsf{both\_final}_{#1}}
+\newcommand{\bfinal}[3]{\bfinalf{#1}\left(#2, #3\right)}
 
 % ------------------------------------------------------------------------------
 % 4. RTL Language: Types and Identifiers
@@ -119,7 +117,6 @@
 \newcommand{\mem}{\textsf{memory}}
 \newcommand{\memory}{\textsf{memory}}
 \newcommand{\instr}{\textsf{instr}}
-\newcommand{\pcstate}{\textsf{pcstate}}
 \newcommand{\rtlstate}{\textsf{rtl\_state}}
 \newcommand{\rtlfun}{\textsf{rtl\_function}}
 
@@ -203,10 +200,10 @@
 \newcommand{\frees}[1]{\textsf{free}_{\text{s}}\left(#1\right)}
 \newcommand{\meminj}[2]{\textsf{meminj}_{#2}\left(#1\right)}
 
-\newcommand{\sameargs}[3]{\textsf{same\_args}_{#1}\left(#2, #3\right)}
-\newcommand{\samer}[3]{\textsf{samer}_{#1}\left(#2, #3\right)}
 \newcommand{\sameargsf}[1]{\textsf{same\_args}_{#1}}
-\newcommand{\samerf}[1]{\textsf{samer}_{#1}}
+\newcommand{\samerf}[1]{\textsf{same\_res}_{#1}}
+\newcommand{\sameargs}[3]{\sameargsf{#1}\left(#2, #3\right)}
+\newcommand{\samer}[3]{\samerf{#1}\left(#2, #3\right)}
 
 % ------------------------------------------------------------------------------
 % 11. Relational Separation Logic: Connectives and Hoare Quadruples

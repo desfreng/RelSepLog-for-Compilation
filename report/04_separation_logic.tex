@@ -4,8 +4,7 @@
 
 \section{Relational Separation Logic}
 
-Having defined our free simulation framework
-and instantiated it with \muRTL{},
+Having defined our free simulation framework,
 we require a program logic to specify and verify relational properties
 of program executions.
 Reasoning about memory transformations using global heap predicates
@@ -16,13 +15,12 @@ we develop a relational separation logic.
 
 \subsection{Separation Logic}
 
-Separation logic~\parencite{chargueraud-20-sl} establishes
-a foundation for modular reasoning about programs that manipulate memory.
-In standard Hoare logic,
+Separation logic~\parencite{chargueraud-20-sl} provides
+a modular foundation for reasoning about programs that manipulate memory.
+In classical Hoare logic,
 assertions describe properties of the entire heap.
-Establishing that an operation modifies only a restricted portion of memory
-requires explicitly proving that all untouched heap regions remain invariant,
-an issue known as the frame problem.
+Establishing that an operation modifies only a restricted memory region
+requires explicitly proving that untouched memory regions remain unchanged.
 Separation logic solves this challenge by introducing
 the separating conjunction $P \sep Q$,
 which asserts that the memory can be split into two disjoint sub-heaps
@@ -38,13 +36,13 @@ whose assertions describe pairs of memory states $(m_t, m_s)$.
 
 In modern interactive proof assistants,
 the Iris framework~\parencite{jung-18-iris,krebbers-17-essence} serves
-as the standard platform for separation logic in Rocq.
+as the standard platform for mechanized separation logic in Rocq.
 Iris provides expressive mechanisms for higher-order concurrent reasoning,
 including step-indexed models,
 higher-order ghost state,
 and user-defined resource algebras.
-For our setting,
-these advanced features are not needed.
+In our setting,
+these advanced features are not yet needed.
 Instead,
 we formalize our relational separation logic directly
 as a shallow embedding in Rocq.
@@ -59,7 +57,7 @@ the first argument denotes the target memory $m_t$,
 and the second argument denotes the source memory $m_s$.
 An assertion $P \in \rProp$ represents a predicate that
 expresses ownership over the memory footprints of both programs,
-specifying the contents of sub-heaps of the target and source.
+specifying the contents of target and source sub-heaps.
 
 \begin{figure}[htb]
   \centering
@@ -150,7 +148,7 @@ $P \sep Q \ent P$.
 In our linear formulation,
 proving $P \ent Q$ guarantees that every memory cell described by $P$
 is accounted for in $Q$.
-This strict resource discipline forbids any memory leak.
+This strict resource discipline prevents unnoticed resource leaks.
 
 To preserve the interactive proof engineering benefits of the
 Iris Proof Mode (MoSeL)~\parencite{krebbers-18-mosel},
@@ -199,8 +197,8 @@ of deallocated memory cells in the target and source heaps,
 respectively.
 
 Memory allocations in the target and source programs
-are not guaranteed to produce identical physical addresses.
-To account for address variations,
+do not necessarily yield identical physical addresses.
+To account for such address variations,
 we maintain an address mapping $I \subseteq \loc \times \loc$,
 where each pair $(l_t, l_s) \in I$ relates a target location $l_t$
 to a source location $l_s$.
@@ -208,66 +206,82 @@ We enforce that $I$ is a bijective mapping:
 target locations are uniquely related to source locations.
 This mapping $I$ parameterizes the value similarity relation
 $\sameval{I}{v_t}{v_s}$ (\cref{fig:same-val}).
-As the bijection grows monotonically with fresh memory allocations,
-the value relation is preserved:
+Allocating fresh memory in target or source does not extend $I$ immediately.
+Instead,
+the \cref{lem:inj-extension} allows adding
+the fresh address pair to $I$ at convenience.
+Because the mapping grows monotonically,
+existing value relations are preserved:
 \begin{lemma}[Monotonicity of $\sameval{I}{}{}$]
   \label{lem:sameval-mono}
   If $I \subseteq I'$,
   then $\sameval{I}{v_t}{v_s} \implies \sameval{I'}{v_t}{v_s}$.
 \end{lemma}
 
-To relate entire target and source heaps across program execution,
-we adapt the memory injection predicate $\meminj{I}{E}$
-defined by \textcite{gaher-22-simuliris}.
-When the set $E$ is empty,
-this predicate owns all memory cells registered in $I$.
-It asserts that every active pair of locations $(l_t, l_s) \in I$
-holds relationally similar values,
+To relate target and source heaps across program executions,
+we draw upon the principles introduced by \textcite{gaher-22-simuliris}
+in \emph{Simuliris},
+and define the memory injection predicate $\meminj{I}{E}$.
+The parameter $E \subseteq I$ designates a set of active exceptions,
+which is empty ($\emptyset$) by default.
+The predicate $\meminj{I}{\emptyset}$ asserts collective ownership
+over all memory cells registered in $I$.
+Specifically,
+it asserts that every allocated pair $(l_t, l_s) \in I$
+holds similar values ($\sameval{I}{v_t}{v_s}$),
 and that deallocated cells are consistently marked as freed in both heaps.
+When fresh cells are allocated,
+the injection can be extended with the new address pair:
+\begin{lemma}[Injection Extension]
+  \label{lem:inj-extension}
+  When allocating fresh memory cells in target and source,
+  the newly allocated pair $(l_t, l_s)$ can be added to the injection $I$
+  provided that the stored values satisfy $\sameval{I}{v_t}{v_s}$.
+\end{lemma}
 
-When verifying an instruction that reads,
+Because $\meminj{I}{E}$ retains ownership of every cell in $I \setminus E$,
+verifying an instruction that reads,
 writes,
-or deallocates a specific pair of locations $(l_t, l_s) \in I$,
-we need to access the underlying points-to or freed assertion.
-However,
-removing $(l_t, l_s)$ from the mapping $I$ would shrink $I$,
-breaking its monotonicity
-and invalidating the value similarity of existing pointers.
-To overcome this difficulty,
-we introduce the \emph{exploited set} $E \subseteq I$.
-The set $E$ tracks the address pairs whose individual heap assertions
-have been temporarily extracted from the global injection for local reasoning.
+or deallocates a specific location pair $(l_t, l_s) \in I$
+requires accessing its underlying points-to or freed assertion.
+Removing $(l_t, l_s)$ directly from the mapping $I$ to obtain this assertion
+would shrink the domain of $I$,
+breaking monotonicity and invalidating the similarity of existing pointers.
+Instead,
+we temporarily add $(l_t, l_s)$ to the exception set $E$,
+which extracts individual ownership without altering the bijection $I$.
 
-The interaction between the memory injection predicate,
-the bijection $I$,
-and the exploited set $E$ is primarily governed by three lemmas:
-\begin{itemize}
-  \item \textbf{Exploitation:}
-        When $(l_t, l_s) \in I$ is unexploited,
-        the assertion $\meminj{I}{E}$ can be opened to extract ownership
-        of $(l_t, l_s)$ while updating the exploited set to $E \cup \{ (l_t, l_s) \}$.
-
-  \item \textbf{Reintegration:}
-        Once a memory operation completes,
-        the updated points-to assertion $\ptrt{l_t}{v_t} \sep \ptrs{l_s}{v_s}$
-        (with $\sameval{I}{v_t}{v_s}$)
-        or freed assertion $\freet{l_t} \sep \frees{l_s}$
-        can be released back into the injection,
-        decreasing the exploited set to $E \setminus \{ (l_t, l_s) \}$.
-
-  \item \textbf{Extension:}
-        When allocating fresh memory cells,
-        the fresh pair of addresses $(l_t, l_s)$
-        can be added to the memory injection
-        provided their values are related by $\sameval{I}{}{}$.
-\end{itemize}
+This extraction and subsequent reintegration of memory assertions
+are governed by two complementary lemmas:
+\begin{lemma}[Injection Extraction]
+  \label{lem:inj-extraction}
+  When $(l_t, l_s) \in I \setminus E$,
+  the assertion $\meminj{I}{E}$ can be opened to extract ownership
+  of the points-to or freed assertion for $(l_t, l_s)$,
+  updating the exception set to $E \cup \{ (l_t, l_s) \}$.
+\end{lemma}
+\begin{lemma}[Injection Reintegration]
+  \label{lem:inj-reintegration}
+  Once a memory operation completes,
+  the updated points-to assertion $\ptrt{l_t}{v_t} \sep \ptrs{l_s}{v_s}$
+  (satisfying $\sameval{I}{v_t}{v_s}$)
+  or freed assertion $\freet{l_t} \sep \frees{l_s}$
+  is merged back into the injection,
+  restoring the exception set to $E \setminus \{ (l_t, l_s) \}$.
+\end{lemma}
+These lemmas will be used to temporarily extract
+points-to assertions for a location pair $(l_t, l_s) \in I$
+when the source performs a memory operation.
+The exposed pair can then be used to justify a memory step in the target.
+Once both operations are completed,
+the updated assertions are reintegrated back into the memory injection.
 
 \subsection{Relational Hoare Quadruples}
 \label{sec:rel-hoare}
 
 By combining the free simulation with relational separation logic,
 we define relational Hoare quadruples.
-In fixed target and source programs $P_t$ and $P_s$,
+For fixed target and source programs $P_t$ and $P_s$,
 a relational Hoare quadruple relates a target function $f_t$
 to a source function $f_s$.
 The formal definition is given by:
@@ -282,8 +296,8 @@ The formal definition is given by:
   \end{aligned}
 \end{equation*}
 where $P$ is a precondition relating the target and source argument vectors,
-and $Q$ is a postcondition referring to the returned values.
-The simulation is here lifted to an assertion in $\rProp$:
+and $Q$ is a postcondition specifying the returned values.
+The simulation is lifted to an assertion in $\rProp$:
 \begin{equation*}
   \fsim{t}{j}{i}{s}{\Phi}
   \coloneqq
@@ -291,8 +305,8 @@ The simulation is here lifted to an assertion in $\rProp$:
   \fsim{(t, m_t)}{j}{i}{(s, m_s)}{\Phi}
 \end{equation*}
 
-
-The meaning of this quadruple is given by the free simulation:
+The semantics of this quadruple is directly inherited
+from the free simulation:
 whenever the initial function arguments and heap states satisfy
 $P(\vec{v}_t, \vec{v}_s)$,
 if the source execution terminates without encountering undefined behavior,
@@ -300,11 +314,11 @@ then the target execution also terminates with return values and memories
 satisfying $Q(v_t, v_s)$.
 If the source execution diverges,
 the target execution diverges as well.
-If the source execution reaches a stuck state,
+If the source execution encounters a stuck state,
 the simulation relation grants the compiler complete freedom.
 
 The definition of the Hoare quadruple
-is guarded by a persistent modality $\boxm$
+is guarded by the persistent modality $\boxm$
 to guarantee that the specification holds independently of heap ownership.
 As a consequence,
 a verified quadruple constitutes a duplicable resource that can be reused

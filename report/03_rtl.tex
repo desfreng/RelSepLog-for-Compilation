@@ -11,10 +11,14 @@ we formalize a low-level imperative language,
 \muRTL{},
 based on the Register Transfer Language (RTL)
 of CompCert~\parencite{leroy-09-compcert}.
-This language has two kinds of storage:
-local register banks attached to execution states,
-which act as local variables,
-and a global shared heap memory.
+Storage in \muRTL{} is organized into two distinct mechanisms.
+Each function invocation operates on its own local register bank,
+which holds the values of its local variables.
+During execution,
+the language maintains a call stack of activation frames,
+preserving caller contexts.
+In addition,
+functions share a global heap memory.
 
 \subsection{Values, Registers, and Memory}
 \label{sec:rtl-val-mem}
@@ -86,7 +90,7 @@ concrete target operations.
 In \muRTL{},
 registers store values that can be actively manipulated in computations.
 They are referenced by an identifier $r \in \reg$.
-We do not restrict the number of registers.
+\muRTL{} functions can use as many registers as they require.
 A \muRTL{} program can also interact with the heap.
 The heap is indexed by locations $l \in \loc$,
 and the program can read,
@@ -197,10 +201,10 @@ and that the entry function is present.
 
 The execution of a \muRTL{} program is formalized as a small-step operational
 transition system.
-The configurations are tuples $(\sigma, s, m)$,
+The configurations are tuples $(\sigma, z, m)$,
 where $\sigma$ is a call stack,
 $m \in \mem$ is the global heap,
-and $s \in \pcstate$ is a control state which can take three distinct forms:
+and $z$ is a control state that can take three distinct forms:
 \begin{itemize}
   \item $\State{f}{pc}{\rho}$ is the main state.
         It refers to an execution occurring inside function $f$
@@ -270,17 +274,6 @@ from accesses to unallocated memory.
 
 \begin{figure}[htb]
   \begin{gather*}
-    % \begin{prooftree}
-    %   \hypo{\pcatis{f}{pc}{\Inop{pc'}}}
-    %   \infer1[\textsc{Step-Nop}]{
-    %     \step{P}{
-    %       (\sigma, \State{f}{pc}{\rho}, m)
-    %     }{
-    %       (\sigma, \State{f}{pc'}{\rho}, m)
-    %     }
-    %   }
-    % \end{prooftree}
-    % \\[1em]
     \begin{prooftree}
       \hypo{\pcatis{f}{pc}{\Iop{dst}{op}{\vec{r}}{pc'}}}
       \hypo{\getreg{\vec{r}}{\rho} = \vec{v}}
@@ -293,33 +286,6 @@ from accesses to unallocated memory.
         }
       }
     \end{prooftree}
-    % \\[1em]
-    % \begin{prooftree}
-    %   \hypo{\pcatis{f}{pc}{\Iload{dst}{addr}{pc'}}}
-    %   \hypo{\getreg{addr}{\rho} = \VPtr{l}}
-    %   \hypo{\getat{l}{m} = \Allocated{v}}
-    %   \infer3[\textsc{Step-Load}]{
-    %     \step{P}{
-    %       (\sigma, \State{f}{pc}{\rho}, m)
-    %     }{
-    %       (\sigma, \State{f}{pc'}{\setreg{dst}{v}{\rho}}, m)
-    %     }
-    %   }
-    % \end{prooftree}
-    % \\[1em]
-    % \begin{prooftree}
-    %   \hypo{\pcatis{f}{pc}{\Istore{addr}{src}{pc'}}}
-    %   \hypo{\getreg{addr}{\rho} = \VPtr{l}}
-    %   \hypo{\getreg{src}{\rho} = v}
-    %   \hypo{\getat{l}{m} = \Allocated{\_}}
-    %   \infer4[\textsc{Step-Store}]{
-    %     \step{P}{
-    %       (\sigma, \State{f}{pc}{\rho}, m)
-    %     }{
-    %       (\sigma, \State{f}{pc'}{\rho}, \setat{l}{v}{m})
-    %     }
-    %   }
-    % \end{prooftree}
     \\[1em]
     \begin{prooftree}
       \hypo{\pcatis{f}{pc}{\Ialloc{dst}{pc'}}}
@@ -348,18 +314,6 @@ from accesses to unallocated memory.
         }
       }
     \end{prooftree}
-    % \\[1em]
-    % \begin{prooftree}
-    %   \hypo{\pcatis{f}{pc}{\Icond{cond}{pc_{\true}}{pc_{\false}}}}
-    %   \hypo{\getreg{cond}{\rho} = \VBool{b}}
-    %   \infer2[\textsc{Step-Cond}]{
-    %     \step{P}{
-    %       (\sigma, \State{f}{pc}{\rho}, m)
-    %     }{
-    %       (\sigma, \State{f}{(b \;?\; pc_{\true} : pc_{\false})}{\rho}, m)
-    %     }
-    %   }
-    % \end{prooftree}
     \\[1em]
     \begin{prooftree}
       \hypo{\pcatis{f}{pc}{\Icall{dst}{fn}{\vec{r}}{pc'}}}
@@ -467,56 +421,15 @@ Without stack modularity,
 one would need to maintain an explicit invariant over caller stack frames and
 prove that it is preserved across every step.
 To achieve modularity,
-we establish lemmas showing that function executions can be analyzed in
-isolation with an empty call stack $\sigma = []$,
-and then embedded into arbitrary execution contexts.
-
-% Operational steps are preserved when extending the call stack
-% by an arbitrary frame list $\Sigma$:
-% \begin{lemma}[Stack Lifting]
-% \label{lem:rtl-lift-step}
-% For all call stacks $\sigma, \sigma', \Sigma$,
-% control states $ps, pt$,
-% and memories $m, m'$:
-% \begin{align*}
-%   \step{P}{(\sigma, ps, m)}{(\sigma', pt, m')}
-%   & \implies
-%   \step{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{(\sigma' \mathbin{+\!+} \Sigma, pt, m')},
-%   \\
-%   \steps{P}{(\sigma, ps, m)}{(\sigma', pt, m')}
-%   & \implies
-%   \steps{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{(\sigma' \mathbin{+\!+} \Sigma, pt, m')}.
-% \end{align*}
-% \end{lemma}
-
-% Conversely,
-% the unlifting lemma shows that transitions performed in a populated
-% stack context reflect reductions of the local frame:
-% \begin{lemma}[Stack Unlifting]
-% \label{lem:rtl-unlift-step}
-% For all call stacks $\sigma, \Sigma$,
-% control states $ps$,
-% memories $m$,
-% and target configurations $t''$:
-
-% If $(\sigma, ps, m)$ is not a final value
-% and $\step{P}{(\sigma \mathbin{+\!+} \Sigma, ps, m)}{t''}$,
-% then there exist a local stack $\sigma'$,
-% control state $pt$,
-% and memory $m'$ such that:
-% \begin{equation*}
-%   t'' = (\sigma' \mathbin{+\!+} \Sigma, pt, m')
-%   \quad \text{and} \quad
-%   \step{P}{(\sigma, ps, m)}{(\sigma', pt, m')}.
-% \end{equation*}
-% \end{lemma}
-
-% These lemmas provide the foundation for modular verification in our logic.
+we prove framing lemmas directly for the operational semantics.
+These lemmas establish that any execution step derived
+in isolation with an empty call stack remains valid when
+embedded into an arbitrary caller stack context.
 When verifying a function call,
-the callee is verified starting from an empty call stack
+the callee is thus verified starting from an empty call stack
 $([], \CallState{f}{\vec{v}}, m)$.
 Once the callee reduces to $([], \ReturnState{v}, m')$,
-the derivation is lifted back into the caller's stack context,
+the execution is lifted back into the caller's stack context,
 reconnecting the callee's execution with the caller's continuation.
 
 \end{document}
