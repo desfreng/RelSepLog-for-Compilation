@@ -9,10 +9,10 @@
 % \linenumbers
 % \usepackage{todonotes}
 
-
 \usepackage{microtype}
 \usepackage{csquotes}
 \usepackage{parskip}
+% \usepackage{scrlayer-scrpage}
 
 \usepackage{xcolor}
 \usepackage{hyperref}
@@ -49,6 +49,8 @@
 {title}{\usebibmacro{string+url}{\mkbibquote{#1}}}
 
 \usepackage{tikz}
+% \usepackage{tikzducks}
+
 \usepackage{booktabs}
 \usepackage{pifont}
 \usepackage{xparse}
@@ -72,6 +74,21 @@
 }
 
 \date{}
+
+% \clearpairofpagestyles
+
+% \cfoot*{\thepage}
+
+% \rofoot*{%
+%   % \shuffleducks
+%   \begin{tikzpicture}[remember picture, overlay]
+%     \node[anchor=south east, xshift=-1.0cm, yshift=0.8cm] at (current page.south east) {
+%       \randuck
+%     };
+%   \end{tikzpicture}%
+% }
+
+% \pagestyle{scrheadings}
 
 \begin{document}
 
