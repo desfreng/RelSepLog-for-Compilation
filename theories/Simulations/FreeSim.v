@@ -15,13 +15,13 @@ Section FSimDef.
   Unset Elimination Schemes.
 
   Inductive fsim_lfp'
-    (gfp: post -> state Λt -> J -> I -> state Λs -> Prop)
-    (ϕ : post) : state Λt -> J -> I -> state Λs -> Prop :=
+    (gfp: post -> config Λt -> J -> I -> config Λs -> Prop)
+    (ϕ : post) : config Λt -> J -> I -> config Λs -> Prop :=
   | FRelated : ∀ t j i s,
     both_final ϕ t s -> fsim_lfp' gfp ϕ t j i s
 
   | FSourceStuck : ∀ t j i s,
-    stuck Ps s -> fsim_lfp' gfp ϕ t j i s
+    super_stuck Ps s -> fsim_lfp' gfp ϕ t j i s
 
   | FSourceSteps : ∀ t j i i' s s',
     Ps ⊨ s ->> s' ->
@@ -42,15 +42,15 @@ Section FSimDef.
   Set Elimination Schemes.
 
   Section FSimInd.
-    Variable gfp : post -> state Λt -> J -> I -> state Λs -> Prop.
+    Variable gfp : post -> config Λt -> J -> I -> config Λs -> Prop.
     Variable ϕ : post.
-    Variable P : state Λt -> J -> I -> state Λs -> Prop.
+    Variable P : config Λt -> J -> I -> config Λs -> Prop.
 
     Hypothesis HFinal:
       ∀ t j i s, both_final ϕ t s -> P t j i s.
 
     Hypothesis HStuck:
-      ∀ t j i s, stuck Ps s -> P t j i s.
+      ∀ t j i s, super_stuck Ps s -> P t j i s.
 
     Hypothesis HSourceSteps:
       ∀ t j i i' s s',
@@ -125,7 +125,6 @@ Section FSimDef.
   Lemma fsim_roll ϕ t j i s :
     fsim_lfp' (gfp fsim_lfp) ϕ t j i s -> gfp fsim_lfp ϕ t j i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
-
   Lemma chain_mono (R: Chain fsim_lfp) ϕ t j i s:
     ∀ ϕ' j' i',
     (∀ vt vs mt ms, ϕ vt vs mt ms -> ϕ' vt vs mt ms) ->
@@ -148,10 +147,10 @@ Section FSimDef.
                         | t ? ? ? s s' Hstep Hsim IH
                         | t ? ? s Hprog IH
                         | t ? ? s ? ? Htt Hss Hsim ];
-        intros ? ? ? Hϕ Hj Hi.
+        intros ϕ' ? ? Hϕ Hj Hi.
       + constructor.
-        destruct Hfin as (vt & vs & mt & ms & Hfint & Hfins & Hfin).
-        exists vt, vs, mt, ms; now auto.
+        destruct Hfin as (vt & vs & ? & ? & Hfint & Hfins & Hfin).
+        eexists vt, vs, _, _. now eauto.
       + now constructor.
       + eapply FSourceSteps.
         { eassumption. }
@@ -177,7 +176,7 @@ Section FSimDef.
   Qed.
 
   Lemma chain_stuck C ϕ t j i s :
-    stuck Ps s ->
+    super_stuck Ps s ->
     elem C ϕ t j i s.
   Proof using Type.
     apply tower.

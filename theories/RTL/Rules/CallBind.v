@@ -83,13 +83,13 @@ Section CallBindLemma.
         exists (succ j).
         eapply FSourceSteps with (i' := succ i). { by econstructor. }
         by apply Hcont, Hphi; apply is_succ.
-      - apply FSourceStuck. by apply unlift_stuck.
+      - apply FSourceStuck. by apply unlift_super_stuck.
       - destruct s' as [[? ?] ?].
         eapply FSourceSteps. { by apply lift_step. }
         by apply IH.
       - apply FTargetSteps. { by apply lift_can_progress. }
         intros t'' Hstep''.
-        assert (Hnfin: is_final ((σt, pst, mt) : state rtl_lang) = None).
+        assert (Hnfin: is_final ((σt, pst, mt) : config rtl_lang) = None).
         { by eapply progress_not_final. }
         edestruct (step_frame_preserved _ _ _ _ _ _ Hnfin Hstep'')
           as (σt' & pt' & mt'' & -> & Hstept').

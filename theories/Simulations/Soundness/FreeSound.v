@@ -11,8 +11,8 @@ Section FSimSound.
   Context {J I: WfRel}.
   Context (Pt: prog Λt) (Ps: prog Λs).
 
-  Instance behₜ_elem : ElemOf behavior (state Λt) := beh Pt.
-  Instance behₛ_elem : ElemOf behavior (state Λs) := beh Ps.
+  Instance behₜ_elem : ElemOf behavior (config Λt) := beh Pt.
+  Instance behₛ_elem : ElemOf behavior (config Λs) := beh Ps.
 
   Notation "a '⊑{' Φ '}' b" :=
     (behavior_order Φ a b)
@@ -29,7 +29,7 @@ Section FSimSound.
     ∃ b, b ∈ s ∧ Terminating vt mt ⊑{Φ} b.
   Proof using Type.
     intros Hsim vt mt Hb.
-    (* t Terminates -> it reduces to a final state *)
+    (* t Terminates -> it reduces to a final config *)
     apply has_terminating_behavior in Hb. destruct Hb as (t' & Hrtc & Hfin).
     (* Induction on the reduction *)
     revert j i s Hsim.
@@ -50,7 +50,7 @@ Section FSimSound.
         (* s is final too *)
         inv Ht. exists (Terminating vs ms). now do 2 constructor.
       + (* Source Stuck *)
-        exists Undef. split; now constructor.
+        exists Undef. split; constructor. by apply super_stuck_is_stuck.
       + (* Source Steps, use IH on s *)
         destruct (IHs Hfin) as (b & Hbeh & Horder).
         { intros. edestruct IHi as (b & Hbeh & Horder); now eauto. }
@@ -74,7 +74,7 @@ Section FSimSound.
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck *)
-        exists Undef. split; now constructor.
+        exists Undef. split; constructor. by apply super_stuck_is_stuck.
       + (* Source Steps, use IH on s *)
         destruct (IHs Hstep) as (b & Hbeh & Horder).
         { intros. edestruct IHi as (b & Hbeh & Horder); now eauto. }
@@ -112,7 +112,7 @@ Section FSimSound.
       apply diverges_unroll in Hdiv. destruct Hdiv as (t' & Hstep & _).
       langmixin.
     - (* SourceStuck *)
-      left. exact Hstuck.
+      left. by apply super_stuck_is_stuck.
     - (* Source Steps *)
       apply fsim_roll in Hsim.
       right. repeat econstructor; now eauto.
@@ -187,7 +187,7 @@ Section FSimSound.
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck -> trivial *)
-        now constructor.
+        constructor. by apply super_stuck_is_stuck.
       + (* Source Steps, use IH on s *)
         eapply IsSteping; eauto.
         now apply IHs.
@@ -209,7 +209,7 @@ Section FSimSound.
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck -> trivial *)
-        now constructor.
+        constructor. by apply super_stuck_is_stuck.
       + (* Source Steps, use IH on s *)
         eapply IsSteping; eauto.
         apply IHs; auto.

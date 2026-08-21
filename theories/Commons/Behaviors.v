@@ -8,13 +8,13 @@ From Coinduction Require Import all.
 
 Section Behavior.
   Context {Λ: lang} (P: prog Λ).
-  Implicit Types s : state Λ.
+  Implicit Types s : config Λ.
 
-  Program Definition diverges_: mon (state Λ -> Prop) :=
+  Program Definition diverges_: mon (config Λ -> Prop) :=
     {| body R s := ∃ s', P ⊨ s ->> s' ∧ R s' |}.
   Next Obligation. firstorder. Qed.
 
-  Definition diverges : state Λ -> Prop := gfp diverges_.
+  Definition diverges : config Λ -> Prop := gfp diverges_.
 
   Lemma diveges_sound f:
     (∀ n, P ⊨ f n ->> f (S n)) -> diverges (f 0).
@@ -46,7 +46,7 @@ Section Behavior.
     - by apply diverges_roll.
   Qed.
 
-  Definition strong_diverge (t: state Λ) : Prop :=
+  Definition strong_diverge (t: config Λ) : Prop :=
     ∀ t', P ⊨ t ->>* t' -> can_progress P t'.
 
   Lemma strong_div_always_div t :
@@ -68,7 +68,7 @@ Section Behavior.
   | Undef.
 
   (* [beh s] is the set of all the behaviors of [s] *)
-  Inductive beh : behavior -> state Λ -> Prop :=
+  Inductive beh : behavior -> config Λ -> Prop :=
   | IsTerminating : ∀ s v m,
       is_final s = Some (v, m) ->
       beh (Terminating v m) s
@@ -83,7 +83,7 @@ Section Behavior.
       P ⊨ s ->> t ->
       beh b s.
 
-  Global Instance beh_elem_state : ElemOf behavior (state Λ) := beh.
+  Global Instance beh_elem_config : ElemOf behavior (config Λ) := beh.
 
   (* [s] is terminating iff there is a execution from [s] to a final state. *)
   Lemma has_terminating_behavior : ∀ s v m,
@@ -179,8 +179,8 @@ Section Refinement.
   Context {Λt Λs: lang}.
   Context (Pt: prog Λt) (Ps: prog Λs).
 
-  Instance beht_elem : ElemOf behavior (state Λt) := beh Pt.
-  Instance behs_elem : ElemOf behavior (state Λs) := beh Ps.
+  Instance beht_elem : ElemOf behavior (config Λt) := beh Pt.
+  Instance behs_elem : ElemOf behavior (config Λs) := beh Ps.
 
   Variant behavior_order Φ : @behavior Λt -> @behavior Λs -> Prop :=
   | BehOrderTerm vt vs mt ms :
@@ -206,25 +206,25 @@ Section Refinement.
     (behavior_equal Φ a b)
       (at level 70, format "a  '≡{' Φ '}'  b", no associativity).
 
-  (* A definition of state refinement: *)
+  (* A definition of config refinement: *)
   (*    - if the target terminates on (v, m), *)
   (*    the source must either terminate on (v, m) or be stuck. *)
   (*    - if the target diverges, *)
   (*    the source must either diverges or be stuck. *)
   (*    - if the target is stuck, the source should also be stuck. *)
-  Definition flex_refines Φ (t: state Λt) (s: state Λs) : Prop :=
+  Definition flex_refines Φ (t: config Λt) (s: config Λs) : Prop :=
     ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ⊑{Φ} b'.
 
-  Definition rigid_refines Φ (t: state Λt) (s: state Λs) : Prop :=
+  Definition rigid_refines Φ (t: config Λt) (s: config Λs) : Prop :=
     ∀ b, b ∈ t -> ∃ b', b' ∈ s ∧ b ≡{Φ} b'.
 End Refinement.
 
 Section SpecPreserving.
   Context {Λ: lang} (P: prog Λ).
-  Instance beh_elem : ElemOf behavior (state Λ) := beh P.
+  Instance beh_elem : ElemOf behavior (config Λ) := beh P.
 
   Definition Spec : Type := @behavior Λ -> Prop.
-  Implicit Types (s : state Λ) (S : Spec).
+  Implicit Types (s : config Λ) (S : Spec).
 
   Definition meaningful S : Prop := ∀ b, S b -> b ≠ Undef.
   Definition match_spec s S : Prop :=  ∀ b, b ∈ s -> S b.

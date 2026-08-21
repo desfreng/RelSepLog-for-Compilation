@@ -10,12 +10,12 @@ Section ISimDef.
   Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
   Inductive isim_lfp'
-    (gfp: state Λt -> state Λs -> Prop) : state Λt -> state Λs-> Prop :=
+    (gfp: config Λt -> config Λs -> Prop) : config Λt -> config Λs-> Prop :=
   | IRelated : ∀ t s,
     both_final Φ t s -> isim_lfp' gfp t s
 
   | ISourceStuck : ∀ t s,
-    stuck Ps s -> isim_lfp' gfp t s
+    super_stuck Ps s -> isim_lfp' gfp t s
 
   | ISourceSteps : ∀ t s s',
     Ps ⊨ s ->> s' -> isim_lfp' gfp t s' -> isim_lfp' gfp t s
@@ -39,7 +39,7 @@ Section ISimDef.
     eexists. split; eassumption || now apply Hgfp.
   Qed.
 
-  Definition isim_lfp : mon (state Λt -> state Λs -> Prop) := {| body := isim_lfp' |}.
+  Definition isim_lfp : mon (config Λt -> config Λs -> Prop) := {| body := isim_lfp' |}.
 
   Lemma isim_unroll t s :
     gfp isim_lfp t s -> isim_lfp' (gfp isim_lfp) t s.

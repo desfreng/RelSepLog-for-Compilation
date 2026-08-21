@@ -12,7 +12,7 @@ Section TargetRulesDef.
   Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
 
   Context (σt : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank)
-    (j i : WfNat) (ss : istate Λs) (Q : value Λt -> value Λs -> rProp).
+    (j i : WfNat) (ss : state Λs) (Q : value Λt -> value Λs -> rProp).
 
   Ltac target_step :=
     repeat intro; subst; unseal; intros ? ? [-> ->] ? ? _ _ Hsim;

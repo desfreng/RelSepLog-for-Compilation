@@ -9,8 +9,8 @@ Section LSimDef.
   Context (Pt: prog Λt) (Ps: prog Λs).
   Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
-  Variant lsim_lfp' (gfp: state Λt -> state Λs -> Prop)
-    : state Λt -> state Λs -> Prop :=
+  Variant lsim_lfp' (gfp: config Λt -> config Λs -> Prop)
+    : config Λt -> config Λs -> Prop :=
   | LRelated : ∀ t s,
     both_final Φ t s -> lsim_lfp' gfp t s
 
@@ -19,7 +19,7 @@ Section LSimDef.
     (∀ t', Pt ⊨ t ->> t' -> ∃ s', Ps ⊨ s ->> s' ∧ gfp t' s') ->
     lsim_lfp' gfp t s.
 
-  Program Definition lsim_lfp : mon (state Λt -> state Λs -> Prop) :=
+  Program Definition lsim_lfp : mon (config Λt -> config Λs -> Prop) :=
     {| body := lsim_lfp' |}.
   Next Obligation.
     intros gfp gfp' Hgfp t s Hsim.

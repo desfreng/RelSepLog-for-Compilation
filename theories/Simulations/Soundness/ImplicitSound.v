@@ -10,8 +10,8 @@ Section ISimSound.
   Context {Λt Λs: lang}.
   Context (Pt: prog Λt) (Ps: prog Λs).
 
-  Instance behₜ_elem : ElemOf behavior (state Λt) := beh Pt.
-  Instance behₛ_elem : ElemOf behavior (state Λs) := beh Ps.
+  Instance behₜ_elem : ElemOf behavior (config Λt) := beh Pt.
+  Instance behₛ_elem : ElemOf behavior (config Λs) := beh Ps.
 
   Notation "a '⊑{' Φ '}' b" :=
     (behavior_order Φ a b)
@@ -28,7 +28,7 @@ Section ISimSound.
     ∃ b, b ∈ s ∧ Terminating vt mt ⊑{Φ} b.
   Proof using Type.
     intros Hsim vt mt Hb.
-    (* t Terminates -> it reduces to a final state *)
+    (* t Terminates -> it reduces to a final config *)
     apply has_terminating_behavior in Hb. destruct Hb as (t' & Hrtc & Hfin).
     revert s Hsim.
     (* Induction on the reduction *)
@@ -45,7 +45,7 @@ Section ISimSound.
         (* s is final too *)
         inv Ht. exists (Terminating vs ms). now do 2 constructor.
       + (* Source Stuck *)
-        exists Undef. split; now constructor.
+        exists Undef. split; constructor. now apply super_stuck_is_stuck.
       + (* Source Steps, use IH on s *)
         destruct (IHs Hfin) as (b & Hbeh & Horder).
         exists b. split; auto.
@@ -64,7 +64,7 @@ Section ISimSound.
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck *)
-        exists Undef. split; now constructor.
+        exists Undef. split; constructor. now apply super_stuck_is_stuck.
       + (* Source Steps, use IH on s *)
         destruct (IHs Ht) as (b & Hbeh & Horder).
         exists b. split; auto.
@@ -97,7 +97,7 @@ Section ISimSound.
       apply diverges_unroll in Hdiv. destruct Hdiv as (t' & Ht_step & _).
       langmixin.
     - (* SourceStuck *)
-      left. exact Hstuck.
+      left. now apply super_stuck_is_stuck.
     - (* Source Steps *)
       apply isim_roll in Hsim'.
       right. exists t, s'. split; now auto.
@@ -166,7 +166,7 @@ Section ISimSound.
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck -> trivial *)
-        now constructor.
+        constructor. now apply super_stuck_is_stuck.
       + (* Target Stutter, use IH on s *)
         eapply IsSteping; eauto.
         now apply IHs.
@@ -184,7 +184,7 @@ Section ISimSound.
       + (* Both Final -> contradiction *)
         langmixin.
       + (* Source Stuck -> trivial *)
-        now constructor.
+        constructor. now apply super_stuck_is_stuck.
       + (* Target Stutter, use IH on s *)
         eapply IsSteping; eauto.
         now apply IHs.

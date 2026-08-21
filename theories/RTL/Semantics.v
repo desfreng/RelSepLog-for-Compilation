@@ -151,7 +151,7 @@ Definition rtl_lang : lang := Lang _ _ _ _ _ rtl_mixin_lang.
 Section SemProp.
   Let Λ : lang := rtl_lang.
   Context (P: prog Λ).
-  Implicit Type s : state Λ.
+  Implicit Type s : config Λ.
   Implicit Type v : value Λ.
 
   (** Lemmas on the step relation  *)
@@ -235,7 +235,7 @@ Section SemProp.
   Qed.
 
   Lemma unlift_can_progress σ Σ ps m:
-    is_final ((σ, ps, m) : state Λ)= None ->
+    is_final ((σ, ps, m) : config Λ)= None ->
     can_progress P (σ ++ Σ, ps, m) ->
     can_progress P (σ, ps, m).
   Proof using Type.
@@ -246,7 +246,7 @@ Section SemProp.
   Qed.
 
   Lemma step_frame_preserved σ Σ ps m t'' :
-    is_final ((σ, ps, m) : state Λ) = None ->
+    is_final ((σ, ps, m) : config Λ) = None ->
     P ⊨ (σ ++ Σ, ps, m) ->> t'' ->
     ∃ σ' pt m', t'' = (σ' ++ Σ, pt, m') ∧ P ⊨ (σ, ps, m) ->> (σ', pt, m').
   Proof using Type.
@@ -271,6 +271,18 @@ Section SemProp.
     - destruct σ, Σ; simpl; auto.
     - intros Hprog. apply Hcan.
       by eapply unlift_can_progress.
+  Qed.
+
+  Lemma unlift_super_stuck σ Σ ps m :
+    super_stuck P (σ, ps, m) ->
+    super_stuck P (σ ++ Σ, ps, m).
+  Proof using Type.
+    intros [Hfin Hcan].
+    split.
+    - destruct σ, Σ; simpl; auto.
+    - intros ? Hprog. eapply Hcan.
+      eapply unlift_can_progress; last done.
+      unfold is_final. by rewrite Hfin.
   Qed.
 
   Lemma eval_op_same_args {I op valt vals vs}:

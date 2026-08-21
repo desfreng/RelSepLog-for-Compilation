@@ -9,14 +9,14 @@ Section ESimLaxDef.
   Context (W: WfRel) (Pt: prog Λt) (Ps: prog Λs).
   Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
-  Inductive esim_lax_lfp' (gfp: W -> state Λt -> state Λs -> Prop)
-    : W -> state Λt -> state Λs -> Prop :=
+  Inductive esim_lax_lfp' (gfp: W -> config Λt -> config Λs -> Prop)
+    : W -> config Λt -> config Λs -> Prop :=
   | ELaxRelated : ∀ i t s,
     both_final Φ t s ->
     esim_lax_lfp' gfp i t s
 
   | ELaxSourceStuck : ∀ i t s,
-    stuck Ps s ->
+    super_stuck Ps s ->
     esim_lax_lfp' gfp i t s
 
   | ELaxSourceSteps : ∀ i i' t s s',
@@ -35,7 +35,7 @@ Section ESimLaxDef.
     (∀ t', Pt ⊨ t ->> t' -> ∃ i' s', Ps ⊨ s ->>+ s' ∧ gfp i' t' s') ->
     esim_lax_lfp' gfp i t s.
 
-  Program Definition esim_lax_lfp : mon (W -> state Λt -> state Λs -> Prop) :=
+  Program Definition esim_lax_lfp : mon (W -> config Λt -> config Λs -> Prop) :=
     {| body := esim_lax_lfp' |}.
   Next Obligation.
     intros gfp gfp' Hgfp i t s Hsim.

@@ -12,7 +12,7 @@ Section FailingSourceRulesDef.
   Context {Pt : prog Λt} {Ps : prog Λs}.
   Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
 
-  Context (st : istate Λt) (j i : WfNat) (cs : list stackframe)
+  Context (st : state Λt) (j i : WfNat) (cs : list stackframe)
     (fs : rtl_function) (pcs : node) (ρs : regbank)
     (Q : value Λt -> value Λs -> rProp).
 

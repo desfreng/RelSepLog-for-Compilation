@@ -13,7 +13,7 @@ Section PROOF.
   Context (Pt: prog Λt) (Ps: prog Λs).
   Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
-  Definition StatePair := (state Λt * state Λs)%type.
+  Definition StatePair := (config Λt * config Λs)%type.
 
   Lemma fsim_implies_gsim: ∀ j t i s,
     fsim J I Pt Ps Φ t j i s ->

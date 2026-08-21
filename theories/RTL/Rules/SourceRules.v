@@ -12,7 +12,7 @@ Ltac source_does_UB :=
       let Hpreg := fresh "Hprog" in
       by eapply chain_stuck; split;
       [ destruct cs
-      | intros Hprog;
+      | intros ? Hprog;
         apply can_progress_must_step in Hprog;
         destruct Hprog as [? Hprog]; inv Hprog; simregs
       ]
@@ -30,7 +30,7 @@ Section SourceRulesDef.
   Context {Pt : prog Λt} {Ps : prog Λs}.
   Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
 
-  Context (st : istate Λt) (j i : WfNat) (σs : list stackframe)
+  Context (st : state Λt) (j i : WfNat) (σs : list stackframe)
     (fs : rtl_function) (pcs : node) (ρs : regbank)
     (Q : value Λt -> value Λs -> rProp).
 

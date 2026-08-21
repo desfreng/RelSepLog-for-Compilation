@@ -10,13 +10,13 @@ Section EAltSimDef.
   Context (Pt: prog Λt) (Ps: prog Λs).
   Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
-  Variant ealt_sim_lfp' (gfp: J -> state Λt -> I -> state Λs -> Prop)
-    : J -> state Λt -> I -> state Λs -> Prop :=
+  Variant ealt_sim_lfp' (gfp: J -> config Λt -> I -> config Λs -> Prop)
+    : J -> config Λt -> I -> config Λs -> Prop :=
   | EAltBothFinal : ∀ j t i s,
     both_final Φ t s -> ealt_sim_lfp' gfp j t i s
 
   | EAltSourceStuck : ∀ j t i s,
-    stuck Ps s -> ealt_sim_lfp' gfp j t i s
+    super_stuck Ps s -> ealt_sim_lfp' gfp j t i s
 
   | EAltSourceSteps : ∀ j j' t i i' s s',
     Ps ⊨ s ->> s' ->
@@ -63,7 +63,7 @@ Section EAltSimDef.
       apply Hgfp. eassumption.
   Qed.
 
-  Definition ealt_sim_lfp : mon (J -> state Λt -> I -> state Λs -> Prop) :=
+  Definition ealt_sim_lfp : mon (J -> config Λt -> I -> config Λs -> Prop) :=
     {| body := ealt_sim_lfp' |}.
 
   Lemma ealt_sim_unroll j t i s :

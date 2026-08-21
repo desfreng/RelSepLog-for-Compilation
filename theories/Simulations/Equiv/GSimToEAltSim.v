@@ -16,7 +16,7 @@ Section PROOF.
   Context (Pt: prog Λt) (Ps: prog Λs).
   Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
-  Definition StatePair := (state Λt * state Λs)%type.
+  Definition StatePair := (config Λt * config Λs)%type.
 
   Lemma gsim_implies_ealt_sim: ∀ j b t i a s,
     gsim J I (WfOrdTree StatePair) Pt Ps Φ j b t i a s  ->

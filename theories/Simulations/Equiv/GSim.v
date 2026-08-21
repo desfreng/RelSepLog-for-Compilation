@@ -12,12 +12,12 @@ Section GSimDef.
 
   Unset Elimination Schemes.
 
-  Inductive gsim : J -> W -> state Λt -> I -> W -> state Λs -> Prop :=
+  Inductive gsim : J -> W -> config Λt -> I -> W -> config Λs -> Prop :=
   | GRelated : ∀ j b t i a s,
     both_final Φ t s -> gsim j b t i a s
 
   | GSourceStuck : ∀ j b t i a s,
-    stuck Ps s -> gsim j b t i a s
+    super_stuck Ps s -> gsim j b t i a s
 
   | GSourceSteps : ∀ j b t i i' a s s' a',
     Ps ⊨ s ->> s' ->
@@ -40,13 +40,13 @@ Section GSimDef.
   Set Elimination Schemes.
 
   Section GSimInd.
-    Variable P : J -> W -> state Λt -> I -> W -> state Λs -> Prop.
+    Variable P : J -> W -> config Λt -> I -> W -> config Λs -> Prop.
 
     Hypothesis HFinal:
       ∀ j b t i a s, both_final Φ t s -> P j b t i a s.
 
     Hypothesis HStuck:
-      ∀ j b t i a s, stuck Ps s -> P j b t i a s.
+      ∀ j b t i a s, super_stuck Ps s -> P j b t i a s.
 
     Hypothesis HSourceSteps:
       ∀ j b t i i' a s s' a',

@@ -24,8 +24,8 @@ Section SimRules.
   Context {Pt: prog Λt} {Ps: prog Λs}.
   Context {C: Chain (fsim_lfp J I Pt Ps)}.
 
-  Implicit Types
-    (st: istate Λt) (j: J) (i: I) (ss: istate Λs) (Q: value Λt -> value Λs -> rProp).
+  Implicit Types (st: state Λt) (j: J) (i: I) (ss: state Λs)
+    (Q: value Λt -> value Λs -> rProp).
 
   Lemma final st j i ss Q vt vs:
     is_value st = Some vt ->
@@ -51,7 +51,7 @@ Section SimRules.
   Proof using Type.
     unseal.
     intros ? ? [-> ->].
-    intros ? ? _ _ [[-> ->] HQ].
+    intros mtP msP _ _ [[-> ->] HQ].
     intros ? ? _ _ [[-> ->] Hj].
     intros ? ? _ _ [[-> ->] Hi].
     intros mt ms _ _ Hsim. smap.
@@ -63,13 +63,13 @@ Section SimRules.
       apply HQ.
       + by apply map_disjoint_empty_r.
       + by apply map_disjoint_empty_r.
-      + assumption.
+      + done.
     - done.
     - done.
   Qed.
 
   Definition SInv : Type :=
-    istate Λt -> J -> I -> istate Λs ->
+    state Λt -> J -> I -> state Λs ->
     (value Λt -> value Λs -> rProp) -> rProp.
 
   Lemma coind (Inv : SInv) st j i ss Q:

@@ -9,13 +9,13 @@ Section ESimDef.
   Context (W: WfRel) (Pt: prog Λt) (Ps: prog Λs).
   Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
-  Variant esim_lfp' (gfp: W -> state Λt -> state Λs -> Prop)
-    : W -> state Λt -> state Λs -> Prop :=
+  Variant esim_lfp' (gfp: W -> config Λt -> config Λs -> Prop)
+    : W -> config Λt -> config Λs -> Prop :=
   | ERelated : ∀ i t s,
     both_final Φ t s -> esim_lfp' gfp i t s
 
   | ESourceStuck : ∀ i t s,
-    stuck Ps s -> esim_lfp' gfp i t s
+    super_stuck Ps s -> esim_lfp' gfp i t s
 
   | ESourceSteps : ∀ i i' t s s',
     Ps ⊨ s ->> s' ->
@@ -33,7 +33,7 @@ Section ESimDef.
     (∀ t', Pt ⊨ t ->> t' -> ∃ i' s', Ps ⊨ s ->> s' ∧ gfp i' t' s') ->
     esim_lfp' gfp i t s.
 
-  Program Definition esim_lfp : mon (element W -> state Λt -> state Λs -> Prop) :=
+  Program Definition esim_lfp : mon (element W -> config Λt -> config Λs -> Prop) :=
     {| body := esim_lfp' |}.
   Next Obligation.
     intros gfp gfp' Hgfp i t s Hsim.

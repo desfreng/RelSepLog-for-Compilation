@@ -9,8 +9,8 @@ Section USimDef.
   Context (Pt: prog Λt) (Ps: prog Λs).
   Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
 
-  Variant usim_lfp' (gfp: state Λt -> state Λs -> Prop)
-    : state Λt -> state Λs -> Prop :=
+  Variant usim_lfp' (gfp: config Λt -> config Λs -> Prop)
+    : config Λt -> config Λs -> Prop :=
   | URelated : ∀ t s,
     both_final Φ t s -> usim_lfp' gfp t s
 
@@ -24,7 +24,7 @@ Section USimDef.
     gfp t s' ->
     usim_lfp' gfp t s.
 
-  Program Definition usim_lfp : mon (state Λt -> state Λs -> Prop) :=
+  Program Definition usim_lfp : mon (config Λt -> config Λs -> Prop) :=
     {| body := usim_lfp' |}.
   Next Obligation.
     intros gfp gfp' Hgfp t s Hsim.

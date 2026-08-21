@@ -10,8 +10,8 @@ Section LSimSound.
   Context {Λt Λs: lang}.
   Context (Pt: prog Λt) (Ps: prog Λs).
 
-  Instance beht_elem : ElemOf behavior (state Λt) := beh Pt.
-  Instance behs_elem : ElemOf behavior (state Λs) := beh Ps.
+  Instance beht_elem : ElemOf behavior (config Λt) := beh Pt.
+  Instance behs_elem : ElemOf behavior (config Λs) := beh Ps.
 
   Notation "a '≡{' Φ '}' b" :=
     (behavior_equal Φ a b)
@@ -28,7 +28,7 @@ Section LSimSound.
     ∃ b, b ∈ s ∧ Terminating vt mt ≡{Φ} b.
   Proof using Type.
     intros Hsim vt mt Hb.
-    (* t Terminates -> it reduces to a final state *)
+    (* t Terminates -> it reduces to a final config *)
     apply has_terminating_behavior in Hb. destruct Hb as (t' & Hrtc & Hfin).
     revert s Hsim.
     (* Induction on the reduction *)
