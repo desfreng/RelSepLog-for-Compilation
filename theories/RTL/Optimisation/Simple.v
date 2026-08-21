@@ -98,7 +98,8 @@ Section simple_opt.
   Proof using Type.
     iIntros "!>" (valt vals) "[%Harg Hinj]".
     iApply (source_callstate_exploit).
-    iIntros (ρs pc Hlen -> ->).
+    iIntros (Hlen).
+    iApply (source_callstate); auto.
     iApply (target_callstate); auto; first by eapply Forall2_length_r.
     iApply (coind (simple_opt_sim_inv)).
     {
@@ -128,6 +129,7 @@ Section simple_opt.
       - destruct (multiple_same args Hsame) as (valt & vals & Hvalt & Hvals & Hval).
         iApply (source_op_exploit); try done.
         iIntros (vs Hvs).
+        iApply (source_op); try done.
         destruct (simple_opt_instr_case op args dst pc') as
           [ (-> & -> & H) | [(? & -> & -> & H) | H]].
 
@@ -224,7 +226,8 @@ Section simple_opt.
         + clear.
           iIntros "!>" (valt vals) "[%Harg Hinj]".
           iApply (source_callstate_exploit).
-          iIntros (ρs pc Hlen -> ->).
+          iIntros (Hlen).
+          iApply (source_callstate); auto.
           iApply (target_callstate); auto; first by eapply Forall2_length_r.
           iApply "CIH"; simpl; try (iPureIntro; lia).
           iExists I, fn, _, _, _.  iFrame. iPureIntro.
@@ -232,7 +235,7 @@ Section simple_opt.
 
         + iFrame. by iPureIntro.
 
-        + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
+        + iIntros (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
           iApply "CIH"; auto.
           iExists I', f, _, _, _. iFrame.
           iSplitR. { by iPureIntro. }
@@ -245,7 +248,8 @@ Section simple_opt.
 
       - destruct (Hsame r) as (bt & bs & Hbt & Hbs & Hb).
         iApply (source_if_exploit); try done.
-        iIntros (b pc' -> ->). inv Hb.
+        iIntros (b ->). inv Hb.
+        iApply (source_if); try done.
         destruct (decide (tpc = fpc)) as [-> | Hneq].
         + iApply (target_nop).
           { simpl. rewrite lookup_fmap Hi. simpl. by rewrite Nat.eqb_refl. }

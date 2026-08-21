@@ -101,7 +101,8 @@ Section remove_nop.
   Proof using Type.
     iIntros "!>" (valt vals) "[%Harg Hinj]".
     iApply (source_callstate_exploit).
-    iIntros (ρs pc Hlen -> ->).
+    iIntros (Hlen).
+    iApply (source_callstate); auto.
     iApply (target_callstate); auto; first by eapply Forall2_length_r.
     iApply (coind (remove_nop_sim_inv)).
     {
@@ -133,6 +134,7 @@ Section remove_nop.
         - destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
           iApply (source_op_exploit); try done.
           iIntros (vs Hvs).
+          iApply (source_op); try done.
           destruct (eval_op_same_args Hval Hvs) as (vt & Hvt & Hrel).
           iApply (target_op).
           { simpl. rewrite lookup_fmap Hi. by simpl. } all: try done.
@@ -189,15 +191,16 @@ Section remove_nop.
           + clear.
             iIntros "!>" (valt vals) "[%Harg Hinj]".
             iApply (source_callstate_exploit).
-            iIntros (ρs pc Hlen -> ->).
+            iIntros (Hlen).
+            iApply (source_callstate); auto.
             iApply (target_callstate); auto; first by eapply Forall2_length_r.
             iApply "CIH"; simpl; try (iPureIntro; lia).
             iExists I, fn, _, _, _, _, _.  iFrame. iPureIntro.
             split_and!; try done. by apply init_same_bank.
 
-          + iFrame. by iPureIntro.
+          + iFrame. iPureIntro. exact Hval.
 
-          + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
+          + iIntros (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
             iApply "CIH"; auto.
             iExists I', f, _, _, _, _, _. iFrame.
             iSplitR. { by iPureIntro. }
@@ -211,7 +214,8 @@ Section remove_nop.
 
         - destruct (Hsame r) as (bt & bs & Hbt & Hbs & Hb).
           iApply (source_if_exploit); try done.
-          iIntros (b pc' -> ->). inv Hb.
+          iIntros (b ->). inv Hb.
+          iApply (source_if); try done.
           iApply (target_if).
           { simpl. rewrite lookup_fmap Hi. by simpl. } all: try done.
           iApply "CIH"; simpl; try (iPureIntro; lia).
@@ -264,6 +268,7 @@ Section remove_nop.
         - destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
           iApply (source_op_exploit); try done.
           iIntros (vs Hvs).
+          iApply (source_op); try done.
           destruct (eval_op_same_args Hval Hvs) as (vt & Hvt & Hrel).
           iApply (target_op); try done.
           iApply "CIH"; simpl; try (iPureIntro; lia).
@@ -315,15 +320,16 @@ Section remove_nop.
           + clear.
             iIntros "!>" (valt vals) "[%Harg Hinj]".
             iApply (source_callstate_exploit).
-            iIntros (ρs pc Hlen -> ->).
+            iIntros (Hlen).
+            iApply (source_callstate); auto.
             iApply (target_callstate); auto; first by eapply Forall2_length_r.
             iApply "CIH"; simpl; try (iPureIntro; lia).
             iExists I, fn, _, _, _, _, _.  iFrame. iPureIntro.
             split_and!; try done. by apply init_same_bank.
 
-          + iFrame. by iPureIntro.
+          + iFrame. iPureIntro. done.
 
-          + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
+          + iIntros (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
             iApply "CIH"; auto.
             iExists I', f, _, _, _, _, _. iFrame.
             iSplitR. { by iPureIntro. }
@@ -337,7 +343,8 @@ Section remove_nop.
 
         - destruct (Hsame r) as (bt & bs & Hbt & Hbs & Hb).
           iApply (source_if_exploit); try done.
-          iIntros (b pc' -> ->). inv Hb.
+          iIntros (b ->). inv Hb.
+          iApply (source_if); try done.
           iApply (target_if); try done.
           iApply "CIH"; try (iPureIntro; simpl; lia).
           iExists I, f, _, _, _, _, _. iFrame. iPureIntro.

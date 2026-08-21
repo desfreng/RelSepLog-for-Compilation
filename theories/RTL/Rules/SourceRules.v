@@ -6,13 +6,13 @@ From RSL.Logic Require Import Logic.
 Import RTLNotations.
 
 Ltac source_does_UB :=
-  unfold sim_lfp; cbv [rPropDef.rProp_holds];
+  unfold sim_def; cbv [rPropDef.rProp_holds];
   match goal with
   | |- elem _ ?Q ?t ?j ?i (?cs, ?ss, ?ms) =>
       let Hpreg := fresh "Hprog" in
       by eapply chain_stuck; split;
       [ destruct cs
-      | intros ? Hprog;
+      | intros ? ? Hprog;
         apply can_progress_must_step in Hprog;
         destruct Hprog as [? Hprog]; inv Hprog; simregs
       ]
@@ -20,8 +20,9 @@ Ltac source_does_UB :=
   end.
 
 Ltac source_step :=
-  repeat intro; subst; unseal;
-  intros ? ? [-> ->] ? ? _ _ Hsim; smap;
+  repeat intro; subst; unfold sim; unseal;
+  intros ? ? [-> ->] ? ? _ _ Hsim;
+  intros W mtW msW Hdt Hds HW; smap;
   eapply chain_source_step; [by econstructor|apply Hsim].
 
 Section SourceRulesDef.
@@ -69,13 +70,15 @@ Section SourceRulesDef.
     l →ₛ vs -∗
     [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
-    intros Hpc Haddr. unseal.
-    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros Hpc Haddr. unfold sim. unseal.
+    intros ? ? [-> ->] mt ms _ _ Hsim. smap.
     intros ? ? _ Hdij [-> ->].
+    intros W mtW msW Hdt Hds HW.
     decompose_map_disjoint.
 
     eapply chain_source_step.
     - eapply exec_Iload with (v := vs); try done.
+      rewrite get_at_union_left; auto.
       rewrite get_at_union_right; auto.
       rewrite get_at_singl; auto.
     - eapply Hsim; smap; by solve_map_disjoint.
@@ -90,18 +93,21 @@ Section SourceRulesDef.
     l →ₛ old -∗
     [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
-    intros Hpc Haddr Hsrc. unseal.
-    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros Hpc Haddr Hsrc. unfold sim. unseal.
+    intros ? ? [-> ->] mt ms _ _ Hsim. smap.
     intros ? ? _ Hdij [-> ->].
+    intros W mtW msW Hdt Hds HW.
     decompose_map_disjoint.
 
     eapply chain_source_step.
     - eapply exec_Istore with (v := v); try done.
       unfold set_at. erewrite update_at_some.
-      + rewrite insert_union_r; last done.
+      + rewrite insert_union_l.
+        rewrite insert_union_r; last done.
         rewrite insert_singleton_eq.
         reflexivity.
-      + rewrite get_at_union_right; last done.
+      + rewrite get_at_union_left; last done.
+        rewrite get_at_union_right; last done.
         by apply get_at_singl.
     - eapply Hsim; smap; by solve_map_disjoint.
   Qed.
@@ -113,21 +119,35 @@ Section SourceRulesDef.
        [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ VPtr l⟧ρs)) {{ Q }}) -∗
     [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
-    intros Hpc. unseal.
-    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros Hpc. unfold sim. unseal.
+    intros ? ? [-> ->] mtS msS _ _ Hsim.
+    intros W mtW msW Hdt Hds HW. smap.
+
+    pose (l := fresh (dom (msS ∪ msW))).
+    assert (Hl: l ∉ dom msS ∪ dom msW).
+    { rewrite <-dom_union_L. by apply is_fresh. }
+    apply not_elem_of_union in Hl
+        as [Hls%not_elem_of_dom HlW%not_elem_of_dom].
 
     eapply chain_source_step.
-    - eapply exec_Ialloc.
+    - eapply exec_Ialloc with (l := l) (v := v).
       + done.
       + rewrite alloc_at_is_some. split.
         * reflexivity.
-        * apply not_elem_of_dom, is_fresh.
+        * by apply lookup_union_None.
       + reflexivity.
-    - replace mtS with (mtS ∪ ∅) by smap.
-      eapply Hsim.
-      + solve_map_disjoint.
-      + apply map_disjoint_singleton_l, not_elem_of_dom, is_fresh.
-      + by split.
+    - replace (mtS ∪ mtW) with (mtS ∪ ∅ ∪ mtW) by smap.
+      replace (msS ∪ msW ∪ {[l := Allocated v]}) with (msS ∪ {[l := Allocated v]} ∪ msW).
+      + eapply Hsim.
+        * solve_map_disjoint.
+        * solve_map_disjoint.
+        * by split.
+        * solve_map_disjoint.
+        * solve_map_disjoint.
+        * done.
+      + rewrite <-!map_union_assoc. f_equal.
+        apply map_union_comm.
+        solve_map_disjoint.
   Qed.
 
   Lemma source_free pc src l v:
@@ -138,9 +158,10 @@ Section SourceRulesDef.
     l →ₛ v -∗
     [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
-    intros Hpc Hsrc. unseal.
-    intros ? ? [-> ->] mtS msS _ _ Hsim. smap.
+    intros Hpc Haddr. unfold sim. unseal.
+    intros ? ? [-> ->] mt ms _ _ Hsim. smap.
     intros ? ? _ Hdij [-> ->].
+    intros W mtW msW Hdt Hds HW.
     decompose_map_disjoint.
 
     eapply chain_source_step.
@@ -148,10 +169,12 @@ Section SourceRulesDef.
       + done.
       + done.
       + unfold free_at. erewrite update_at_some.
-        * rewrite insert_union_r; last done.
+        * rewrite insert_union_l.
+          rewrite insert_union_r; last done.
           rewrite insert_singleton_eq.
           reflexivity.
-        * rewrite get_at_union_right; last done.
+        * rewrite get_at_union_left; last done.
+          rewrite get_at_union_right; last done.
           by apply get_at_singl.
     - eapply Hsim; smap; by solve_map_disjoint.
   Qed.

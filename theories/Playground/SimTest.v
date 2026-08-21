@@ -91,7 +91,10 @@ Section T.
   Proof using Type.
     iIntros "!>" (valt vals) "(%Hsame_arg & Hinj)".
     iApply (source_callstate_exploit).
-    iIntros (ρs ? Hlen Heqs ->).
+    iIntros (Hlen).
+    iApply (source_callstate); auto.
+    remember (init_regs (rtl_fn_regs fact_bad) vals) as ρs eqn:Heqs.
+
     assert (H: ∃ ρt, ρt = init_regs (rtl_fn_regs fact_good) valt ∧ ∀ r, ρt @ r <{ I }> ρs @ r).
     {
       eexists. split; first done.
@@ -112,9 +115,11 @@ Section T.
 
     iApply (source_store_exploit with "[-Hinj] Hinj"). all: close_hyp.
     { by set_solver. }
-    iIntros (E' lt ls ? -> -> ->).
-    iIntros "Ht Hs Hinj".
+    iIntros (E' lt ls ? ? -> -> ->).
+    iIntros "Ht Hs %_ Hinj".
 
+    iApply (source_store with "[-Hs] Hs"). all: close_hyp.
+    iIntros "Hs".
     iApply (target_store with "[-Ht] Ht"). all: close_hyp.
     iIntros "Ht".
     simpl.
@@ -136,6 +141,7 @@ Section T.
       iIntros (v Hz).
       destruct vn_s as [ vn | | | ], vn_t; inv Hz; inv Hsame_n.
 
+      iApply (source_op). all: close_hyp.
       iApply (target_op). all: close_hyp.
       simpl.
 
@@ -162,6 +168,7 @@ Section T.
         iIntros (? Hv).
         destruct vres_s, vres_t; inv Hv; inv Hsame_res.
 
+        iApply (source_op). all: close_hyp.
         iApply (target_op). all: close_hyp.
         simpl.
 

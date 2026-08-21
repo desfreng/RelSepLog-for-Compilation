@@ -21,8 +21,9 @@ Section FailingSourceRulesDef.
     True -∗
     [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
-    intros Hpc. unseal.
-    intros ? ? [-> ->] mt ms _ _ _. smap.
+    intros Hpc. unfold sim. unseal.
+    intros ? ? [-> ->] mt ms _ _ _.
+    intros W mtW msW Hdt Hds HW. smap.
     source_does_UB.
   Qed.
 
@@ -33,8 +34,9 @@ Section FailingSourceRulesDef.
     True -∗
     [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
-    intros Hpc Hargs Hv. unseal.
-    intros ? ? [-> ->] mt ms _ _ _. smap.
+    intros Hpc Hargs Hv. unfold sim. unseal.
+    intros ? ? [-> ->] mt ms _ _ _.
+    intros W mtW msW Hdt Hds HW. smap.
     source_does_UB.
   Qed.
 
@@ -44,8 +46,9 @@ Section FailingSourceRulesDef.
     True -∗
     [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
-    intros Hpc Hfun. unseal.
-    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
+    intros Hpc Hfun. unfold sim. unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim.
+    intros W mtW msW Hdt Hds HW. smap.
     source_does_UB.
   Qed.
 
@@ -54,8 +57,9 @@ Section FailingSourceRulesDef.
     True -∗
     [Pt, Ps, C] st <{j, i}= (cs, CallState fs args) {{ Q }}.
   Proof using Type.
-    intros Hlen. unseal.
-    intros ? ? [-> ->] mt ms _ _ Hsim. smap.
+    intros Hlen. unfold sim. unseal.
+    intros ? ? [-> ->] mt ms _ _ Hsim.
+    intros W mtW msW Hdt Hds HW. smap.
     source_does_UB.
   Qed.
 End FailingSourceRulesDef.

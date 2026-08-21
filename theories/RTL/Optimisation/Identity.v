@@ -69,6 +69,7 @@ Section identity.
         iApply (source_op_exploit); try done.
         iIntros (vs Hvs).
         destruct (eval_op_same_args Hval Hvs) as (vt & Hvt & Hrel).
+        iApply (source_op); try done.
         iApply (target_op); [ by eapply pc_eq | done | done | ].
         iApply "CIH"; try (iPureIntro; simpl; lia).
         iExists I, ft, fs, _, _, _. iFrame. iPureIntro. split_and!; try done.
@@ -126,7 +127,8 @@ Section identity.
         + clear -Heq.
           iIntros "!>" (valt vals) "[%Harg Hinj]".
           iApply (source_callstate_exploit).
-          iIntros (ρs pc Hlen -> ->).
+          iIntros (Hlen).
+          iApply (source_callstate); try done.
           iApply (target_callstate); try done.
           { destruct Heq as (_ & -> & _ & _). by eapply Forall2_length_r. }
           iApply "CIH"; simpl; try (iPureIntro; lia).
@@ -138,7 +140,7 @@ Section identity.
           * by destruct Heq as (_ & -> & _ & _); apply init_same_bank.
           * by iIntros (? ? ) "$".
         + iFrame. by iPureIntro.
-        + iIntros "!>" (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
+        + iIntros (j' i' ? ? ? ?) "(%I' & %Hincl & %Hsame' & Hinj)".
           iApply "CIH"; auto.
           iExists I', ft, fs, _, _, _. iFrame.
           iSplitR. { by iPureIntro. }
@@ -152,7 +154,8 @@ Section identity.
 
       - destruct (Hsame r) as (bt & bs & Hbt & Hbs & Hb).
         iApply (source_if_exploit); try done.
-        iIntros (b pc' -> ->). inv Hb.
+        iIntros (b ->). inv Hb.
+        iApply (source_if); try done.
         iApply (target_if); [ by eapply pc_eq | done | ].
         iApply "CIH"; simpl; try (iPureIntro; lia).
         iExists I, ft, fs, _, _, _.  iFrame. iPureIntro. by split_and!.
@@ -181,7 +184,8 @@ Section identity.
     intros Heq.
     iIntros "!>" (valt vals) "[%Harg Hinj]".
     iApply (source_callstate_exploit).
-    iIntros (ρs pc Hlen -> ->).
+    iIntros (Hlen).
+    iApply (source_callstate); try done.
     iApply (target_callstate); try done.
     { destruct Heq as (_ & -> & _ & _). by eapply Forall2_length_r. }
     destruct Heq as (Hname & Hentry & Hregs & Hcode).

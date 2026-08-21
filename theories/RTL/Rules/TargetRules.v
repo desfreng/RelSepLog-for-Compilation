@@ -15,8 +15,10 @@ Section TargetRulesDef.
     (j i : WfNat) (ss : state Λs) (Q : value Λt -> value Λs -> rProp).
 
   Ltac target_step :=
-    repeat intro; subst; unseal; intros ? ? [-> ->] ? ? _ _ Hsim;
-    smap; apply chain_target_step;
+    repeat intro; subst; unfold sim; unseal;
+    intros ? ? [-> ->] ? ? _ _ Hsim;
+    intros W mtW msW Hdt Hds HW; smap;
+    apply chain_target_step;
     [ eexists; by econstructor
     | intros t' Hstep; inv Hstep; try simregs; eexists; apply Hsim ].
 
@@ -49,25 +51,28 @@ Section TargetRulesDef.
     l →ₜ v -∗
     [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros Hpc Haddr. unseal.
-    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
-    intros ? ? ? _ [-> ->]. smap.
+    intros Hpc Haddr. unfold sim. unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim.
+    intros ? ? ? _ [-> ->].
+    intros W mtW msW Hdt Hds HW. smap.
 
     decompose_map_disjoint.
 
     eapply chain_target_step.
     - eexists. eapply exec_Iload; try eassumption.
-      + rewrite get_at_union_right; last done.
+      + rewrite get_at_union_left; last done.
+        rewrite get_at_union_right; last done.
         by apply get_at_singl.
       + reflexivity.
     - intros t Hstep.
       inv Hstep as [ | | | ? ? ? ? ? ? ? ? ? ? ? ? ? Hget | | | | | | | ].
       simregs.
+      rewrite get_at_union_left in Hget; last done.
       rewrite get_at_union_right in Hget; last done.
       rewrite get_at_singl in Hget. inv Hget.
 
       eexists.
-      replace msP with (msP ∪ ∅) by smap.
+      replace (msP ∪ msW) with (msP ∪ ∅ ∪ msW) by smap.
       apply Hsim; smap; by solve_map_disjoint.
   Qed.
 
@@ -80,15 +85,17 @@ Section TargetRulesDef.
     l →ₜ old -∗
     [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros Hpc Haddr Hv. unseal.
-    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
-    intros ? ? ? _ [-> ->]. smap.
+    intros Hpc Haddr Hv. unfold sim. unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim.
+    intros ? ? ? _ [-> ->].
+    intros W mtW msW Hdt Hds HW. smap.
 
     decompose_map_disjoint.
 
     eapply chain_target_step.
     - eexists. eapply exec_Istore; try eassumption.
       eapply update_at_some.
+      rewrite get_at_union_left; last done.
       rewrite get_at_union_right; last done.
       by apply get_at_singl.
     - intros t Hstep.
@@ -96,14 +103,16 @@ Section TargetRulesDef.
       simregs.
       unfold set_at in Hset.
       erewrite update_at_some in Hset.
-      + rewrite insert_union_r in Hset; last done.
+      + rewrite insert_union_l in Hset.
+        rewrite insert_union_r in Hset; last done.
         rewrite insert_singleton_eq in Hset.
         inv Hset.
 
         eexists.
-        replace msP with (msP ∪ ∅) by smap.
+        replace (msP ∪ msW) with (msP ∪ ∅ ∪ msW) by smap.
         apply Hsim; smap; by solve_map_disjoint.
-      + rewrite get_at_union_right; last done.
+      + rewrite get_at_union_left; last done.
+        rewrite get_at_union_right; last done.
         by apply get_at_singl.
   Qed.
 
@@ -114,22 +123,34 @@ Section TargetRulesDef.
        [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ VPtr l⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
     [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros Hpc. unseal.
-    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
+    intros Hpc. unfold sim. unseal.
+    intros ? ? [-> ->] mt ms _ _ Hsim.
+    intros W mtW msW Hdt Hds HW. smap.
+
+    pose (l := fresh (dom (mt ∪ mtW))).
+    assert (Hl: l ∉ dom mt ∪ dom mtW).
+    { rewrite <-dom_union_L. by apply is_fresh. }
+    apply not_elem_of_union in Hl
+        as [Hl%not_elem_of_dom HlW%not_elem_of_dom].
 
     eapply chain_target_step.
-    - eexists. eapply exec_Ialloc.
+    - eexists. eapply exec_Ialloc with (l := l) (v := inhabitant).
       + done.
-      + apply alloc_at_is_some with (v := VUndef). split.
+      + apply alloc_at_is_some. split.
         * done.
-        * apply not_elem_of_dom, is_fresh.
+        * by apply lookup_union_None.
       + reflexivity.
     - intros t Hstep.
-      inv Hstep as [ | | | | | ? ? ? ? ? ? ? ? ? ? ? ? Hm | | | | | ].
-      apply alloc_at_is_some in Hm as [-> HnIn].
+      inv Hstep as [ | | | | | ? ? ? ? ? ? ? ? ? l' v ? Hm | | | | | ].
+      apply alloc_at_is_some in Hm as [-> [? ?]%lookup_union_None].
 
       eexists.
-      replace msP with (msP ∪ ∅) by smap.
+      replace (mt ∪ mtW ∪ {[l' := Allocated v]}) with (mt ∪ {[l' := Allocated v]} ∪ mtW).
+      2:{
+        rewrite <-!map_union_assoc. f_equal.
+        apply map_union_comm. solve_map_disjoint.
+      }
+      replace (ms ∪ msW) with (ms ∪ ∅ ∪ msW) by smap.
       eapply Hsim; smap; solve_map_disjoint.
   Qed.
 
@@ -141,9 +162,11 @@ Section TargetRulesDef.
     l →ₜ v -∗
     [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
-    intros Hpc Hsrc. unseal.
-    intros ? ? [-> ->] mtP msP _ _ Hsim. smap.
-    intros ? ? Hdij _ [-> ->]. smap.
+    intros Hpc Hsrc. unfold sim. unseal.
+    intros ? ? [-> ->] mtP msP _ _ Hsim.
+    intros ? ? ? _ [-> ->].
+    intros W mtW msW Hdt Hds HW. smap.
+
     decompose_map_disjoint.
 
     eapply chain_target_step.
@@ -152,21 +175,24 @@ Section TargetRulesDef.
       + done.
       + unfold free_at. erewrite update_at_some.
         * reflexivity.
-        * rewrite get_at_union_right; last done.
+        * rewrite get_at_union_left; last done.
+          rewrite get_at_union_right; last done.
           by apply get_at_singl.
     - intros t Hstep.
       inv Hstep as [ | | | | | | ? ? ? ? ? ? ? ? ? ? ? Hm | | | | ].
       simregs.
       unfold free_at in Hm.
       erewrite update_at_some in Hm.
-      + rewrite insert_union_r in Hm; last done.
+      + rewrite insert_union_l in Hm.
+        rewrite insert_union_r in Hm; last done.
         rewrite insert_singleton_eq in Hm.
         inv Hm.
 
         eexists.
-        replace msP with (msP ∪ ∅) by smap.
+        replace (msP ∪ msW) with (msP ∪ ∅ ∪ msW) by smap.
         apply Hsim; smap; by solve_map_disjoint.
-      + rewrite get_at_union_right; last done.
+      + rewrite get_at_union_left; last done.
+        rewrite get_at_union_right; last done.
         by apply get_at_singl.
   Qed.
 

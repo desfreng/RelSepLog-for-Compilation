@@ -155,7 +155,7 @@ Section LangProp.
 
   Definition super_stuck (c: config Λ) : Prop :=
     let '(s, m) := c in
-    is_value s = None ∧ ∀ mm, ~can_progress (s, m ∪ mm).
+    is_value s = None ∧ ∀ mm, m ##ₘ mm -> ~can_progress (s, m ∪ mm).
 
   Lemma super_stuck_is_stuck c:
     super_stuck c -> stuck c.
@@ -165,19 +165,22 @@ Section LangProp.
     split.
     - apply is_final_None. by eexists _, _.
     - intros H. apply Hnprog with ∅.
-      unfold memory. by rewrite map_union_empty.
+      + solve_map_disjoint.
+      + unfold memory. by rewrite map_union_empty.
   Qed.
 
   Lemma super_stuck_mono s m mm:
+    m ##ₘ mm ->
     super_stuck (s, m) ->
     super_stuck (s, m ∪ mm).
   Proof using Type.
-    intros [Hval Hnprog].
+    intros ? [Hval Hnprog].
     split; first done.
-    intros mm' Hprog.
+    intros mm' ? Hprog.
     unfold memory in *.
     rewrite <-map_union_assoc in Hprog.
-    by eapply Hnprog.
+    eapply Hnprog; last done.
+    solve_map_disjoint.
   Qed.
 End LangProp.
 

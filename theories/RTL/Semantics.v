@@ -280,7 +280,7 @@ Section SemProp.
     intros [Hfin Hcan].
     split.
     - destruct σ, Σ; simpl; auto.
-    - intros ? Hprog. eapply Hcan.
+    - intros ? ? Hprog. eapply Hcan; first done.
       eapply unlift_can_progress; last done.
       unfold is_final. by rewrite Hfin.
   Qed.
