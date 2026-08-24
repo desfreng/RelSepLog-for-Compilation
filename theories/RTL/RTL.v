@@ -27,6 +27,9 @@ Inductive rtl_instr : Type :=
         operation [op] over the values of registers [args],
         stores the result in [dest], and branches to [succ]. *)
 | Iop: op -> list reg -> reg -> node -> rtl_instr
+    (** [Irand dest succ] set the register [dest] to a random integer value,
+        and branches to [succ]. *)
+| Irand: reg -> node -> rtl_instr
     (** [Iload addr dest succ] loads the value at [addr] into [dest],
         and branches to [succ]. *)
 | Iload: reg -> reg -> node -> rtl_instr

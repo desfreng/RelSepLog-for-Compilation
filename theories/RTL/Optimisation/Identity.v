@@ -51,6 +51,7 @@ Section identity.
         as [
           [ pc'
           | op args dst pc'
+          | dst pc'
           | src dst pc'
           | dst src pc'
           | dst pc'
@@ -75,6 +76,15 @@ Section identity.
         iExists I, ft, fs, _, _, _. iFrame. iPureIntro. split_and!; try done.
         apply update_same_bank.
         + done.
+        + intros ? ?. apply Hsame.
+
+      - iApply (target_random); [ by eapply pc_eq | ].
+        iIntros (v).
+        iApply (source_random); try done.
+        iApply "CIH"; try (iPureIntro; simpl; lia).
+        iExists I, ft, fs, _, _, _. iFrame. iPureIntro. split_and!; try done.
+        apply update_same_bank.
+        + by constructor.
         + intros ? ?. apply Hsame.
 
       - destruct (Hsame src) as (vt & vs & Ht & Hs & Hv).

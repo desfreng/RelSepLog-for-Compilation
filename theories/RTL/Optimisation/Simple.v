@@ -24,6 +24,8 @@ Definition simple_opt_instr (i: rtl_instr) : rtl_instr :=
       if (pcT =? pcF)
       then Inop pcT
       else Icond b pcT pcF
+  | Irand dst pc =>
+      Iop (ImmInt 0%Z) [] dst pc
   | _ => i
   end.
 
@@ -111,6 +113,7 @@ Section simple_opt.
         as [
           [ pc'
           | op args dst pc'
+          | dst pc'
           | src dst pc'
           | dst src pc'
           | dst pc'
@@ -177,6 +180,15 @@ Section simple_opt.
           iExists I, f, _, _, _. iFrame. iPureIntro.
           split_and!; try done. by apply update_same_bank.
 
+      - iApply (target_op).
+        { simpl. rewrite lookup_fmap Hi. eapply fmap_Some.
+          eexists. by split. } all: try done.
+        iApply (source_random); try done.
+        iApply "CIH"; simpl; try (iPureIntro; lia).
+        iExists I, f, _, _, _. iFrame. iPureIntro.
+        split_and!; try done. apply update_same_bank.
+        + by constructor.
+        + done.
 
       - destruct (Hsame src) as (vt & vs & Ht & Hs & Hv).
         iApply (both_load with "[] Hinj").

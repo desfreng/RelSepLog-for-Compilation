@@ -46,6 +46,11 @@ Variant rtl_step (P: rtl_program) : rtl_state * memory -> rtl_state * memory -> 
   ⟦dst ⇐ v⟧ρ = ρ' ->
   rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
 
+| exec_Irand: ∀ σ m ρ f pc dst pc' ρ' i,
+  f@pc is <<{ dst := random () -> pc' }>> ->
+  ⟦dst ⇐ VInt i⟧ρ = ρ' ->
+  rtl_step P (σ, State f pc ρ, m) (σ, State f pc' ρ', m)
+
 | exec_Iload: ∀ σ m ρ f pc dst src pc' ρ' addr v,
   f@pc is <<{ dst := !src -> pc' }>> ->
   ρ@src ⇒ addr ->
@@ -114,7 +119,7 @@ Lemma rtl_memory_mono p s m s' m':
   dom m ⊆ dom m'.
 Proof.
   intros Hstep.
-  inv Hstep as [ | | | | | ? ? ? ? ? ? ? ? ? ? ? ? Hm | | | | | ]; try done.
+  inv Hstep as [ | | | | | | ? ? ? ? ? ? ? ? ? ? ? ? Hm | | | | | ]; try done.
   - by erewrite update_at_dom.
   - apply alloc_at_dom in Hm as <-.
     by set_solver.
@@ -125,7 +130,11 @@ Lemma can_step_mono p s m t mm:
   rtl_step p (s, m) t ->
   ∃ t, rtl_step p (s, m ∪ mm) t.
 Proof.
-  intros H. inv H; try by do 2 econstructor.
+  intros H. inv H.
+  - eexists. by eapply exec_Inop.
+  - eexists. by eapply exec_Iret.
+  - eexists. by eapply exec_Iop.
+  - eexists. by eapply exec_Irand with (i := inhabitant).
   - eexists.
     eapply exec_Iload; try done.
     by apply get_at_mono.
@@ -137,6 +146,10 @@ Proof.
   - eexists.
     eapply exec_Ifree; try done.
     by apply update_at_mono.
+  - eexists. by eapply exec_Icond.
+  - eexists. by eapply exec_Icall.
+  - eexists. by eapply exec_function.
+  - eexists. by eapply exec_return.
 Qed.
 
 Lemma rtl_mixin_lang : LangMixin rtl_step is_rtl_final.
@@ -190,7 +203,19 @@ Section SemProp.
     P ⊨ (σ, ps, m) ->> (σ', pt, m') ->
     P ⊨ (σ ++ Σ, ps, m) ->> (σ' ++ Σ, pt, m').
   Proof using Type.
-    intros H; inv H; econstructor; now eauto.
+    intros H; inv H.
+    - by eapply exec_Inop.
+    - by eapply exec_Iret.
+    - by eapply exec_Iop.
+    - by eapply exec_Irand.
+    - by eapply exec_Iload.
+    - by eapply exec_Istore.
+    - by eapply exec_Ialloc.
+    - by eapply exec_Ifree.
+    - by eapply exec_Icond.
+    - by eapply exec_Icall.
+    - by eapply exec_function.
+    - by eapply exec_return.
   Qed.
 
   Lemma unlift_step σ ps m σ' pt m' Σ:
@@ -199,8 +224,19 @@ Section SemProp.
   Proof using Type.
     intros H; inv H;
       rewrite ?app_comm_cons in *;
-      eassert _ by (eapply app_inv_tail; eassumption);
-      subst; econstructor; now eauto.
+      eassert _ by (eapply app_inv_tail; eassumption); subst.
+    - by eapply exec_Inop.
+    - by eapply exec_Iret.
+    - by eapply exec_Iop.
+    - by eapply exec_Irand.
+    - by eapply exec_Iload.
+    - by eapply exec_Istore.
+    - by eapply exec_Ialloc.
+    - by eapply exec_Ifree.
+    - by eapply exec_Icond.
+    - by eapply exec_Icall.
+    - by eapply exec_function.
+    - by eapply exec_return.
   Qed.
 
   Theorem lift_steps σ ps m σ' pt m' Σ:
@@ -240,9 +276,20 @@ Section SemProp.
     can_progress P (σ, ps, m).
   Proof using Type.
     intros Hfin [[[] ?] Ht].
-    inv Ht; try by do 2 econstructor.
-    destruct σ as [|[]]; inv Hfin.
-    econstructor. try by do 2 econstructor.
+    inv Ht.
+    - eexists. by eapply exec_Inop.
+    - eexists. by eapply exec_Iret.
+    - eexists. by eapply exec_Iop.
+    - eexists. by eapply exec_Irand with (i := inhabitant).
+    - eexists. by eapply exec_Iload.
+    - eexists. by eapply exec_Istore.
+    - eexists. by eapply exec_Ialloc.
+    - eexists. by eapply exec_Ifree.
+    - eexists. by eapply exec_Icond.
+    - eexists. by eapply exec_Icall.
+    - eexists. by eapply exec_function.
+    - destruct σ as [|[]]; inv Hfin.
+      eexists. by eapply exec_return.
   Qed.
 
   Lemma step_frame_preserved σ Σ ps m t'' :
@@ -252,7 +299,7 @@ Section SemProp.
   Proof using Type.
     intros Hnf Hstep.
     destruct t'' as [[σ'' pt] m'].
-    inv Hstep as [ | | | | | | | | | | ? ? ? ? ? ? ? ? ? Heq];
+    inv Hstep as [ | | | | | | | | | | | ? ? ? ? ? ? ? ? ? Heq];
       try (eexists _, _, _; split; [ done | by econstructor]).
     - eexists (_ :: _), _, _. split.
       + done.

@@ -62,6 +62,20 @@ Section SourceRulesDef.
     [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
+  Lemma source_random pc dst v:
+    fs@pcs is <<{ dst := random () -> pc}>> ->
+    [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ VInt v⟧ρs)) {{ Q }} -∗
+    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+  Proof using Type.
+    intros Hpc. unfold sim. unseal.
+    intros ? ? [-> ->] ? ? _ _ Hsim.
+    intros W mtW msW Hdt Hds HW. smap.
+
+    eapply chain_source_step.
+    - by eapply exec_Irand with (i := v).
+    - by eapply Hsim.
+  Qed.
+
   Lemma source_load pc dst src l vs:
     fs@pcs is <<{ dst := !src -> pc }>> ->
     ρs @ src ⇒ VPtr l ->

@@ -26,6 +26,7 @@ Definition redirect_instr (f: node -> node) (i: rtl_instr) : rtl_instr :=
   match i with
   | Inop succ => Inop (f succ)
   | Iop op args dst succ => Iop op args dst (f succ)
+  | Irand dst succ => Irand dst (f succ)
   | Iload addr dst succ => Iload addr dst (f succ)
   | Istore addr src succ => Istore addr src (f succ)
   | Ialloc dst succ => Ialloc dst (f succ)
@@ -116,6 +117,7 @@ Section remove_nop.
           as [
             [ pc'
             | op args dst pc'
+            | dst pc'
             | src dst pc'
             | dst src pc'
             | dst pc'
@@ -141,6 +143,16 @@ Section remove_nop.
           iApply "CIH"; simpl; try (iPureIntro; lia).
           iExists I, f, _, _, _, _, _. iFrame. iPureIntro.
           split_and!; try done. by apply update_same_bank.
+
+        - iApply (target_random).
+          { simpl. rewrite lookup_fmap Hi. by simpl. }
+          iIntros (v).
+          iApply (source_random); try done.
+          iApply "CIH"; simpl; try (iPureIntro; lia).
+          iExists I, f, _, _, _, _, _. iFrame. iPureIntro.
+          split_and!; try done. apply update_same_bank.
+          + by constructor.
+          + done.
 
         - destruct (Hsame src) as (vt & vs & Ht & Hs & Hv).
           iApply (both_load with "[] Hinj").
@@ -248,6 +260,7 @@ Section remove_nop.
           as [
             [ pc'
             | op args dst pc'
+            | dst pc'
             | src dst pc'
             | dst src pc'
             | dst pc'
@@ -258,7 +271,7 @@ Section remove_nop.
             ]
           |] eqn:Hs;
           try (eassert (Ht: remove_nop_fun depth f @ pcs is _);
-           [simpl; rewrite lookup_fmap Hs; by simpl|]).
+               [simpl; rewrite lookup_fmap Hs; by simpl|]).
 
         - iApply (source_nop); first done.
           iApply (target_nop); first done.
@@ -274,6 +287,15 @@ Section remove_nop.
           iApply "CIH"; simpl; try (iPureIntro; lia).
           iExists I, f, _, _, _, _, _. iFrame. iPureIntro.
           split_and!; try done. by apply update_same_bank.
+
+        - iApply (target_random); try done.
+          iIntros (v).
+          iApply (source_random); try done.
+          iApply "CIH"; simpl; try (iPureIntro; lia).
+          iExists I, f, _, _, _, _, _. iFrame. iPureIntro.
+          split_and!; try done. apply update_same_bank.
+          + by constructor.
+          + done.
 
         - destruct (Hsame src) as (vt & vs & Hvt & Hvs & Hv).
           iApply (both_load with "[] Hinj"); try done.

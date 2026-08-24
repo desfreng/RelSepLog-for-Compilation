@@ -43,6 +43,21 @@ Section TargetRulesDef.
     [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
+  Lemma target_random pc dst:
+    ft@pct is <<{ dst := random () -> pc }>> ->
+    (∀ v, [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ VInt v⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
+    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+  Proof using Type.
+    intros Hpc. unfold sim. unseal.
+    intros ? ? [-> ->] ? ? _ _ Hsim.
+    intros W mtW msW Hdt Hds HW. smap.
+
+    apply chain_target_step.
+    - eexists. by eapply exec_Irand with (i := inhabitant).
+    - intros t' Hstep. inv Hstep.
+      eexists. by apply Hsim.
+  Qed.
+
   Lemma target_load pc dst src l v:
     ft@pct is <<{ dst := !src -> pc }>> ->
     ρt @ src ⇒ VPtr l ->
@@ -65,7 +80,7 @@ Section TargetRulesDef.
         by apply get_at_singl.
       + reflexivity.
     - intros t Hstep.
-      inv Hstep as [ | | | ? ? ? ? ? ? ? ? ? ? ? ? ? Hget | | | | | | | ].
+      inv Hstep as [ | | | | ? ? ? ? ? ? ? ? ? ? ? ? ? Hget | | | | | | | ].
       simregs.
       rewrite get_at_union_left in Hget; last done.
       rewrite get_at_union_right in Hget; last done.
@@ -99,7 +114,7 @@ Section TargetRulesDef.
       rewrite get_at_union_right; last done.
       by apply get_at_singl.
     - intros t Hstep.
-      inv Hstep as [ | | | | ? ? ? ? ? ? ? ? ? ? ? ? ? ? Hset | | | | | | ].
+      inv Hstep as [ | | | | | ? ? ? ? ? ? ? ? ? ? ? ? ? ? Hset | | | | | | ].
       simregs.
       unfold set_at in Hset.
       erewrite update_at_some in Hset.
@@ -141,7 +156,7 @@ Section TargetRulesDef.
         * by apply lookup_union_None.
       + reflexivity.
     - intros t Hstep.
-      inv Hstep as [ | | | | | ? ? ? ? ? ? ? ? ? l' v ? Hm | | | | | ].
+      inv Hstep as [ | | | | | | ? ? ? ? ? ? ? ? ? l' v ? Hm | | | | | ].
       apply alloc_at_is_some in Hm as [-> [? ?]%lookup_union_None].
 
       eexists.
@@ -179,7 +194,7 @@ Section TargetRulesDef.
           rewrite get_at_union_right; last done.
           by apply get_at_singl.
     - intros t Hstep.
-      inv Hstep as [ | | | | | | ? ? ? ? ? ? ? ? ? ? ? Hm | | | | ].
+      inv Hstep as [ | | | | | | | ? ? ? ? ? ? ? ? ? ? ? Hm | | | | ].
       simregs.
       unfold free_at in Hm.
       erewrite update_at_some in Hm.
