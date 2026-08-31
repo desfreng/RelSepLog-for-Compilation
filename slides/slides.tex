@@ -24,7 +24,7 @@
 \usepackage{wasysym}
 
 \usepackage{tikz}
-\usetikzlibrary{calc, fit, patterns, positioning, shapes, arrows.meta, overlay-beamer-styles}
+\usetikzlibrary{calc, backgrounds, fit, tikzmark, decorations.pathreplacing, patterns, positioning, shapes, arrows.meta, overlay-beamer-styles}
 
 \usepackage{ulem}
 \usepackage{booktabs}
@@ -43,8 +43,8 @@
 
 \tikzset{
   bbox/.style={
-    % draw, red
-    draw=none
+    draw, red
+    % draw=none
   },
   text width between/.style args={#1 and #2}{
     parse let={\p@=($(#2)-(#1)$)},
@@ -52,18 +52,27 @@
   }
 }
 
-\def\subnode#1#2%
-{\tikz[remember picture,baseline=(#1.base),inner sep=0pt,
-  outer sep=0pt,minimum width=0pt]\node[](#1){#2};}
+\def\bbox%
+{\coordinate (topright) at (0.99\textwidth, 0.85\textheight);
+  \coordinate (bottomleft) at (0mm, 0mm);
+  \coordinate (topleft) at (topright -| bottomleft);
+  \coordinate (bottomright) at (topright |- bottomleft);
+  \coordinate (topmid) at ($(topleft)!0.5!(topright)$);
+  \coordinate (bottommid) at (topmid |- bottomright);
+  \draw[bbox] (topleft) rectangle (bottomright);
+}
 
 \newcommand{\refines}[2]%
 {\ensuremath{\textcolor{tgtcol}{#1} \slantsqsubseteq \textcolor{srccol}{#2}}}
 
-% \setbeameroption{show only notes}
 \setbeamerfont{note page}{size=\scriptsize}
 \setbeamertemplate{footline}[frame number]{}
 \setbeamertemplate{navigation symbols}{}
-% \includeonlyframes{asymmetry}
+\includeonlyframes{logic}
+
+% TODO: Add references to FreeSim, Simuliris and CompCert for the references
+% TODO: Less linear, show the plan then how we succeded it.
+% TODO: Insist on simulation being a tool, not a goal
 
 \title{Relational Separation Logic for Compiler Verification}
 
@@ -101,20 +110,16 @@
 
   \begin{center}
     \begin{tikzpicture}[
-        comp/.style={align=center, text width=3cm, font=\small},
+        comp/.style={
+          align=center, text width=3cm, font=\small
+        },
         bug/.style={
           background default text=red!70!black,
           background text=gray!50,
         },
         >=stealth, shorten >=2pt
       ]
-      \coordinate (topleft) at (-52mm, 20mm);
-      \coordinate (bottomright) at (52mm, -40mm);
-      \coordinate (topright) at (topleft -| bottomright);
-      \coordinate (topmid) at ($(topleft)!0.5!(topright)$);
-      \coordinate (bottommid) at (topmid |- bottomright);
-
-      \draw[bbox] (topleft) rectangle (bottomright);
+      \bbox{}
 
       \node<2->[draw, minimum height=1cm, minimum width=2.5cm, fill=gray!20]
       (compiler) at ($(topmid)!0.25!(bottommid)$) {Compiler};
@@ -139,7 +144,7 @@
       (verified) {\textbf{Verified}};
 
       \node<5->[comp] (compcert) at ($(topmid)!0.75!(bottommid)$)
-      {CompCert\\ C $\to$ machine};
+      {CompCert\\ C $\to$ assembly};
 
       \node<5->[left=1em of compcert, comp]
       (cakeml) {CakeML\\ ML $\to$ machine};
@@ -150,17 +155,16 @@
   \end{center}
 
   \note<1->[item]{
-    Lorsque l'on execute un programme, ce n'est pas le code source
+    Lorsque l'on exécute un programme, ce n'est pas le code source
     qui est directement exécuté par la machine.
   }
 
   \note<2->[item]{
     On fait appel à un compilateur qui traduit ce programme source
     en un programme dans un langage intermédiaire de plus bas niveau,
-    comprehensible par la machine.
+    compréhensible par la machine.
     Pourquoi vérifier un compilateur ?
   }
-
   \note<3->[item]{
     Parce qu'un compilateur est lui-même un programme complexe
     qui peut introduire des bugs
@@ -188,74 +192,109 @@
 
   \begin{center}
     \begin{tikzpicture}[
-      center box/.style={
-          anchor=north,
-          align=center, text width=10mm,
-          background default text=black,
+        progbox/.style={
+          align=center,
+          minimum width=10mm,
+          minimum height=6mm,
           background text=gray,
           % draw
         },
         src box/.style={
-          align=center, text width=25mm,
+          progbox,
           background default text=srccol,
-          background text=gray,
-          % draw
         },
         tgt box/.style={
-          align=center, text width=25mm,
+          progbox,
           background default text=tgtcol,
-          background text=gray,
-          % draw
+        },
+        center box/.style={
+          progbox,
+          background default text=black,
         },
         beh box/.style={
           align=center, text width=6cm, font=\small, text=darkgray
+        },
+        example/.style={
+          text width=45mm,
+          align=center,
+          font=\scriptsize,
+          background default text=black,
+          background text=gray,
+          % draw
+        },
+        gridline/.style={
+          draw=gray!30, thick
         }
       ]
-      \coordinate (topleft) at (-52mm, 25mm);
-      \coordinate (bottomright) at (52mm, -45mm);
-      \coordinate (topright) at (topleft -| bottomright);
-      \coordinate (topmid) at ($(topleft)!0.5!(topright)$);
-      \coordinate (bottommid) at (topmid |- bottomright);
+      \bbox{}
 
-      \draw[bbox] (topleft) rectangle (bottomright);
-
-      \node<1->[center box, text on=<3->] (c1) at ($(topmid)!0.1!(bottommid)$)
-      {$\implies$};
-      \node<1->[left=1em of c1, src box, text on=<3->] (s1) {$S \vDash Spec$};
-      \node<1->[right=1em of c1, tgt box, text on=<3->] (t1) {$T \vDash Spec$};
-
-      \node<2->[anchor=south, beh box] (beh) at ($(topmid)!0.9!(bottommid)$)
+      \node<2->[beh box] (beh) at ($(topmid)!0.1!(bottommid)$)
       {
         $b \in \left\{
           \texttt{Term}(v, m) \mid \texttt{Div} \mid \text{\lightning}
         \right\}$
       };
 
-      \node<3->[center box, text on=<4->] (c2) at ($(topmid)!0.2!(bottommid)$)
-      {$\iff$};
-      \node<3->[left=1em of c2, src box, text on=<4->] (s2) {$b \in S$};
-      \node<3->[right=1em of c2, tgt box, text on=<4->] (t2) {$b \in T$};
+      \coordinate<3->[xshift=-10mm] (arrup) at ($(topmid)!0.2!(bottommid)$);
+      \coordinate<3->[xshift=-10mm] (arrdown) at ($(topmid)!0.6!(bottommid)$);
 
-      \node<4->[center box, text on=<5->] (c3) at ($(topmid)!0.3!(bottommid)$)
-      {$\impliedby$};
-      \node<4->[left=1em of c3, src box, text on=<5->] (s3) {$b \in S$};
-      \node<4->[right=1em of c3, tgt box, text on=<5->] (t3) {$b \in T$};
+      \coordinate<3-> (arrmid) at ($(arrup)!0.5!(arrdown)$);
 
-      \coordinate<5-> (midup) at ($(topmid)!0.45!(bottommid)$);
-      \coordinate<5-> (midlow) at ($(topmid)!0.75!(bottommid)$);
+      \draw<3->[gridline] (arrmid -| topleft) -- (arrmid -| topright);
+      \draw<3->[gridline] (arrup) -- (arrdown);
+
+      \node<3->[center box, font=\small, text on=<5->]
+      (c2) at ($(arrup -| topleft)!0.5!(arrmid)$) {$\iff$};
+      \node<3->[left=1mm of c2, tgt box, font=\small, text on=<5->] {$b \in T$};
+      \node<3->[right=1mm of c2, src box, font=\small, text on=<5->] {$b \in S$};
+
+      \node<4->[example, text on=<5->] at ($(arrup)!0.5!(arrmid -| topright)$)
+      {$
+        \begin{matrix}
+          \mathtt{f}
+          \big((\mathtt{print}(\mathtt{"A"})); 1),
+          (\mathtt{print}(\mathtt{"B"}); 2)\big) \\
+          \downarrow \\
+          \mathtt{print}(\mathtt{"A"}); \mathtt{print}(\mathtt{"B"}); \mathtt{f}(1, 2)
+        \end{matrix}
+        $};
+
+      \node<5->[center box, font=\small, text on=<7->]
+      (c3) at ($(arrmid -| topleft)!0.5!(arrdown)$) {$\implies$};
+      \node<5->[left=1mm of c3, tgt box, font=\small, text on=<7->] {$b \in T$};
+      \node<5->[right=1mm of c3, src box, font=\small, text on=<7->] {$b \in S$};
+
+      \node<6->[example, text on=<7->] at ($(arrmid)!0.5!(arrdown -| topright)$)
+      {
+        $
+        \begin{aligned}
+          x &\coloneqq y / y & &\to & x &\coloneq 1
+        \end{aligned}
+        $
+      };
+
+      \coordinate<7-> (midup) at ($(topmid)!0.7!(bottommid)$);
+      \coordinate<7-> (midlow) at ($(topmid)!1!(bottommid)$);
 
       \def\halfwidth{45mm}
-      \coordinate<5-> (topleft) at ($ (midup.north) + (-\halfwidth, 0) $);
+      \coordinate<7-> (topleft) at ($ (midup.north) + (-\halfwidth, 0) $);
 
-      \draw<5->[rounded corners=8pt, fill=gray!10, draw=gray!80, thick]
+      \draw<7->[rounded corners=8pt, fill=gray!10, draw=gray!80, thick]
       (topleft) rectangle ($ (midlow.south) + (\halfwidth, 0) $);
 
-      \node<5->[below right=1ex of topleft] (ref) {$\refines{T}{S} \triangleq {}$};
+      \node<7->[below right=1ex of topleft] (legend) {$\refines{T}{S} \triangleq {}$};
 
-      \node<6->[center box, text on=<1>] (c4) at ($(topmid)!0.6!(bottommid)$)
-      {$\impliedby$};
-      \node<6->[left=1em of c4, src box, text on=<1>] (s4) {$b \in S \vee \text{\lightning} \in S$};
-      \node<6->[right=1em of c4, tgt box, text on=<1>] (t4) {$b \in T$};
+      \node<8->[src box, text on=<1>] at (legend -| topmid) (srcUB)
+      {$\text{\lightning} \in S$};
+
+      \node<8->[center box, text on=<1>] (c4) at ($(midup)!0.8!(midlow)$)
+      {$\implies$};
+
+      \node<8->[center box, text on=<1>] at ($(srcUB)!0.5!(c4)$)
+      {or};
+
+      \node<8->[left=1em of c4, tgt box, text on=<1>] {$b \in T$};
+      \node<8->[right=1em of c4, src box, text on=<1>] {$b \in S$};
     \end{tikzpicture}
   \end{center}
 
@@ -266,7 +305,7 @@
   }
 
   \note[item]{
-    Ces garanties portent sur les comportements observables du programme source.
+    Ces garanties portent sur les comportements observables du programme source :
     soit il termine avec une valeur et une mémoire finale,
     soit il diverge, soit il est bloqué dans un état indéfini (stuck).
   }
@@ -292,18 +331,18 @@
 \end{frame}
 
 
-\begin{frame}[label=simulations]
-  \frametitle{Simulation Relations}
+\begin{frame}[label=simulation]
+  \frametitle{Simulation Relation}
 
   \begin{center}
     \begin{tikzpicture}[
         title/.style={
-          align=center, text width=20mm, minimum height=7mm,
           font=\bfseries,
           % draw
         },
         step arrow/.style={
-          >=stealth, ->, thick
+          >=stealth, ->, thick,
+          draw
         },
         rel/.style={
           dashed, darkgray
@@ -317,100 +356,67 @@
         },
       ]
 
-      \coordinate (topleft) at (-45mm, 20mm);
-      \coordinate (bottomright) at (45mm, -40mm);
-      \coordinate (topright) at (topleft -| bottomright);
+      \bbox{}
 
-      \draw[bbox] (topleft) rectangle (bottomright);
-
-      \node<1> at ($(topleft)!0.5!(bottomright)$)
-      {$\begin{array}{c}
-        \textcolor{tgtcol}{t_0 \to t_1 \to \dots \to \mathtt{Term}(v, m)} \\
-        \Downarrow \\
-        \textcolor{srccol}{s_0 \to s_1 \to \dots \to \mathtt{Term}(v, m)} \\
-        \end{array}
+      \node<1> at ($(topmid)!0.45!(bottommid)$)
+      {$\begin{aligned}
+        \textcolor{tgtcol}{t_0 \to t_1 \to {}}
+        & \textcolor{tgtcol}{\dots \to \mathtt{Term}(v, m)} \\
+        & \Downarrow \\
+        \textcolor{srccol}{s_0 \to s_1 \to {}}
+        & \textcolor{srccol}{\dots \to \mathtt{Term}(v, m)} \\
+        \end{aligned}
         $};
 
-      \node<2->[title] (forward) at ($(topleft)!0.22!(topright) - (0, 2em)$)
-      {\only<3->{Forward}};
+      \coordinate (relup) at ($(topmid)!0.3!(bottommid)$);
+      \coordinate (reldown) at ($(topmid)!0.6!(bottommid)$);
 
-      \node<2->[below=1em of forward.south west, conf, srccol] (sf1) {$s$};
-      \node<2->[below=12mm of sf1, conf, srccol] (sf2) {$s'$};
+      \node<2->[xshift=-15mm, conf, srccol] (s1) at (relup) {$s$};
+      \node<2->[xshift=15mm, conf, tgtcol] (t1) at (relup) {$t$};
 
-      \draw<2->[step arrow, srccol]
-      (sf1) -- node[left] (msf) {\only<4->{$\forall$}} (sf2);
+      \node<2->[conf, srccol] (s2) at (reldown -| s1) {$s'$};
+      \node<2->[conf, tgtcol] (t2) at (reldown -| t1) {$t'$};
 
-      \node<2->[below=1em of forward.south east, conf, tgtcol] (tf1) {$t$};
-      \node<2->[below=12mm of tf1, conf, tgtcol] (tf2) {$t'$};
+      \draw<2->[step arrow, tgtcol] (t1) -- (t2);
+      \draw<2->[step arrow, srccol] (s1) -- (s2);
 
-      \draw<2->[step arrow, tgtcol]
-      (tf1) -- node[right] (mtf) {\only<4->{$\exists$}} (tf2);
+      \draw<2->[rel] (s1) -- (t1);
+      \draw<2->[rel] (s2) -- (t2);
 
-      \draw<2->[rel] (sf1) -- (tf1);
-      \draw<2->[rel] (sf2) -- node[] (lowfor) {} (tf2);
 
-      \draw<4->[arr] ($(msf) + (7mm, 0)$) to[bend left=25] ($(mtf) - (7mm, 0)$);
+      \coordinate<3-> (relmid) at ($(relup)!0.5!(reldown)$);
 
-      \node<5->[below=1em of lowfor, font=\scriptsize] (dethyp) {${} + \text{Determinism}$};
-      \node<5->[below=.5mm of dethyp] (arrfor) {$\Downarrow$};
-      \node<5->[below=.5mm of arrfor] (reffor) {$\refines{T}{S}$};
+      \coordinate<3-> (midt) at (relmid -| t2);
+      \coordinate<3-> (mids) at (relmid -| s2);
 
-      \node<6->[title] (backward) at ($(topleft)!0.78!(topright) - (0, 2em)$) {Backward};
+      \node<3->[anchor=west, tgtcol] at (midt) {$\forall$};
+      \draw<4->[arr] ($(mids)!0.8!(midt)$) to[bend right=25] ($(mids)!0.2!(midt)$);
+      \node<5->[anchor=east, srccol] at (mids) {$\exists$};
 
-      \node<6->[below=1em of backward.south west, conf, srccol] (sb1) {$s$};
-      \node<6->[below=12mm of sb1, conf, srccol] (sb2) {$s'$};
 
-      \draw<6->[step arrow, srccol]
-      (sb1) -- node[left] (msb) {\only<7->{$\exists$}} (sb2);
-
-      \node<6->[below=1em of backward.south east, conf, tgtcol] (tb1) {$t$};
-      \node<6->[below=12mm of tb1, conf, tgtcol] (tb2) {$t'$};
-
-      \draw<6->[step arrow, tgtcol] (tb1) -- node[right]
-      (mtb) {\only<7->{$\forall$}} (tb2);
-
-      \draw<6->[rel] (sb1) -- (tb1);
-      \draw<6->[rel] (sb2) -- node[] (lowback) {}(tb2);
-
-      \draw<7->[arr] ($(mtb) - (7mm, 0)$) to[bend right=25] ($(msb) + (7mm, 0)$);
-
-      \node<8-> (refback) at (reffor -| lowback) {$\refines{T}{S}$};
-      \node<8-> (arrback) at ($(lowback)!0.5!(refback)$) {$\Downarrow$};
-
+      \node<6->[title] at ($(topmid)!0.15!(bottommid)$) {Backward Simulation};
+      \node<6-> (arrback) at ($(topmid)!0.7!(bottommid)$) {$\Downarrow$};
+      \node<6-> (refback) at ($(topmid)!0.8!(bottommid)$) {$\refines{T}{S}$};
     \end{tikzpicture}
   \end{center}
 
   \note<1->[item]{
     Ce raffinement est énoncé sur des traces d'exécution complètes.
     Mais prouver directement une propriété sur des exécutions globales est difficile,
-    car les optimisations opérent localement, sur quelques étapes de calcul.
+    car les optimisations opèrent localement, sur quelques étapes de calcul.
   }
 
   \note<2->[item]{
-    On utilise alors les relations de simulation.
-    Elles relient pas à pas les configurations successives des deux programmes.
+    On utilise alors une relation de simulation.
+    Elle relie pas à pas les configurations successives des deux programmes.
   }
 
   \note<3->[item]{
-    Les simulations dites 'en avant' relient chaque pas du source à des pas
-    de la cible.
-  }
-
-  \note<5->[item]{
-    Elles garantissent le raffinement lorsque le langage cible est déterministe.
-  }
-
-  \note<6->[item]{
-    Une autre possibilité sont les simulations dites 'en arrière'.
-  }
-
-  \note<7->[item]{
     On observe les pas du programme cible et on les relie à des pas du source.
   }
 
-  \note<8->[item]{
-    Une simulation en arrière implique directement le raffinement sans hypothèse
-    de déterminisme sur le langage cible.
+  \note<6->[item]{
+    Cette simulation, dit `en arrière', implique le raffinement souhaité.
   }
 
 \end{frame}
@@ -438,22 +444,16 @@
           darkgray, font=\small
         },
       ]
-      \coordinate (topleft) at (-45mm, 30mm);
-      \coordinate (bottomright) at (45mm, -40mm);
-      \coordinate (topright) at (topleft -| bottomright);
-      \coordinate (topmid) at ($(topleft)!0.5!(topright)$);
 
-      \draw[bbox] (topleft) rectangle (bottomright);
+      \bbox{}
 
       \node[conf, srccol] (s0) at ($(topmid) + (-10mm, -10mm)$) {$s_0$};
       \node[below=10mm of s0, conf, srccol] (s1) {};
-      \node[below=10mm of s1, conf, srccol] (s) {$s$};
+      \node[below=10mm of s1, conf, srccol] (s) {\alt<5->{$s_1$}{$s$}};
 
       \node[conf, tgtcol] (t0) at ($(topmid) + (10mm, -10mm)$) {$t_0$};
-      \node[below=10mm of t0, conf, tgtcol] (t1)
-      {\only<2->{$t_1$}};
-      \node[below=10mm of t1, conf, tgtcol] (t)
-      {\alt<5->{$t_2$}{$t$}};
+      \node[below=10mm of t0, conf, tgtcol] (t1) {\only<2->{$t_1$}};
+      \node[below=10mm of t1, conf, tgtcol] (t) {$t$};
 
       % Frame 1
       \draw<1->[step arrow, srccol] (s0) -- (s);
@@ -474,26 +474,26 @@
       \draw<4>[gray, ->] (stutlbl) -- (stut.east);
 
       % Frame 5
-      \node<5->[below=5mm of t, conf, tgtcol] (t3) {$\dots$};
-      \node<5->[below=5mm of t3, conf, tgtcol] (tinf)
-      {\alt<7->{$t$}{$\dots$}};
+      \node<5->[below=5mm of s, conf, srccol] (s3) {$\dots$};
+      \node<5->[below=5mm of s3, conf, srccol] (sinf)
+      {\alt<7->{$s$}{$\dots$}};
 
-      \draw<5->[step arrow, tgtcol, dashed] (t) -- (t3);
-      \draw<5->[step arrow, tgtcol, dashed] (t3) -- (tinf);
+      \draw<5->[step arrow, srccol, dashed] (s) -- (s3);
+      \draw<5->[step arrow, srccol, dashed] (s3) -- (sinf);
 
       % Frame 6
-      \node<6->[below=5mm of s, conf, srccol] (s3) {};
+      \node<6->[below=5mm of t, conf, srccol] (t3) {};
       \node<6->[fuel] (f1) at ($(s0)!0.5!(t1)$) {$1$};
       \node<6->[fuel] (f2) at ($(s1)!0.5!(t)$) {$0$};
       \node<6->[fuel] (le1) at ($(f1)!0.5!(f2)$) {$\vee$};
 
       \node<6->[fuel] (f3) at ($(s)!0.5!(t3)$) {$n$};
-      \node<6->[fuel] (f4) at ($(s3)!0.5!(tinf)$) {$n-1$};
+      \node<6->[fuel] (f4) at ($(t3)!0.5!(sinf)$) {$n-1$};
       \node<6->[fuel] (le2) at ($(f3)!0.5!(f4)$) {$\vee$};
 
       % Frame 7
-      \node<7->[below=5mm of s3, conf, srccol] (sinf) {$s$};
-      \draw<7->[thick, double equal sign distance, srccol] (s) -- (sinf);
+      \node<7->[below=5mm of t3, conf, tgtcol] (tinf) {$t$};
+      \draw<7->[thick, double equal sign distance, tgtcol] (t) -- (tinf);
 
       \draw<7->[rel] (sinf) -- (tinf);
     \end{tikzpicture}
@@ -505,19 +505,19 @@
   }
 
   \note<2->[item]{
-    En effet, un programme source dans un langage de plus haut peut faire moins d'etapes
-    que sont transformé dans un language de plus bas niveau.
-    Contrairement, un programme cible optimisé peut réalisé moins d'étapes que
+    En effet, un programme source dans un langage de plus haut niveau peut faire moins d'étapes
+    que son transformé dans un langage de plus bas niveau.
+    À l'inverse, un programme cible optimisé peut réaliser moins d'étapes que
     son programme source associé.
   }
 
   \note<3->[item]{
-    Lorsque l'un dees deux programme réalise un pas de calcul qui n'a pas
+    Lorsque l'un des deux programmes réalise un pas de calcul qui n'a pas
     d'équivalent dans l'autre programme,
   }
 
   \note<4->[item]{
-    on appèle cela une étape de bégaiement.
+    on appelle cela une étape de bégaiement.
   }
 
   \note<5->[item]{
@@ -540,7 +540,7 @@
 
   \note<6->[item]{
     Cependant, construire explicitement cette mesure pour chaque transformation
-    peut se réveler contraignant voire difficile.
+    peut se révéler contraignant, voire difficile.
   }
 
 \end{frame}
@@ -552,10 +552,10 @@
   \begin{center}
     \begin{tikzpicture}[
         header/.style={
-          anchor=north, text=blue!85!black
+          text=blue!85!black
         },
         side/.style={
-          anchor=west, font=\bfseries\small, text=gray!80!black
+          font=\bfseries\small, text=gray!80!black
         },
         elem-bad/.style={
           font=\small, text=red!75!black,
@@ -573,76 +573,74 @@
           draw=gray!30, thick
         }
       ]
-      \coordinate (topleft) at (-52mm, 25mm);
-      \coordinate (bottomright) at (52mm, -25mm);
-      \coordinate (topright) at (topleft -| bottomright);
-      \coordinate (bottomleft) at (topleft |- bottomright);
+      \bbox{}
 
-      \coordinate (col1) at ($(topleft)!0.22!(topright)$);
-      \coordinate (col2) at ($(topleft)!0.61!(topright)$);
+      \coordinate (tblstart) at ($(topleft)!0.2!(bottomleft)$);
+      \coordinate (tblend) at ($(topleft)!0.85!(bottomleft)$);
 
-      \draw[bbox] (topleft) rectangle (bottomright);
+      \coordinate (line1) at ($(tblstart)!0.15!(tblend)$);
+      \coordinate (line2) at ($(line1)!0.5!(tblend)$);
 
-      \draw<2->[gridline] (col1) -- (col1 |- bottomright);
-      \draw<2->[gridline] (col2) -- (col2 |- bottomright);
+      \coordinate (col1) at ({$(topleft)!0.22!(topright)$} |- tblstart);
+      \coordinate (col2) at ({$(topleft)!0.61!(topright)$} |- tblstart);
 
-      \node<3->[header, minimum width=36mm] (nd) at ($(col1)!0.5!(col2)$) {Non-Determinism};
-      \coordinate<3-> (l1) at (nd.south -| topleft);
-      \draw<3->[gridline] (l1) -- (l1 -| topright);
 
-      \node<4->[side] (cakeml) at ($(l1)!0.25!(bottomleft)$) {CakeML};
-      \node<4->[elem-bad] at (cakeml -| nd) {Not Supported};
+      \draw<2->[gridline] (col1) -- (col1 |- tblend);
+      \draw<2->[gridline] (col2) -- (col2 |- tblend);
 
-      \node<5->[side] (compcert) at ($(l1)!0.75!(bottomleft)$) {CompCert};
+      \draw<2->[gridline] (line1) -- (line1 -| topright);
+      \draw<2->[gridline] (line2) -- (line2 -| topright);
 
-      \coordinate<5-> (l2) at ({$(cakeml)!0.5!(compcert)$} -| l1);
-      \draw<5->[gridline] (l2) -- (l2 -| topright);
-      \node<5->[elem-warn] at (compcert -| nd) {External only};
+      \node<2->[header] (nd) at ($(col1)!0.5!(col2 |- line1)$) {Non-Determinism};
 
-      \node<6->[missing] at (l2 -| nd) {Backward Simulation};
+      \node<3->[side] (cakeml) at ($(line1)!0.5!(line2 -| col1)$) {CakeML};
+      \node<3->[elem-bad] at (cakeml -| nd) {Not Supported};
 
-      \node<7->[header, minimum width=36mm] (mem) at ($(col2)!0.5!(topright)$) {Memory Reasoning};
+      \node<4->[side] (compcert) at ($(line2)!0.5!(tblend -| col1)$) {CompCert};
+      \node<4->[elem-warn] at (compcert -| nd) {External only};
 
-      \node<8->[elem-warn] at (cakeml -| mem) {Global Invariants};
-      \node<8->[elem-warn] at (compcert -| mem) {Global Invariants};
+      \node<5->[missing] at (line2 -| nd) {Backward Simulation};
 
-      \node<9->[missing] at (l2 -| mem) {Separation Logic};
+      \node<6->[header, minimum width=36mm] (mem) at ($(col2)!0.5!(topright |- line1)$)
+      {Memory Reasoning};
+
+      \node<7->[elem-warn] at (cakeml -| mem) {Global Invariants};
+      \node<7->[elem-warn] at (compcert -| mem) {Global Invariants};
+
+      \node<8->[missing] at (line2 -| mem) {Separation Logic};
 
     \end{tikzpicture}
   \end{center}
 
   \note<2->[item]{
     Les approches existantes présentent deux limitations principales.
-  }
-
-  \note<3->[item]{
     La première est la gestion du non-déterminisme interne.
   }
 
-  \note<4->[item]{
+  \note<3->[item]{
     CakeML exige un langage cible déterministe.
   }
 
-  \note<5->[item]{
+  \note<4->[item]{
     CompCert ne traite que le non-déterminisme externe.
   }
 
-  \note<6->[item]{
+  \note<5->[item]{
     En effet, ils s'appuient en partie sur des simulations en avant.
     Traiter de la concurrence ou des effets
     non déterministes demande une simulation en arrière.
   }
 
+  \note<6->[item]{
+    La deuxième est le raisonnement sur la mémoire.
+  }
+
   \note<7->[item]{
-    La deuxieme est le raisonnement sur la mémoire.
+    CompCert et CakeML manipulent tous les deux des invariants globaux sur la mémoire.
+    Cela complique les preuves dès que l'organisation du tas change, même un petit peu.
   }
 
   \note<8->[item]{
-    CompCert et CakeML manipulent tous les deux des invariants globaux sur la mémoire.
-    Cela complique les preuves dès que l'organisation du tas change, meme un petit peu.
-  }
-
-  \note<9->[item]{
     La logique de séparation permet de raisonner localement sur des segments
     de mémoire disjoints,
     mais son intégration dans des compilateurs vérifiés reste encore à développer.
@@ -687,17 +685,10 @@
         }
       ]
 
-      \coordinate (topleft) at (-52mm, 25mm);
-      \coordinate (bottomright) at (52mm, -30mm);
-      \coordinate (topright) at (topleft -| bottomright);
-      \coordinate (bottomleft) at (topleft |- bottomright);
-      \coordinate (topmid) at ($(topleft)!0.5!(topright)$);
-      \coordinate (bottommid) at (topmid |- bottomright);
+      \bbox{}
 
-      \draw[bbox] (topleft) rectangle (bottomright);
-
-      \node<2->[freebox, anchor=south] (free) at (bottommid)
-      {Free Backward Simulation};
+      \node<2->[freebox, anchor=south] (free) at ($(topmid)!0.85!(bottommid)$)
+      {Backward Simulation};
 
       \node<3->[above=1.5mm of free, logicbox] (rsl)
       {Relational Separation Logic};
@@ -713,12 +704,12 @@
       {Language\\ Dependent};
 
       \node<5->[above=3mm of rsl, langbox] (murtl)
-      {Low level language: \muRTL{}};
+      {Low-level language: \muRTL{}};
 
       \coordinate<6-> (l) at (murtl.north west);
       \coordinate<6-> (r) at (murtl.north east);
       \coordinate<6-> (m1) at ($(l)!0.66!(r)$);
-      \coordinate<6->[xshift=1.5mm] (m2) at (m1);
+      \coordinate<6->[xshift=2mm] (m2) at (m1);
 
       \node<6->[
         above=1.5mm of murtl.north west, anchor=south west,
@@ -752,17 +743,17 @@
   }
 
   \note<5->[item]{
-    Nous avons instancié ce cadre génerique pour un langage intermédiaire de bas niveau,
+    Nous avons instancié ce cadre générique pour un langage intermédiaire de bas niveau,
     \muRTL{}.
   }
 
   \note<6->[item]{
-    Puis nous avons vérifiés des transformations de programmes.
+    Puis nous avons vérifié des transformations de programmes.
   }
 
   \note<7->[item]{
-    Enfin, nous avons vérifiés une transformation globale
-    de CompCert: le raccourcissement des sauts.
+    Enfin, nous avons vérifié une transformation globale
+    de CompCert : le raccourcissement des sauts.
     L'ensemble a été formalisé et vérifié en Rocq.
   }
 
@@ -790,7 +781,6 @@
           dotted, darkgray
         },
         conf/.style={
-          anchor=north,
           align=center, text width=5mm, minimum height=6mm,
           % draw,
         },
@@ -802,34 +792,35 @@
           ->, >=stealth, thick, gray
         },
         fuel/.style={
-          anchor=center, gray, font=\footnotesize,
+          gray, font=\footnotesize,
           % draw
         },
         idx legend/.style={
-          legend, anchor=west, text width=8mm, align=center
+          legend, text width=8mm, align=center
         }
       ]
 
-      \coordinate (topleft) at (-45mm, 35mm);
-      \coordinate (bottomright) at (45mm, -35mm);
-      \coordinate (topright) at (topleft -| bottomright);
-      \coordinate (topmid) at ($(topleft)!0.5!(topright)$);
+      \bbox{}
+
+      \coordinate (step0) at ($(topmid)!0.1!(bottommid)$);
+      \coordinate (step4) at ($(topmid)!0.9!(bottommid)$);
+
+      \coordinate (step1) at ($(step0)!0.25!(step4)$);
+      \coordinate (step2) at ($(step0)!0.5!(step4)$);
+      \coordinate (step3) at ($(step0)!0.75!(step4)$);
 
       \def\halfwidth{20mm}
-      \def\stepsize{15mm}
-
-      \draw[bbox] (topleft) rectangle (bottomright);
 
       % Frame 2
-      \node<2->[conf, srccol, xshift=-\halfwidth] (s0) at (topmid) {$s_0$};
-      \node<2->[below=2*\stepsize of s0.north, conf, srccol] (s1) {$s_1$};
-      \node<2->[below=\stepsize of s1.north, conf, srccol] (s2) {$s_2$};
-      \node<2->[below=\stepsize of s2.north, conf, srccol] (s3) {$s_3$};
+      \node<2->[conf, srccol, xshift=-\halfwidth] (s0) at (step0) {$s_0$};
+      \node<2->[conf, srccol] (s1) at (s0 |- step2) {$s_1$};
+      \node<2->[conf, srccol] (s2) at (s0 |- step3) {$s_2$};
+      \node<2->[conf, srccol] (s3) at (s0 |- step4) {$s_3$};
 
-      \node<2->[conf, tgtcol, xshift=\halfwidth] (t0) at (topmid) {$t_0$};
-      \node<2->[below=\stepsize of t0.north, conf, tgtcol] (t1) {$t_1$};
-      \node<2->[below=\stepsize of t1.north, conf, tgtcol] (t2) {$t_2$};
-      \node<2->[below=2*\stepsize of t2.north, conf, tgtcol] (t3) {$t_3$};
+      \node<2->[conf, tgtcol, xshift=\halfwidth] (t0) at (step0) {$t_0$};
+      \node<2->[conf, tgtcol] (t1) at (t0 |- step1) {$t_1$};
+      \node<2->[conf, tgtcol] (t2) at (t0 |- step2) {$t_2$};
+      \node<2->[conf, tgtcol] (t3) at (t0 |- step4) {$t_3$};
 
       \draw<2->[step arrow, srccol, aspect on=<7->] (s0) -- node (syns1) {} (s1);
       \draw<2->[stut arrow, srccol, aspect on=<7->] (s1) -- node (begs) {} (s2);
@@ -876,7 +867,7 @@
       \node<8->[fuel, right=0mm of synt2] {1};
 
       % Frame 9
-      \node<9->[idx legend] (idx) at (s1 -| topleft) {Index\\ Reset};
+      \node<9->[idx legend] (idx) at (s1 -| {$(topleft)!0.1!(topright)$}) {Index\\ Reset};
       \draw<9->[legend arr] (idx) to[out=90, in=180] (s0);
       \draw<9->[legend arr] (idx) -- (s1);
       \draw<9->[legend arr] (idx) to[out=-90, in=180] (s3);
@@ -885,7 +876,7 @@
   \end{center}
 
   \note[item]{
-    Notre relation de simulation est adaptée des travaux de Cho et Song:
+    Notre relation de simulation est adaptée des travaux de Cho et Song :
     \emph{Stuttering for Free}.
   }
 
@@ -902,11 +893,11 @@
   }
 
   \note<5->[item]{
-    pour permettre de relier les configuration poursuivre de la preuve.
+    pour permettre de relier les configurations et poursuivre la preuve.
   }
 
   \note<6->[item]{
-    La simulation libre dévelopée dans \emph{Stuttering For Free}
+    La simulation libre développée dans \emph{Stuttering For Free}
     oblige une progression entièrement asymétrique.
   }
 
@@ -923,7 +914,7 @@
   \note<9->[item]{
     Dès que les deux programmes ont chacun progressé au moins une fois,
     on peut relier les états.
-    Les indices sont alors réinitialisées et on peut poursuivre la preuve.
+    Les indices sont alors réinitialisés et on peut poursuivre la preuve.
   }
 
   \note<9->[item]{
@@ -947,7 +938,7 @@
 }
 
 \begin{frame}[label=theory]
-  \frametitle{Theoretic Guarantees}
+  \frametitle{Theoretical Guarantees}
 
   \pause
 
@@ -992,7 +983,7 @@
   }
 
   \note<4->[item]{
-    Un corrolaire de cette équivalence montre également que les indices de départ
+    Un corollaire de cette équivalence montre également que les indices de départ
     n'ont aucune incidence sur la validité de la simulation.
   }
 
@@ -1011,7 +1002,7 @@
   \begin{center}
     \begin{tikzpicture}[
         header/.style={
-          anchor=north, minimum height=8mm, minimum width=40mm,
+          minimum height=8mm, minimum width=40mm,
           % draw
         },
         gridline/.style={
@@ -1021,23 +1012,18 @@
           thick, ->, >=stealth,
         }
       ]
-      \coordinate (topleft) at (-52mm, 30mm);
-      \coordinate (bottomright) at (52mm, -30mm);
-      \coordinate (topright) at (topleft -| bottomright);
-      \coordinate (bottomleft) at (topleft |- bottomright);
-      \coordinate (topmid) at ($(topleft)!0.5!(topright)$);
-      \coordinate (bottommid) at (topmid |- bottomright);
+      \bbox{}
 
-      \draw[bbox] (topleft) rectangle (bottomright);
+      \coordinate[xshift=10mm] (tblstart) at ($(topleft)!0.1!(bottomleft)$);
+      \coordinate[xshift=-10mm] (tblend) at ($(topright)!0.75!(bottomright)$);
 
-      \node<2->[header, tgtcol] (tgt-head) at ($(topleft)!0.5!(topmid)$) {Target};
-      \node<2->[header, srccol] (src-head) at ($(topmid)!0.5!(topright)$) {Source};
+      \coordinate (mid) at ({$(tblstart)!0.2!(tblend)$} -| topmid);
 
-      \coordinate<2-> (l1) at (tgt-head.south -| topleft);
-      \coordinate<2->[yshift=15mm] (midend) at (topmid |- bottomright);
+      \draw<2->[gridline] (mid -| tblstart) -- (mid -| tblend);
+      \draw<2->[gridline] (mid |- tblstart) -- (mid |- tblend);
 
-      \draw<2->[gridline] (l1) -- (l1 -| topright);
-      \draw<2->[gridline] (topmid) -- (midend);
+      \node<2->[header, tgtcol] (tgt-head) at ($(tblstart)!0.5!(mid)$) {Target};
+      \node<2->[header, srccol] (src-head) at ($(mid)!0.5!(tblend |- tblstart)$) {Source};
 
       \node<3->[below=1mm of tgt-head, font=\small] (tgt-nd)
       {\emoji{smiling-face-with-horns} nondeterminism};
@@ -1072,7 +1058,7 @@
       \draw<6->[link, gray]   (s-r)   -- (s-rr);
 
 
-      \node<7-> at ($(midend)!0.5!(bottommid)$) {
+      \node<7-> at ($(tblend -| bottommid)!0.5!(bottommid)$) {
         $\text{\lightning} \in \textcolor{srccol}{S}
         \implies
         \textcolor{tgtcol}{T} \sim_{\text{free}} \textcolor{srccol}{S}
@@ -1114,7 +1100,164 @@
 
 \section{A Logic}
 
-\begin{frame}[label=logic]{Relational Separation Logic}
+\begin{frame}[label=logic]
+  \frametitle{Relational Separation Logic}
+
+  \begin{center}
+    \begin{tikzpicture}[
+        memline/.style={
+          draw=black!70, thick
+        },
+        lowmeml/.style={
+          memline, dashed, draw=black!40
+        },
+        uppmeml/.style={
+          lowmeml, dash phase=-1pt
+        },
+        title/.style={
+          font=\small,
+        },
+        cell/.style={
+          font=\small,
+          text width=14mm,
+          align=center,
+        },
+        loc/.style={
+          font=\scriptsize,
+          % draw,
+        },
+        leg/.style={
+          % draw
+        },
+        braceleg/.style={
+          decorate, thick, decoration={brace, amplitude=10pt},
+        },
+        bgfill/.style={
+          opacity=0.2,
+        }
+      ]
+      \bbox{}
+
+      \coordinate (header) at ($(topmid)!0.2!(bottommid)$);
+      \coordinate (footer) at ($(topmid)!0.95!(bottommid)$);
+
+      \coordinate (l1) at ($(header)!0.1!(footer)$);
+      \coordinate (l2) at ($(header)!0.3!(footer)$);
+      \coordinate (l3) at ($(header)!0.5!(footer)$);
+      \coordinate (l4) at ($(header)!0.7!(footer)$);
+      \coordinate (l5) at ($(header)!0.9!(footer)$);
+
+      \coordinate (tgt-l) at ($(topleft)!0.75!(topright)$);
+      \coordinate (tgt-r) at ($(topleft)!0.9!(topright)$);
+      \coordinate (tgt-m) at ($(tgt-l)!0.5!(tgt-r)$);
+      \coordinate (tgt-leg) at ($(topmid)!0.5!(tgt-l)$);
+
+      \coordinate (src-l) at ($(topleft)!0.1!(topright)$);
+      \coordinate (src-r) at ($(topleft)!0.25!(topright)$);
+      \coordinate (src-m) at ($(src-l)!0.5!(src-r)$);
+      \coordinate (src-leg) at ($(src-r)!0.5!(topmid)$);
+
+      \draw[memline] (l1 -| tgt-l) -- (l1 -| tgt-r);
+      \draw[memline] (l2 -| tgt-l) -- (l2 -| tgt-r);
+      \draw[memline] (l3 -| tgt-l) -- (l3 -| tgt-r);
+      \draw[memline] (l4 -| tgt-l) -- (l4 -| tgt-r);
+      \draw[memline] (l5 -| tgt-l) -- (l5 -| tgt-r);
+
+      \draw[uppmeml] (header -| tgt-l) -- (l1 -| tgt-l);
+      \draw[memline] (l1 -| tgt-l) -- (l5 -| tgt-l);
+      \draw[lowmeml] (l5 -| tgt-l) -- (footer -| tgt-l);
+
+      \draw[uppmeml] (header -| tgt-r) -- (l1 -| tgt-r);
+      \draw[memline] (l1 -| tgt-r) -- (l5 -| tgt-r);
+      \draw[lowmeml] (l5 -| tgt-r) -- (footer -| tgt-r);
+
+      \node<-2>[title] at ($(tgt-m)!0.5!(tgt-m |- header)$) {Heap};
+
+      \node<2> at (l3 -| src-r) {$\textcolor{teal}{P} \sep \textcolor{magenta}{Q}$};
+      \node<2> at (l3) {$\implies$};
+
+      \begin{scope}[on background layer]
+        \fill<2>[bgfill, teal] (l1 -| tgt-l) rectangle (l3 -| tgt-r);
+        \fill<2>[bgfill, magenta] (l3 -| tgt-l) rectangle (l5 -| tgt-r);
+      \end{scope}
+
+      \draw<2>[braceleg, teal] (l3 -| tgt-l) -- (l1 -| tgt-l)
+      node[midway, font=\small, left=1em] {$P$};
+
+      \draw<2>[braceleg, magenta] (l5 -| tgt-l) -- (l3 -| tgt-l)
+      node[midway, font=\small, left=1em] {$P$};
+
+      \draw<3->[memline] (l1 -| src-l) -- (l1 -| src-r);
+      \draw<3->[memline] (l2 -| src-l) -- (l2 -| src-r);
+      \draw<3->[memline] (l3 -| src-l) -- (l3 -| src-r);
+      \draw<3->[memline] (l4 -| src-l) -- (l4 -| src-r);
+      \draw<3->[memline] (l5 -| src-l) -- (l5 -| src-r);
+
+      \draw<3->[uppmeml] (header -| src-l) -- (l1 -| src-l);
+      \draw<3->[memline] (l1 -| src-l) -- (l5 -| src-l);
+      \draw<3->[lowmeml] (l5 -| src-l) -- (footer -| src-l);
+
+      \draw<3->[uppmeml] (header -| src-r) -- (l1 -| src-r);
+      \draw<3->[memline] (l1 -| src-r) -- (l5 -| src-r);
+      \draw<3->[lowmeml] (l5 -| src-r) -- (footer -| src-r);
+
+      \node<3->[title, tgtcol] at ($(tgt-m)!0.5!(tgt-m |- header)$) {Target Heap};
+      \node<3->[title, srccol] at ($(src-m)!0.5!(src-m |- header)$) {Source Heap};
+
+      \node<4> at (l3) {$\textcolor{teal}{P} \sep \textcolor{magenta}{Q}$};
+
+      \begin{scope}[on background layer]
+        \fill<4>[bgfill, teal] (l1 -| src-l) rectangle (l3 -| src-r);
+        \fill<4>[bgfill, teal] (l2 -| tgt-l) rectangle (l5 -| tgt-r);
+
+        \fill<4>[bgfill, magenta] (l3 -| src-l) rectangle (l5 -| src-r);
+        \fill<4>[bgfill, magenta] (l1 -| tgt-l) rectangle (l2 -| tgt-r);
+      \end{scope}
+
+      \draw<4>[braceleg, teal] (l1 -| src-r) -- (l3 -| src-r)
+      node[midway, font=\small, right=1em] {$P_{\text{src}}$};
+
+      \draw<4>[braceleg, magenta] (l3 -| src-r) -- (l5 -| src-r)
+      node[midway, font=\small, right=1em] {$Q_{\text{src}}$};
+
+      \draw<4>[braceleg, magenta] (l2 -| tgt-l) -- (l1 -| tgt-l)
+      node[midway, font=\small, left=1em] {$Q_{\text{tgt}}$};
+
+      \draw<4>[braceleg, teal] (l5 -| tgt-l) -- (l2 -| tgt-l)
+      node[midway, font=\small, left=1em] {$P_{\text{tgt}}$};
+
+      \node<5->[cell] at ({$(l2)!0.5!(l3)$} -| tgt-m) {Alloc($v'$)};
+      \node<5->[loc, anchor=west] at ({$(l2)!0.5!(l3)$} -| tgt-r) {${}:l_2$};
+      \begin{scope}[on background layer]
+        \fill<5->[bgfill, gray] (l2 -| tgt-l) rectangle (l3 -| tgt-r);
+      \end{scope}
+
+      \node<6->[leg, tgtcol] at ({$(l2)!0.5!(l3)$} -| tgt-leg) {$\ptrt{l_2}{v'}$};
+
+      \node<7->[cell] at ({$(l4)!0.5!(l5)$} -| tgt-m) {Freed};
+      \node<7->[loc, anchor=west] at ({$(l4)!0.5!(l5)$} -| tgt-r) {${}:l_4$};
+      \begin{scope}[on background layer]
+        \fill<7->[bgfill, gray] (l4 -| tgt-l) rectangle (l5 -| tgt-r);
+      \end{scope}
+
+      \node<8->[leg, tgtcol] at ({$(l4)!0.5!(l5)$} -| tgt-leg) {$\freet{l_4}$};
+
+      \node<9->[cell] at ({$(l1)!0.5!(l2)$} -| src-m) {Freed};
+      \node<9->[cell] at ({$(l3)!0.5!(l4)$} -| src-m) {Alloc($v$)};
+      \begin{scope}[on background layer]
+        \fill<9->[bgfill, gray] (l1 -| src-l) rectangle (l2 -| src-r);
+        \fill<9->[bgfill, gray] (l3 -| src-l) rectangle (l4 -| src-r);
+      \end{scope}
+
+      \node<9->[loc, anchor=east] at ({$(l1)!0.5!(l2)$} -| src-l) {$l_1:{}$};
+      \node<9->[loc, anchor=east] at ({$(l3)!0.5!(l4)$} -| src-l) {$l_3:{}$};
+
+      \node<9->[leg, srccol] at ({$(l1)!0.5!(l2)$} -| src-leg) {$\frees{l_1}$};
+      \node<9->[leg, srccol] at ({$(l3)!0.5!(l4)$} -| src-leg) {$\ptrs{l_3}{v}$};
+
+    \end{tikzpicture}
+  \end{center}
+
   \note[item]{
     La logique de séparation permet d'exprimer
     des propriétés locales sur un tas unique.
@@ -1137,25 +1280,162 @@
   }
 
   \note[item]{
-    On se donne deux assertions primitives décrivent les cellules allouées
+    On se donne deux assertions primitives qui décrivent les cellules allouées
     et libérées, tant côté source que côté cible.
   }
 
   \note[item]{
     Notre logique est linéaire.
     On ne peut pas ignorer une partie du tas dans un raisonnement,
-    comme dans les logique d'Iris.
+    comme dans les logiques d'Iris.
   }
 
   \note[item]{
-    Enfin, notre logique est compatible avec le Proof Mode de Iris,
+    Enfin, notre logique est compatible avec le Proof Mode d'Iris,
     ce qui facilite l'écriture des preuves.
   }
 
 \end{frame}
 
 
-\begin{frame}[label=values]{Values equivalence}
+\begin{frame}[label=values]
+  \frametitle{Value Equivalence}
+
+  \begin{center}
+    \begin{tikzpicture}[
+        memline/.style={
+          draw=black!70, thick
+        },
+        lowmeml/.style={
+          memline, dashed, draw=black!40
+        },
+        uppmeml/.style={
+          lowmeml, dash phase=-1pt
+        },
+        title/.style={
+          font=\small,
+        },
+        cell/.style={
+          font=\small,
+          text width=14mm,
+          align=center,
+        },
+        rel/.style={
+          <->,
+          line width=1pt,
+          >=Stealth,
+          color=purple!75!blue,
+        },
+        relbadge/.style={
+          font=\footnotesize\bfseries,
+          text=purple!75!blue,
+          draw=purple!75!blue!60,
+          fill=purple!8!white,
+          rounded corners=3pt,
+          semithick,
+        },
+        defs/.style={
+          text=violet!75!black,
+          draw=violet!75,
+          fill=violet!10,
+          very thick,
+          rounded corners=5pt,
+          align=center,
+          text width=80mm
+        }
+      ]
+      \bbox{}
+
+      \coordinate (header) at ($(topmid)!0.2!(bottommid)$);
+      \coordinate (footer) at ($(topmid)!0.95!(bottommid)$);
+
+      \coordinate (l1) at ($(header)!0.1!(footer)$);
+      \coordinate (l2) at ($(header)!0.3!(footer)$);
+      \coordinate (l3) at ($(header)!0.5!(footer)$);
+      \coordinate (l4) at ($(header)!0.7!(footer)$);
+      \coordinate (l5) at ($(header)!0.9!(footer)$);
+
+      \coordinate (tgt-l) at ($(topleft)!0.75!(topright)$);
+      \coordinate (tgt-r) at ($(topleft)!0.9!(topright)$);
+      \coordinate (tgt-m) at ($(tgt-l)!0.5!(tgt-r)$);
+      \coordinate (tgt-leg) at ($(tgt-l)!0.3!(topmid)$);
+
+      \coordinate (src-l) at ($(topleft)!0.1!(topright)$);
+      \coordinate (src-r) at ($(topleft)!0.25!(topright)$);
+      \coordinate (src-m) at ($(src-l)!0.5!(src-r)$);
+      \coordinate (src-leg) at ($(src-r)!0.3!(topmid)$);
+
+      \begin{scope}[on background layer]
+        \fill[srccol!12] (l1 -| src-l) rectangle (l2 -| src-r);
+        \fill[srccol!12] (l3 -| src-l) rectangle (l5 -| src-r);
+
+        \fill[tgtcol!12] (l1 -| tgt-l) rectangle (l4 -| tgt-r);
+      \end{scope}
+
+      \draw[memline] (l1 -| tgt-l) -- (l1 -| tgt-r);
+      \draw[memline] (l2 -| tgt-l) -- (l2 -| tgt-r);
+      \draw[memline] (l3 -| tgt-l) -- (l3 -| tgt-r);
+      \draw[memline] (l4 -| tgt-l) -- (l4 -| tgt-r);
+      \draw[memline] (l5 -| tgt-l) -- (l5 -| tgt-r);
+
+      \draw[uppmeml] (header -| tgt-l) -- (l1 -| tgt-l);
+      \draw[memline] (l1 -| tgt-l) -- (l5 -| tgt-l);
+      \draw[lowmeml] (l5 -| tgt-l) -- (footer -| tgt-l);
+
+      \draw[uppmeml] (header -| tgt-r) -- (l1 -| tgt-r);
+      \draw[memline] (l1 -| tgt-r) -- (l5 -| tgt-r);
+      \draw[lowmeml] (l5 -| tgt-r) -- (footer -| tgt-r);
+
+      \draw[memline] (l1 -| src-l) -- (l1 -| src-r);
+      \draw[memline] (l2 -| src-l) -- (l2 -| src-r);
+      \draw[memline] (l3 -| src-l) -- (l3 -| src-r);
+      \draw[memline] (l4 -| src-l) -- (l4 -| src-r);
+      \draw[memline] (l5 -| src-l) -- (l5 -| src-r);
+
+      \draw[uppmeml] (header -| src-l) -- (l1 -| src-l);
+      \draw[memline] (l1 -| src-l) -- (l5 -| src-l);
+      \draw[lowmeml] (l5 -| src-l) -- (footer -| src-l);
+
+      \draw[uppmeml] (header -| src-r) -- (l1 -| src-r);
+      \draw[memline] (l1 -| src-r) -- (l5 -| src-r);
+      \draw[lowmeml] (l5 -| src-r) -- (footer -| src-r);
+
+      \node[title, tgtcol] at ($(tgt-m)!0.5!(tgt-m |- header)$) {Target Heap};
+      \node[title, srccol] at ($(src-m)!0.5!(src-m |- header)$) {Source Heap};
+
+      \node[cell] at ({$(l1)!0.5!(l2)$} -| tgt-m) {$v_1$};
+      \node[cell] at ({$(l2)!0.5!(l3)$} -| tgt-m) {$v_3$};
+      \node[cell] at ({$(l3)!0.5!(l4)$} -| tgt-m) {$v_4$};
+
+      \node[cell] at ({$(l1)!0.5!(l2)$} -| src-m) {$v_2$};
+      \node[cell] at ({$(l3)!0.5!(l4)$} -| src-m) {$v_5$};
+      \node[cell] at ({$(l4)!0.5!(l5)$} -| src-m) {$v_6$};
+
+      \draw<2->[rel]
+      (src-leg |- {$(l1)!0.5!(l2)$}) -- (tgt-leg |- {$(l1)!0.5!(l2)$});
+
+      \draw<2->[rel]
+      (src-leg |- {$(l3)!0.5!(l4)$}) to[out=10, in=190] (tgt-leg |- {$(l2)!0.5!(l3)$});
+
+      \draw<2->[rel]
+      (src-leg |- {$(l4)!0.5!(l5)$}) to[out=10, in=190] (tgt-leg |- {$(l3)!0.5!(l4)$});
+
+      \node<2->[relbadge] at ($(header)!0.5!(l1)$) {Partial bijection $I$};
+
+      \node<3->[defs] at (l3)
+      {
+        \begin{gather*}
+          \text{\Large $v_t \bowtie_I v_s$} \\[1em]
+          \begin{array}{c @{\quad\implies\quad} r @{\;{}\bowtie_I{}\;} l}
+            i_t = i_s        & \VInt{i_t}  & \VInt{i_s}  \\[0.5em]
+            b_t = b_s        & \VBool{b_t} & \VBool{b_s} \\[0.5em]
+            (l_t, l_s) \in I & \VPtr{l_t}  & \VPtr{l_s}
+          \end{array}
+        \end{gather*}
+      };
+    \end{tikzpicture}
+  \end{center}
+
   \note[item]{
     Les transformations opérées par un compilateur
     changent souvent l'agencement de la mémoire
@@ -1170,7 +1450,7 @@
 
   \note[item]{
     Cette bijection est monotone.
-    Elle grandie au fil de l'executiuon des programmes et des allocations.
+    Elle grandit au fil de l'exécution des programmes et des allocations.
     Elle sert à définir l'équivalence entre valeurs cibles et sources.
   }
 
@@ -1184,8 +1464,137 @@
 
 \end{frame}
 
+\begin{frame}[label=bijection]
+  \frametitle{Memory Bijection}
 
-\begin{frame}[label=injection]{Memory Injection}
+  \begin{center}
+    \begin{tikzpicture}[
+        memline/.style={
+          draw=black!70, thick
+        },
+        lowmeml/.style={
+          memline, dashed, draw=black!40
+        },
+        uppmeml/.style={
+          lowmeml, dash phase=-1pt
+        },
+        title/.style={
+          font=\small,
+        },
+        cell/.style={
+          font=\small,
+          text width=14mm,
+          align=center,
+        },
+        rel/.style={
+          <->,
+          line width=1pt,
+          >=Stealth,
+          color=purple!75!blue,
+        },
+        relbadge/.style={
+          font=\footnotesize\bfseries,
+          text=purple!75!blue,
+          draw=purple!75!blue!60,
+          fill=purple!8!white,
+          rounded corners=3pt,
+          semithick,
+        },
+        defs/.style={
+          text=violet!75!black,
+          draw=violet!75,
+          fill=violet!10,
+          very thick,
+          rounded corners=5pt,
+          align=center,
+          text width=80mm
+        },
+        remember picture,
+      ]
+      \bbox{}
+
+      \coordinate (header) at ($(topmid)!0.2!(bottommid)$);
+      \coordinate (footer) at ($(topmid)!0.95!(bottommid)$);
+
+      \coordinate (l1) at ($(header)!0.1!(footer)$);
+      \coordinate (l2) at ($(header)!0.3!(footer)$);
+      \coordinate (l3) at ($(header)!0.5!(footer)$);
+      \coordinate (l4) at ($(header)!0.7!(footer)$);
+      \coordinate (l5) at ($(header)!0.9!(footer)$);
+
+      \coordinate (tgt-l) at ($(topleft)!0.75!(topright)$);
+      \coordinate (tgt-r) at ($(topleft)!0.9!(topright)$);
+      \coordinate (tgt-m) at ($(tgt-l)!0.5!(tgt-r)$);
+      \coordinate (tgt-leg) at ($(tgt-l)!0.3!(topmid)$);
+
+      \coordinate (src-l) at ($(topleft)!0.1!(topright)$);
+      \coordinate (src-r) at ($(topleft)!0.25!(topright)$);
+      \coordinate (src-m) at ($(src-l)!0.5!(src-r)$);
+      \coordinate (src-leg) at ($(src-r)!0.3!(topmid)$);
+
+      \draw[memline] (l1 -| tgt-l) -- (l1 -| tgt-r);
+      \draw[memline] (l2 -| tgt-l) -- (l2 -| tgt-r);
+      \draw[memline] (l3 -| tgt-l) -- (l3 -| tgt-r);
+      \draw[memline] (l4 -| tgt-l) -- (l4 -| tgt-r);
+      \draw[memline] (l5 -| tgt-l) -- (l5 -| tgt-r);
+
+      \draw[uppmeml] (header -| tgt-l) -- (l1 -| tgt-l);
+      \draw[memline] (l1 -| tgt-l) -- (l5 -| tgt-l);
+      \draw[lowmeml] (l5 -| tgt-l) -- (footer -| tgt-l);
+
+      \draw[uppmeml] (header -| tgt-r) -- (l1 -| tgt-r);
+      \draw[memline] (l1 -| tgt-r) -- (l5 -| tgt-r);
+      \draw[lowmeml] (l5 -| tgt-r) -- (footer -| tgt-r);
+
+      \draw[memline] (l1 -| src-l) -- (l1 -| src-r);
+      \draw[memline] (l2 -| src-l) -- (l2 -| src-r);
+      \draw[memline] (l3 -| src-l) -- (l3 -| src-r);
+      \draw[memline] (l4 -| src-l) -- (l4 -| src-r);
+      \draw[memline] (l5 -| src-l) -- (l5 -| src-r);
+
+      \draw[uppmeml] (header -| src-l) -- (l1 -| src-l);
+      \draw[memline] (l1 -| src-l) -- (l5 -| src-l);
+      \draw[lowmeml] (l5 -| src-l) -- (footer -| src-l);
+
+      \draw[uppmeml] (header -| src-r) -- (l1 -| src-r);
+      \draw[memline] (l1 -| src-r) -- (l5 -| src-r);
+      \draw[lowmeml] (l5 -| src-r) -- (footer -| src-r);
+
+      \node[title, tgtcol] at ($(tgt-m)!0.5!(tgt-m |- header)$) {Target Heap};
+      \node[title, srccol] at ($(src-m)!0.5!(src-m |- header)$) {Source Heap};
+
+      \begin{scope}[on background layer]
+        \fill<-4>[magenta!12] (l1 -| src-l) rectangle (l2 -| src-r);
+        \fill<-4>[magenta!12] (l3 -| src-l) rectangle (l5 -| src-r);
+        \fill<-4>[magenta!12] (l1 -| tgt-l) rectangle (l4 -| tgt-r);
+      \end{scope}
+
+      \node[font=\Large] at (l1)
+      {$\textsf{membij}_{\tikzmarknode[teal]{exn}{\visible<4->{\mathbf{E}}}}
+        (\textcolor{magenta}{\mathbf{I}})$};
+
+      \node<2-3> at (l2) {$(l_t, l_s) \in \textcolor{magenta}{I}$};
+      \node<2-3> at ($(l2)!0.5!(l3)$) {$\Downarrow$};
+      \node<2-3> at (l3) {both alive with $\sameval{\textcolor{magenta}{I}}{}{}$};
+      \node<3> at ($(l3)!0.5!(l4)$) {or};
+      \node<3> at (l4) {both freed};
+
+      \node<4->[teal, font=\small] (exn-leg) at (exn |- {$(l2)!0.5!(l3)$}) {Exceptions};
+      \draw<4->[->, shorten >=1ex] (exn-leg) -- (exn);
+
+      \node<5-> at (l4) {$\textcolor{teal}{E} \subseteq \textcolor{magenta}{I}$};
+
+      \begin{scope}[on background layer]
+        \fill<5->[teal!20] (l1 -| src-l) rectangle (l2 -| src-r);
+        \fill<5->[magenta!12] (l3 -| src-l) rectangle (l5 -| src-r);
+        \fill<5->[magenta!12] (l1 -| tgt-l) rectangle (l2 -| tgt-r);
+        \fill<5->[teal!20] (l2 -| tgt-l) rectangle (l3 -| tgt-r);
+        \fill<5->[magenta!12] (l3 -| tgt-l) rectangle (l4 -| tgt-r);
+      \end{scope}
+
+    \end{tikzpicture}
+  \end{center}
+
   \note[item]{
     La bijection $I$ permet de définir le prédicat d'injection de mémoire $\meminj{I}{E}$,
     qui formalise la cohérence globale entre les deux tas. % TODO: Cite Simuliris.
@@ -1199,7 +1608,7 @@
 
   \note[item]{
     Une règle d'extension permet d'ajouter de nouvelles adresses dans $I$,
-    si elle respectent les condition précedentes.
+    si elles respectent les conditions précédentes.
   }
 
   \note[item]{
@@ -1217,43 +1626,193 @@
   \note[item]{
     C'est le rôle de l'ensemble d'exceptions $E$.
     Deux lemmes d'extraction et de réintégration permettent de sortir temporairement
-    une paire d'addresse de l'injection, puis de la réintégrer après modification locale.
+    une paire d'adresses de l'injection, puis de la réintégrer après modification locale.
   }
 
 
 \end{frame}
 
 
-\begin{frame}[label=hoare]{Relational Hoare Quadruples}
+\begin{frame}[label=hoare]
+  \frametitle{Relational Hoare Quadruples}
+
+  \begin{center}
+    \begin{tikzpicture}
+      \bbox{}
+
+      \node<2->[font=\huge] at ($(topmid)!0.25!(bottommid)$)
+      {
+        $\{P\}\; \textcolor{tgtcol}{f_t} \lesssim \textcolor{srccol}{f_s} \;\{ Q\}$
+      };
+
+      \node<3->[font=\large] at ($(topmid)!0.4!(bottommid)$)
+      {
+        ${} \triangleq
+        P \wand
+        \textsf{FreeSim}\left(
+          \textcolor{tgtcol}{f_t},
+          \textcolor{srccol}{f_s},
+          Q
+        \right)
+        $
+      };
+
+      \node<4->[font=\small]
+      at ({$(topmid)!0.55!(bottommid)$} -| {$(topleft)!0.15!(topright)$})
+      {If $P\left(\textcolor{tgtcol}{\vec{v_t}},
+          \textcolor{srccol}{\vec{v_s}}\right)$: };
+
+      \node<5->[font=\small] at ($(topmid)!0.64!(bottommid)$)
+      {$\text{\lightning} \in \textcolor{srccol}{f_s}$};
+
+      \node<6->[font=\itshape\small] at ($(topmid)!0.72!(bottommid)$) {or};
+
+      \node<6->[font=\small] at ($(topmid)!0.85!(bottommid)$)
+      {
+        $
+        \left\{
+          \begin{matrix}
+            \mathtt{Term}(\textcolor{tgtcol}{v_t}, \textcolor{tgtcol}{m_t})
+            \in \textcolor{tgtcol}{f_t}
+            \implies
+            \mathtt{Term}(\textcolor{srccol}{v_s}, \textcolor{srccol}{m_s})
+            \in \textcolor{srccol}{f_s}
+            \text{ with }
+            Q\left(\textcolor{tgtcol}{v_t}, \textcolor{srccol}{v_s},
+            \textcolor{tgtcol}{m_t}, \textcolor{srccol}{m_s}\right)
+            \\[.5em]
+            \mathtt{Div} \in \textcolor{tgtcol}{f_t}
+            \implies
+            \mathtt{Div} \in \textcolor{srccol}{f_s}
+          \end{matrix}
+          \right.
+        $
+      };
+
+\end{tikzpicture}
+  \end{center}
+
   \note[item]{
     Nous définissons des quadruplets de Hoare relationnels
     pour spécifier le raffinement entre paires de fonctions.
   }
 
   \note[item]{
-    Leur sémantique est la suivantes:
+    Leur sémantique est la suivante :
     Si les arguments et mémoires initiales satisfont la précondition $P$
-    et que le programme source n'a pas de comportement indéfinit:
+    et que le programme source n'a pas de comportement indéfini :
     alors si la cible peut terminer,
     la source doit également terminer avec la postcondition $Q$.
     Si la cible peut diverger, la source doit également diverger.
-  }
-
-  \note[item]{
-    Ce jugement est persistant dans notre logique de séparation :
-    une fois prouvé pour une paire de fonctions,
-    il peut être réutilisé autant de fois que nécessaire.
   }
 
 \end{frame}
 
 \section{A Language}
 
-\begin{frame}[label=murtl]{\muRTL{} --- A Low-Level Intermediate Language}
+\begin{frame}[label=murtl]
+  \frametitle{\muRTL{}}
+
+  \begin{center}
+    \begin{tikzpicture}[
+        instr/.style={
+          draw=blue!50!black,
+          fill=blue!3!white,
+          semithick,
+          font=\small,
+          minimum height=6.5mm,
+          minimum width=28mm,
+          rounded corners=4pt,
+          align=center
+        },
+        goto/.style={
+          ->,
+          >={Stealth[round]},
+          semithick,
+          draw=black!70,
+          shorten >=1.5pt,
+          shorten <=1.5pt
+        },
+        pc/.style={
+          anchor=east,
+          font=\footnotesize\ttfamily,
+          text=black!45
+        },
+        regtitle/.style={
+          font=\footnotesize,
+          text=teal!45!black
+        },
+        regslot/.style={
+          draw=teal!55!black,
+          fill=teal!4!white,
+          semithick,
+          font=\small,
+          minimum width=10mm,
+          minimum height=5mm,
+          rounded corners=3pt,
+          align=center
+        },
+        legend/.style={
+          font=\small,
+          text=black!55
+        }
+      ]
+
+      \bbox{}
+
+      \coordinate (instr-col) at ($(topleft)!0.35!(topright)$);
+      \coordinate (regs-col) at ($(topleft)!0.8!(topright)$);
+
+      \node[instr] (c1) at ({$(topmid)!0.2!(bottommid)$} -| instr-col)
+      {$r_1 \coloneq r_2 + r_3$};
+
+      \node[instr] (c5) at ({$(topmid)!0.8!(bottommid)$} -| instr-col)
+      {$\mathtt{ret}\; r_2$};
+
+      \node[instr] (c2) at ({$(c1)!0.25!(c5)$} -| instr-col)
+      {$\mathtt{nop}$};
+
+      \node[instr] (c3) at ({$(c1)!0.5!(c5)$} -| instr-col)
+      {$r_2 \coloneq \mathtt{load}\; r_1$};
+
+      \node[instr] (c4) at ({$(c1)!0.75!(c5)$} -| instr-col)
+      {$\mathtt{test}\; r_4$};
+
+
+      \node[pc] at (c1.west) {0:};
+      \node[pc] at (c2.west) {1:};
+      \node[pc] at (c3.west) {2:};
+      \node[pc] at (c4.west) {3:};
+      \node[pc] at (c5.west) {4:};
+
+      \draw[goto] (c1.south) -- (c2.north);
+      \draw[goto] (c2.south) -- (c3.north);
+      \draw[goto] (c3.south) -- (c4.north);
+      \draw[goto]
+      (c4.south) --
+      node[midway, right=1pt, font=\scriptsize\sffamily, text=teal!65!black] {T} (c5.north);
+
+      \draw[goto, rounded corners=4pt] (c4.east) -- ++(8mm, 0)
+      node[pos=0.4, above=1pt, font=\scriptsize\sffamily, text=red!65!black] {F}
+      |- (c1.east);
+
+      \node[legend] at ({$(topmid)!0.9!(bottommid)$} -| instr-col) {Function body};
+
+      \coordinate (regs) at (regs-col |- c3);
+
+      \node[regslot, above left=2pt of regs] {$r_1$};
+      \node[regslot, above right=2pt of regs] {$r_2$};
+      \node[regslot, below left=2pt of regs] {$r_3$};
+      \node[regslot, below right=2pt of regs]  {$r_4$};
+
+      \node[regtitle, above=6mm of regs] {Local Registers};
+
+    \end{tikzpicture}
+  \end{center}
 
   \note[item]{
     Pour tester ces outils, nous avons utilisé un langage
-    intermédiaire inspiré de RTL (Register Transfer Language) dans CompCert:
+    intermédiaire inspiré de RTL (Register Transfer Language) dans CompCert :
     \muRTL{}.
   }
 
@@ -1266,8 +1825,8 @@
   \note[item]{
     Les instructions manipulent des registres, qui agissent comme des variables locales.
     Elles effectuent des opérations usuelles :
-    des operations arithmétiques,
-    des accès mémoires,
+    des opérations arithmétiques,
+    des accès mémoire,
     des branchements conditionnels.
   }
 
@@ -1281,42 +1840,151 @@
 \end{frame}
 
 
-\begin{frame}[label=semantics]{Operational Semantics}
+\begin{frame}[label=semantics]
+  \frametitle{Operational Semantics}
+
+    \begin{center}
+      \begin{tikzpicture}[
+        tuple/.style={
+          font=\Large,
+        },
+        leg/.style={
+          font=\footnotesize,
+          text=black!60,
+        },
+        leg arr/.style={
+          ->, >={Stealth[round]},
+          semithick, draw=black!60,
+        },
+        state/.style={
+          minimum height=7.5mm,
+          minimum width=26mm,
+          rounded corners=4.5pt,
+          font=\small\bfseries,
+          thick,
+          draw=black!60,
+          text=black,
+          fill=black!5,
+        },
+        state arr/.style={
+          ->, >={Stealth[round]},
+          thick,
+          shorten >=1.5pt,
+          shorten <=1.5pt,
+          draw=black!60,
+        },
+        state leg/.style={
+          font=\scriptsize,
+          text=black!60,
+        },
+        mod label/.style={
+          font=\footnotesize,
+          text=black!60,
+          inner sep=0pt,
+        },
+        mod box/.style={
+          font=\small,
+        },
+      ]
+      \bbox{}
+
+      \node<2->[tuple] (state) at ($(topmid)!0.1!(bottommid)$) {$(\sigma, s, m)$};
+
+      \node<3->[leg] at ({$(topmid)!0.2!(bottommid)$} -| {$(topleft)!0.25!(topright)$})
+        (cs-leg) {Call stack};
+      \node<3->[leg] at ({$(topmid)!0.25!(bottommid)$} -| topmid) (s-leg) {State};
+      \node<3->[leg] at ({$(topmid)!0.2!(bottommid)$} -| {$(topleft)!0.75!(topright)$})
+        (m-leg) {Memory};
+
+      \draw<3->[leg arr] (cs-leg) -- ($(state.west)!0.5!(state.south west)$);
+      \draw<3->[leg arr] (s-leg) -- (state.south);
+      \draw<3->[leg arr] (m-leg) -- ($(state.east)!0.5!(state.south east)$);
+
+      \coordinate (l1) at ($(topmid)!0.42!(bottommid)$);
+      \coordinate (l3) at ($(topmid)!0.72!(bottommid)$);
+      \coordinate (l2) at ($(l1)!0.5!(l3)$);
+
+      \coordinate (c1) at ($(topleft)!0.15!(topright)$);
+      \coordinate (c2) at ($(topleft)!0.5!(topright)$);
+      \coordinate (c3) at ($(topleft)!0.85!(topright)$);
+
+      \node<4->[state] (call)   at (c1 |- l1) {Call State};
+      \node<5->[state] (run)    at (c2 |- l2) {Running State};
+      \node<7->[state] (return) at (c3 |- l3) {Return State};
+
+      \draw<5->[state arr]
+        (call.east)
+        to[out=0, in=90] node [pos=0.2, above, state leg] {start}
+        ($(run.north west)!0.2!(run.north)$);
+
+      \draw<6->[state arr]
+        ($(run.north west)!0.4!(run.north east)$)
+        to[out=120, in=60, looseness=5] node [above, state leg] {step}
+        ($(run.north west)!0.6!(run.north east)$);
+
+      \draw<7->[state arr]
+        ($(run.south)!0.8!(run.south east)$)
+        to[out=-90, in=180] node [pos=0.15, left=2pt, state leg] {end}
+        (return.west);
+
+      \draw<8->[state arr]
+        (run.west)
+        to[out=180, in=-90] node [pos=0.2, below, state leg] {call}
+        ($(call.south east)!0.2!(call.south)$);
+
+      \draw<8->[state arr]
+        ($(return.north west)!0.2!(return.north)$)
+        to[out=90, in=0] node [pos=0.15, right=2pt, state leg] {return}
+        (run.east);
+
+      \node<9->[anchor=west, mod label]
+        at ({$(topmid)!0.8!(bottommid)$} -| {$(topleft)!0.05!(topright)$}) {Modularity:};
+
+      \node<9->[mod box] at ($(topmid)!0.9!(bottommid)$)
+      {
+        $
+        \step{([], s, m)}{([], s', m')}
+        \implies
+        \step{(\sigma, s, m)}{(\sigma, s', m')}
+        $
+      };
+    \end{tikzpicture}
+  \end{center}
 
   \note[item]{
     La sémantique opérationnelle de \muRTL{} est exprimée à petits pas.
-    Cette sémantique, décris comment la con figuration initiale évolue.
+    Cette sémantique décrit comment la configuration initiale évolue.
   }
 
   \note[item]{
     Une configuration est un triplet composé de la pile d'appels courante,
     de la mémoire et de l'état d'exécution du programme.
-    Trois cas sont possibles pour l'états.
+    Trois cas sont possibles pour l'état.
   }
 
   \note[item]{
-    Au début du programme ainsi qu'apres un appel de fonction,
-    le programe est dans l'état $\mathtt{CallState}$.
-    Celui-ci indique la prochaine fonction à executer ainsi que la valeurs des arguments.
+    Au début du programme ainsi qu'après un appel de fonction,
+    le programme est dans l'état $\mathtt{CallState}$.
+    Celui-ci indique la prochaine fonction à exécuter ainsi que la valeur des arguments.
   }
 
   \note[item]{
     Au sein de la fonction le programme est dans un état classique $\mathtt{State}$
-    qui indique la fonction courante, la prochaine instruction à executer ainsi que
-    la valeurs des registres locaux.
+    qui indique la fonction courante, la prochaine instruction à exécuter ainsi que
+    la valeur des registres locaux.
   }
 
   \note[item]{
-    A la fin de l'execution de la fonction, le programme passe dans
-    l'état $\mathtt{ReturnState}$ retourne une valeur.
+    À la fin de l'exécution de la fonction, le programme passe dans
+    l'état $\mathtt{ReturnState}$ et retourne une valeur.
   }
 
   \note[item]{
-    Cette sémantique permet de raisoner de manière modulaire sur la pile d'appel.
+    Cette sémantique permet de raisonner de manière modulaire sur la pile d'appel.
   }
 
   \note[item]{
-    Pour prouver un quadruplet de hoare entre deux fonction,
+    Pour prouver un quadruplet de Hoare entre deux fonctions,
     il suffit de le montrer dans une pile vide.
     Lors de l'utilisation de ce quadruplet,
     la pile d'appel des deux fonctions est augmentée par la pile courante.
@@ -1326,10 +1994,154 @@
 
 \section{Case Studies}
 
-\begin{frame}[label=zerocheck]{Case Study: Eliminating a Redundant Zero-Check}
+\newcommand{\cbullet}{\raisebox{-0.2ex}{\usebeamertemplate{itemize item}}}
+
+\colorlet{pccol}{black!40}
+
+\begin{frame}[label=zerocheck]
+  \frametitle{Eliminating a Redundant Zero-Check}
+
+  \begin{center}
+    \begin{tikzpicture}[
+        instr/.style={
+          font=\small,
+          inner sep=5pt,
+        },
+        pc/.style={
+          font=\footnotesize\ttfamily,
+          text=pccol,
+        },
+        title/.style={
+          font=\small\bfseries,
+        },
+        proof/.style={
+          font=\footnotesize,
+          text=black!50,
+        },
+        inv/.style={
+          font=\small,
+          text=black!60,
+        },
+        highlight/.style={
+          opacity=0.15, green, rounded corners
+        }
+      ]
+      \bbox{}
+
+      \coordinate (src-m) at ($(topleft)!0.1!(topright)$);
+      \coordinate (tgt-m) at ($(topleft)!0.68!(topright)$);
+      \coordinate (case-l) at ($(topleft)!0.01!(topright)$);
+      \coordinate (case-r) at ($(topleft)!0.99!(topright)$);
+
+      \coordinate (before) at ($(topmid)!0.2!(bottommid)$);
+      \coordinate (code1)  at ($(topmid)!0.4!(bottommid)$);
+      \coordinate (code2)  at ($(topmid)!0.7!(bottommid)$);
+      \coordinate (after)  at ($(topmid)!0.9!(bottommid)$);
+
+      \node<2->[title, srccol, anchor=west]
+        at ({$(topmid)!0.6!(before)$} -| src-m) {Source code};
+
+      \node<2->[pc, anchor=east] at (src-m |- before) {$1:$};
+      \node<2->[pc, anchor=east] at (src-m |- code1)  {$2:$};
+      \node<2->[pc, anchor=east] at (src-m |- code2)  {$3:$};
+      \node<2->[pc, anchor=east] at (src-m |- after)  {$4:$};
+
+      \node<2->[instr, anchor=west] (cs1) at (src-m |- before)
+      {
+        $\dots$
+        \textcolor{pccol}{\footnotesize ${}\to 2$}
+      };
+
+      \node<2->[instr, anchor=west] (cs2) at (src-m |- code1)
+      {
+        $r_1 \coloneq r_n / r_d$
+        \textcolor{pccol}{\footnotesize $ {}\to 3$}
+      };
+
+      \node<2->[instr, anchor=west] (cs3) at (src-m |- code2)
+      {
+        $r_d \coloneq \mathop{\texttt{test}} r_d$
+        \textcolor{pccol}{\footnotesize ${}\to 4$}
+      };
+
+      \node<2->[instr, anchor=west] (cs4) at (src-m |- after) {$\dots$};
+
+      \fill<3-5>[highlight] (cs3.north east) rectangle  (cs3.south west);
+
+      \node<4->[pc, anchor=east] at (tgt-m |- code2)  {$3:$};
+      \node<4->[instr, anchor=west] (ct3) at (tgt-m |- code2)
+      {
+        $r_d \coloneq \texttt{false}$
+        \textcolor{pccol}{\footnotesize ${}\to 4$}
+      };
+
+      \node<4-5>[font=\large, text=black!55] at (code2) {$\implies$};
+
+      \fill<4-5>[highlight] (ct3.north east) rectangle  (ct3.south west);
+
+      \node<5->[title, tgtcol, anchor=west]
+        at ({$(topmid)!0.6!(before)$} -| tgt-m) {Target code};
+
+      \node<5->[pc, anchor=east] at (tgt-m |- before) {$1:$};
+      \node<5->[pc, anchor=east] at (tgt-m |- code1)  {$2:$};
+      \node<5->[pc, anchor=east] at (tgt-m |- after)  {$4:$};
+
+      \node<5->[instr, anchor=west] (ct1) at (tgt-m |- before)
+      {
+        $\dots$
+        \textcolor{pccol}{\footnotesize ${}\to 2$}
+      };
+
+      \node<5->[instr, anchor=west] (ct2) at (tgt-m |- code1)
+      {
+        $r_1 \coloneq r_n / r_d$
+        \textcolor{pccol}{\footnotesize ${}\to 3$}
+      };
+
+      \node<5->[instr, anchor=west] (ct4) at (tgt-m |- after) {$\dots$};
+
+      \node<6->[inv] at ($(before)!0.5!(code1)$)
+      {
+        $
+        \{
+        \textsf{membij}_{\emptyset}(I) \sep \textsf{same\_regs}\left(I\right)
+        \}
+        $
+      };
+
+      \node<7->[inv] (rz) at ($(code1)!0.33!(code2)$) {$\{ \top \}$};
+      \node<7->[proof, anchor=base west] at (rz.base -| case-l)
+        {\cbullet~$r_d = 0:$};
+
+      \node<8->[proof, anchor=east] at (rz -| case-r)
+        {because $\text{\lightning} \in \textcolor{srccol!75}{\text{source}}$};
+
+      \node<9->[inv] (rnz) at ($(code1)!0.66!(code2)$)
+      {
+        $
+        \{
+        \textsf{membij}_{\emptyset}(I) \sep \textsf{same\_regs}\left(I\right)
+        \sep r_d \neq 0
+        \}
+        $
+      };
+      \node<9->[proof, anchor=base west] at (rnz.base -| case-l)
+        {\cbullet~$r_d \neq 0:$};
+
+      \node<10->[inv] at ($(code2)!0.5!(after)$)
+      {
+        $
+        \{
+        \textsf{membij}_{\emptyset}(I) \sep \textsf{same\_regs}\left(I\right)
+        \}
+        $
+      };
+
+    \end{tikzpicture}
+  \end{center}
 
   \note[item]{
-    Avec ces outils, nous avons pu verifier des transformations de programmes concrètes.
+    Avec ces outils, nous avons pu vérifier des transformations de programmes concrètes.
     Une première transformation simple est l’élimination d’un test à zéro redondant.
   }
 
@@ -1340,13 +2152,13 @@
 
   \note[item]{
     En \muRTL{}, la division par zéro est un état bloquant.
-    Donc, lorsque le programme source va executer le test à zero,
+    Donc, lorsque le programme source va exécuter le test à zéro,
     $d$ est obligatoirement non nul.
   }
 
   \note[item]{
-    On peut donc optimizer ce code en remplaçant directement le test par
-    une affectation par $\mathtt{false}$.
+    On peut donc optimiser ce code en remplaçant directement le test par
+    une affectation à $\mathtt{false}$.
   }
 
   \note[item]{
@@ -1354,100 +2166,141 @@
   }
 
   \note[item]{
-    si $d = 0$, la source bloque et la cible a toute liberté.
+    Si $d = 0$, la source bloque et la cible a toute liberté.
   }
 
   \note[item]{
-    si $d \neq 0$, la division réussie, et le test source vaut toujours faux.
-    les deux programmes affecte au registre $t$ la meme valeur.
-  }
-\end{frame}
-
-
-\begin{frame}[label=hoist]{Case Study: Hoisting an Invariant Load}
-  \note[item]{
-    Notre deuxième étude de cas porte sur deux fonction cette fois-ci.
-  }
-
-  \note[item]{
-    On considère le programme ($\mathtt{fact\_slow}$) suivant.
-    Celui-ci calcule la factorielle de $n$ dans $res$.
-    Le décrement de $n$ est fait en lisant en memoire à l'adresse $addr$
-    la valeur $1$ à chaque tour de boucle.
-  }
-
-  \note[item]{
-    Dans le programme transformé $\mathtt{fact\_fast}$),
-    ce chargement est optimisé dans le prélude de la fonction,
-    et la boucle réutilise la valeur stockée dans un registre.
-  }
-
-  \note[item]{
-    Cette transformation est correcte car la cellule mémoire pointée par $addr$
-    n'est jamais modifiée pendant la boucle :
-    la lire une unique fois au début est donc suffisant.
-  }
-
-\end{frame}
-
-
-\begin{frame}[label=hoistproof]{?}
-  \note[item]{
-    La correction de cettre transformation est exprimée sous la forme
-    d'un quadruplet de hoare.
-  }
-
-  \note[item]{
-    Celui-ci demande en précondition que les arguments des fonctions soient équivalents,
-    pour une bijection $I$ fixée. On a également le fait que la mémoire source et cible
-    sont reliées selon $I$.
-  }
-
-  \note[item]{
-    Si les programmes termine, on assure que les resultats sont équivalents pour la même
-    bijection $I$. Les mémoires source et cible sont encore reliées selon $I$.
-  }
-
-  \note[item]{
-    La preuve de cette optimisation se fait ici en maintenant l'invariant que
-    la cellule pointée par $addr$ est toujours 1 lors de l'execution de la boucle.
+    Si $d \neq 0$, la division réussit, et le test source vaut toujours faux.
+    Les deux programmes affectent au registre $t$ la même valeur.
   }
 \end{frame}
 
+\begin{frame}[label=tunneling]
+  \frametitle{Short-Circuiting Jump Chains}
 
-\begin{frame}[label=tunneling]{Case Study: Short-Circuiting Jump Chains}
+  \begin{center}
+    \begin{tikzpicture}[
+        instr/.style={
+          draw=blue!50!black,
+          fill=blue!3!white,
+          semithick,
+          font=\small,
+          minimum height=6mm,
+          minimum width=10mm,
+          rounded corners=4pt,
+          align=center
+        },
+        goto/.style={
+          ->,
+          >={Stealth[round]},
+          semithick,
+          draw=black!70,
+          shorten >=1.5pt,
+          shorten <=1.5pt
+        },
+        pc/.style={
+          anchor=north,
+          font=\footnotesize\ttfamily,
+          text=black!45
+        },
+      ]
+      \bbox{}
+
+      \coordinate (l1) at ($(topmid)!0.15!(bottommid)$);
+      \coordinate (l2) at ($(topmid)!0.6!(bottommid)$);
+      \coordinate (l3) at ($(topmid)!0.85!(bottommid)$);
+
+      \coordinate (c1) at ($(topleft)!0.1!(topright)$);
+      \coordinate (c6) at ($(topleft)!0.9!(topright)$);
+
+      \coordinate (c2) at ($(c1)!0.2!(c6)$);
+      \coordinate (c3) at ($(c1)!0.4!(c6)$);
+      \coordinate (c4) at ($(c1)!0.6!(c6)$);
+      \coordinate (c5) at ($(c1)!0.8!(c6)$);
+
+      \node[instr] (i1) at (l1 -| c1) {i};
+      \node[instr] (i2) at (l1 -| c2) {\texttt{nop}};
+      \node[instr] (i3) at (l1 -| c3) {\texttt{nop}};
+      \node[instr] (i4) at (l1 -| c4) {\texttt{nop}};
+      \node[instr] (i5) at (l1 -| c5) {\texttt{nop}};
+      \node[instr] (i6) at (l1 -| c6) {i'};
+
+      \node[pc] at (i1.south) {1};
+      \node[pc] at (i2.south) {2};
+      \node[pc] at (i3.south) {3};
+      \node[pc] at (i4.south) {4};
+      \node[pc] at (i5.south) {5};
+      \node[pc] at (i6.south) {6};
+
+      \draw[goto] (i1) -- (i2);
+      \draw[goto] (i2) -- (i3);
+      \draw[goto] (i3) -- (i4);
+      \draw[goto] (i4) -- (i5);
+      \draw[goto] (i5) -- (i6);
+
+      \node<2->[font=\Large] at ($(l1)!0.4!(l2)$) {$\Downarrow$};
+
+      \node<2->[instr] (i'1) at (l2 -| c1) {i};
+      \node<2->[instr] (i'2) at (l2 -| c2) {\texttt{nop}};
+      \node<2->[instr] (i'3) at (l2 -| c3) {\texttt{nop}};
+      \node<2->[instr] (i'4) at (l2 -| c4) {\texttt{nop}};
+      \node<2->[instr] (i'5) at (l2 -| c5) {\texttt{nop}};
+      \node<2->[instr] (i'6) at (l2 -| c6) {i'};
+
+      \node<2->[pc] at (i'1.south) {1};
+      \node<2->[pc] at (i'2.south) {2};
+      \node<2->[pc] at (i'3.south) {3};
+      \node<2->[pc] at (i'4.south) {4};
+      \node<2->[pc] at (i'5.south) {5};
+      \node<2->[pc] at (i'6.south) {6};
+
+      \draw<2->[goto] (i'1) to[out=35, in=140, looseness=.6] (i'6);
+      \draw<2->[goto] (i'2) to[out=35, in=140, looseness=.6] (i'6);
+      \draw<2->[goto] (i'3) to[out=35, in=140, looseness=.6] (i'6);
+      \draw<2->[goto] (i'4) to[out=35, in=140, looseness=.6] (i'6);
+      \draw<2->[goto] (i'5) -- (i'6);
+
+      \node<3->[font=\Large] at (l3)
+      {
+        $\{\sameargsf{I}\}\;
+        \textcolor{tgtcol}{\mathsf{tunnel}_{d}\left(f\right)}
+        \lesssim
+        \textcolor{srccol}{f}
+        \;\{\samerf{I}\}$
+      };
+    \end{tikzpicture}
+  \end{center}
+
   \note[item]{
-    Enfin, nous avons vérifié une transformation génerique de CompCert :
+    Enfin, nous avons vérifié une transformation générique de CompCert :
     le raccourcissement des chaînes de sauts (nop tunneling).
   }
 
   \note[item]{
     L'optimisation inspecte le graphe de contrôle et fait pointer chaque instruction
     directement vers son prochain successeur utile,
-    en court-circuitant les suites de saut unitiles.
+    en court-circuitant les suites de sauts inutiles.
   }
 
   \note[item]{
     Il s'agit d'une transformation qui réécrit l'intégralité du graphe
-    de flot de controle.
+    de flot de contrôle.
   }
 
-  % Little more info on how this is defined ?
-
   \note[item]{
-    La correction de cette passe d'otimisation est enoncee par le quadruplet
-    de hoare suivant.
+    La correction de cette passe d'optimisation est énoncée par le quadruplet
+    de Hoare suivant.
   }
 
   \note[item]{
     La preuve est faite pour une fonction source arbitraire.
-    Elle utilise un invariant sur l'états des configuration ainsi qu'une
-    une reccurence sur la profondeur à laquelle l'optimisation est faite.
+    Elle utilise un invariant sur l'état des configurations ainsi qu'une
+    récurrence sur la profondeur à laquelle l'optimisation est faite.
   }
 
   \note[item]{
     Lorsque les deux programmes appellent une même fonction,
-    l'invariant utilisé lors de la preuve est réutilisée directement,
+    l'invariant utilisé lors de la preuve est réutilisé directement,
     de manière modulaire.
   }
 
@@ -1455,14 +2308,86 @@
 
 \section{Conclusion}
 
-\begin{frame}[label=future]{What Comes Next}
+\begin{frame}[label=future]
+  \frametitle{What Comes Next}
+
+  \begin{center}
+    \begin{tikzpicture}[
+        txt/.style={
+          font=\small,
+          align=center
+        },
+        arr/.style={
+          draw, thick, darkgray
+        },
+        tick/.style={
+          thick, darkgray,
+        },
+      ]
+      \bbox{}
+
+      \coordinate (start) at ({$(topleft)!0.05!(topright)$} |- {$(topmid)!0.2!(bottommid)$});
+      \coordinate (end) at ({$(topleft)!0.95!(topright)$} |- {$(topmid)!0.8!(bottommid)$});
+      \coordinate (mid) at ($(start)!0.5!(end)$);
+
+      \path let
+        \p{s} = (start),
+        \p{e} = (end),
+        \p{m} = (mid),
+        \n{R} = {0.5 * (\y{s} - \y{m})}
+      in
+        coordinate (c1-start) at (\x{e} - \n{R}, \y{s})
+        coordinate (c1-end) at (\x{e} - \n{R}, \y{m})
+
+        coordinate (c2-start) at (\x{s} + \n{R}, \y{m})
+        coordinate (c2-end) at (\x{s} + \n{R}, \y{e})
+
+        coordinate (tick1) at ($(c2-end)!0.25!(end)$);
+
+      \coordinate[xshift=1mm] (tick2) at (tick1);
+
+      % \fill[red] (start) circle (2pt);
+      % \fill[red] (end) circle (2pt);
+      % \fill[red] (mid) circle (2pt);
+
+      \path[arr]
+        let
+          \p{s} = (start),
+          \p{m}  = (mid),
+          \n{R}  = {0.5 * (\y{s} - \y{m})}
+        in
+          (start) -- (c1-start)
+          arc[start angle=90, end angle=-90, radius=\n{R}] --
+          (c1-end) -- (c2-start)
+          arc[start angle=90, end angle=270, radius=\n{R}] --
+          (c2-end) -- (tick1);
+
+      \draw[tick] ($(tick1) + (-0.15, -0.3)$) -- ($(tick1) + (0.15, 0.3)$);
+      \draw[tick] ($(tick2) + (-0.15, -0.3)$) -- ($(tick2) + (0.15, 0.3)$);
+
+      \draw[arr, -{Latex[length=2.5mm]}] (tick2) -- (end);
+
+      \node<2->[txt, above] at ($(start)!0.2!(c1-start)$) {Complex\\optimisations};
+
+      \node<3->[txt, left=-2em] at ($(c1-start)!0.5!(c1-end)$) {Multi language\\passes};
+
+      \node<4->[txt, above] at ($(c1-end)!0.55!(c2-start)$) {Simulation\\composition};
+
+      \node<5->[txt, right=-2em] at ($(c2-start)!0.5!(c2-end)$) {CompCert\\integration};
+
+      \node<6->[txt, above] at ($(tick2)!0.3!(end)$) {Concurrent\\CompCert};
+
+      \node<7->[txt, below] at ($(tick2)!0.8!(end)$) {OCaml\\verified compiler};
+    \end{tikzpicture}
+  \end{center}
+
   \note[item]{
     Ce travail ouvre plusieurs perspectives de recherche.
   }
 
   \note[item]{
     D'abord, vérifier des optimisations plus complexes,
-    telles que la propagation de constantes, ou la defunctionalisation selective.
+    telles que la propagation de constantes, ou la défonctionnalisation sélective.
   }
 
   \note[item]{
@@ -1476,22 +2401,95 @@
   }
 
   \note[item]{
-    Une autre question de voir si notre infrastructure peut etre
-    integrer progressivement dans le pipeline de CompCert.
+    Une autre question est de voir si notre infrastructure peut être
+    intégrée progressivement dans le pipeline de CompCert.
 
   }
   \note[item]{
-    L'objectif à long terme est de travailler
-    pour un compilateur optimisant entièrement vérifié
+    L'objectif à long terme est d'aboutir à un compilateur optimisant entièrement vérifié
     pour un langage complexe tel que OCaml ou Rust.
   }
 
 \end{frame}
 
 
-\begin{frame}[label=thanks]{Thank you}
-  \centering
-  {\Large Questions?}
+\begin{frame}[label=thanks]
+  \frametitle{Thank you}
+
+  \begin{center}
+    \begin{tikzpicture}[
+        layerbox/.style={
+          align=center, minimum height=10mm,
+          thick, rounded corners=6pt, inner sep=4pt
+        },
+        freebox/.style={
+          layerbox, minimum width=70mm,
+          fill=green!10, draw=green!60!black, text=green!50!black,
+        },
+        logicbox/.style={
+          layerbox, minimum width=70mm,
+          fill=teal!12, draw=teal!70!black, text=teal!75!black,
+        },
+        langbox/.style={
+          layerbox, minimum width=70mm,
+          fill=blue!10, draw=blue!70!black, text=blue!80!black,
+        },
+        transbox/.style={
+          layerbox,
+          fill=orange!10, draw=orange!70!black, text=orange!70!black,
+        },
+        optimbox/.style={
+          layerbox,
+          fill=violet!10, draw=violet!70!black, text=violet!70!black,
+        },
+        scope-tag/.style={
+          font=\tiny\itshape, align=left, text=gray!70!black, inner xsep=0pt
+        },
+        divider/.style={
+          draw=gray!40, thick, dashed
+        }
+      ]
+
+      \bbox{}
+
+      \node[freebox, anchor=south] (free) at ($(topmid)!0.85!(bottommid)$)
+      {Backward Simulation};
+
+      \node[above=1.5mm of free, logicbox] (rsl)
+      {Relational Separation Logic};
+
+      \coordinate[yshift=1.5mm] (sep) at (rsl.north);
+      \coordinate (sepleft) at (topleft |- sep);
+      \coordinate (sepright) at (bottomright |- sep);
+
+      \draw[divider] (sepleft) -- (sepright);
+      \node[anchor=north west, scope-tag] at (sepleft)
+      {Language\\ Independent};
+      \node[anchor=south west, scope-tag] at (sepleft)
+      {Language\\ Dependent};
+
+      \node[above=3mm of rsl, langbox] (murtl)
+      {Low-level language: \muRTL{}};
+
+      \coordinate (l) at (murtl.north west);
+      \coordinate (r) at (murtl.north east);
+      \coordinate (m1) at ($(l)!0.66!(r)$);
+      \coordinate[xshift=2mm] (m2) at (m1);
+
+      \node[
+        above=1.5mm of murtl.north west, anchor=south west,
+        transbox, text width between={l and m1}
+      ]
+      (transf) {Program Transformations};
+
+      \node[
+        above=1.5mm of murtl.north east, anchor=south east,
+        optimbox, text width between={m2 and r}
+      ]
+      (optim) {Tunneling};
+
+    \end{tikzpicture}
+  \end{center}
 \end{frame}
 
 \end{document}
