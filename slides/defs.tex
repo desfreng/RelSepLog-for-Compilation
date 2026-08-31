@@ -1,0 +1,153 @@
+\input{../report/macro.tex}
+
+% ==============================================================================
+% Color Definitions (Named by Color)
+% ==============================================================================
+
+% Green
+\colorlet{greenFill}{green!12}
+\colorlet{greenDraw}{green!60!black}
+\colorlet{greenText}{green!50!black}
+
+% Teal
+\colorlet{tealFill}{teal!12}
+\colorlet{tealDraw}{teal!70!black}
+\colorlet{tealText}{teal!75!black}
+
+% Blue
+\colorlet{blueFill}{blue!10}
+\colorlet{blueDraw}{blue!70!black}
+\colorlet{blueText}{blue!80!black}
+
+% Orange
+\colorlet{orangeFill}{orange!12}
+\colorlet{orangeDraw}{orange!65!black}
+\colorlet{orangeText}{orange!70!black}
+
+% Violet
+\colorlet{violetFill}{violet!10}
+\colorlet{violetDraw}{violet!85!black}
+\colorlet{violetText}{violet!75!black}
+
+% Gray
+\colorlet{grayFill}{black!7}
+\colorlet{grayDraw}{black!45}
+\colorlet{grayText}{black!70}
+
+% Red
+\colorlet{redFill}{red!10}
+\colorlet{redDraw}{red!75!black}
+\colorlet{redText}{red!80!black}
+
+% Cyan
+\colorlet{cyanFill}{cyan!12}
+\colorlet{cyanDraw}{cyan!75!black}
+\colorlet{cyanText}{cyan!85!black}
+
+% Magenta / Rose
+\colorlet{magentaFill}{magenta!10}
+\colorlet{magentaDraw}{magenta!70!black}
+\colorlet{magentaText}{magenta!80!black}
+
+% Light Black
+\colorlet{blackFill}{black!8}
+\colorlet{blackDraw}{black!85}
+\colorlet{blackText}{black}
+
+% Solid Black
+\colorlet{blackSolidFill}{black}
+\colorlet{blackSolidDraw}{black}
+\colorlet{blackSolidText}{white}
+
+% Outline
+\colorlet{blackLineFill}{white}
+\colorlet{blackLineDraw}{black}
+\colorlet{blackLineText}{black}
+
+% Program Colors
+\colorlet{colSrc}{orangeText}
+\colorlet{colTgt}{blueText}
+\colorlet{gridline}{black!30}
+\colorlet{instrFill}{blue!5}
+
+\makeatletter % https://tex.stackexchange.com/a/656319/16595
+\tikzset{parse let/.code={\def\tikz@cc@stop@let in{}\tikz@let@command et #1in}}
+\makeatother
+
+\tikzset{
+bbox/.style={
+    % draw, red
+    draw=none
+  },
+text width between/.style args={#1 and #2}{
+    parse let={\p@=($(#2)-(#1)$)},
+    text width/.expanded={
+        abs(\x@)-2*(\noexpand\pgfkeysvalueof{/pgf/inner xsep})
+      }
+  },
+box/.style={
+    align=center, minimum height=\cellheight,
+    thick, rounded corners=6pt,
+    font=\small,
+  },
+scope-tag/.style={
+    font=\tiny\itshape, align=left, text=gray!70!black, inner xsep=0pt
+  },
+divider/.style={ draw=gray!40, thick, dashed  },
+% direct color-named TikZ styles
+node-green/.style   = { fill=greenFill,  draw=greenDraw,  text=greenText  },
+node-teal/.style    = { fill=tealFill,   draw=tealDraw,   text=tealText   },
+node-blue/.style    = { fill=blueFill,   draw=blueDraw,   text=blueText   },
+node-orange/.style  = { fill=orangeFill, draw=orangeDraw, text=orangeText },
+node-violet/.style  = { fill=violetFill, draw=violetDraw, text=violetText },
+node-gray/.style    = { fill=grayFill,   draw=grayDraw,   text=grayText   },
+node-red/.style     = { fill=redFill,     draw=redDraw,     text=redText     },
+node-cyan/.style    = { fill=cyanFill,    draw=cyanDraw,    text=cyanText    },
+node-magenta/.style = { fill=magentaFill, draw=magentaDraw, text=magentaText },
+gridline/.style     = { draw=black!20, thick },
+node-instr/.style   = { fill=blue!5, draw=blue!50!black, text=blackText, },
+>={Stealth[round]},
+}
+
+
+\def\gaplength{2mm}
+\def\cellheight{12mm}
+\def\cellwidth{75mm}
+\def\cellsplit{0.55}
+
+\NewDocumentCommand{\bbox}{o}{%
+  \IfNoValueTF{#1}{%
+    \coordinate (topright)    at (0.99\textwidth, 0.85\textheight);
+    \coordinate (bottomleft)  at (0mm, 0mm);
+    \coordinate (topleft)     at (topright -| bottomleft);
+    \coordinate (bottomright) at (topright |- bottomleft);
+  }{%
+    \coordinate (centerpoint) at (current page.center);
+    \coordinate (topleft)     at ([xshift=-0.495\textwidth, yshift= 0.425\textheight]centerpoint);
+    \coordinate (bottomright) at ([xshift= 0.495\textwidth, yshift=-0.425\textheight]centerpoint);
+    \coordinate (topright)    at (bottomright |- topleft);
+    \coordinate (bottomleft)  at (topleft |- bottomright);
+  }%
+  \coordinate (topmid)    at ($(topleft)!0.5!(topright)$);
+  \coordinate (bottommid) at (topmid |- bottomright);
+  \draw[bbox] (topleft) rectangle (bottomright);
+}
+
+\newcommand{\refines}[2]{
+  \ensuremath{\textcolor{colTgt}{#1} \slantsqsubseteq \textcolor{colSrc}{#2}}
+}
+
+\newcommand{\fsimrel}[4]{
+  \textcolor{grayText}{\langle} \textcolor{colTgt}{#1}\textcolor{grayText}{, #2\rangle}
+  \sim_{\text{free}}
+  \textcolor{grayText}{\langle} \textcolor{colSrc}{#4}\textcolor{grayText}{, #3 \rangle}
+}
+
+\newcommand{\cbullet}{\raisebox{-0.2ex}{\usebeamertemplate{itemize item}}}
+
+\usetheme{Singapore}
+
+\setbeamertemplate{footline}[frame number]{}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[ball]
