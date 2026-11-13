@@ -1,5 +1,7 @@
 From RSL Require Import Prelude.
 
+From stdpp Require Import list.
+
 Section NoDupProof.
   Context `{dec : EqDecision A}.
   Implicit Types (l: list A).

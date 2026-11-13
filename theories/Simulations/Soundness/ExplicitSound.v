@@ -1,31 +1,32 @@
 From RSL Require Import Prelude.
 
-From Stdlib Require Import Classical.
 From Coinduction Require Import all.
 
-From RSL Require Import Commons.Behaviors.
-From RSL Require Import Simulations.ExplicitSim.
+From RSL.Simulations Require Export Explicit.
+From RSL.Language Require Export Behaviors.
+
+From Stdlib Require Import Classical.
 
 Section ESimSound.
   Context {Λt Λs: lang}.
-  Context (W: WfRel) (Pt: prog Λt) (Ps: prog Λs).
+  Context (W: WfRel) (Et: genv Λt) (Es: genv Λs).
 
-  Instance behₜ_elem : ElemOf behavior (config Λt) := beh Pt.
-  Instance behₛ_elem : ElemOf behavior (config Λs) := beh Ps.
+  Instance beht_elem : ElemOf behavior (config Λt) := beh Et.
+  Instance behs_elem : ElemOf behavior (config Λs) := beh Es.
 
-  Notation "a '⊑{' Φ '}' b" :=
-    (behavior_order Φ a b)
-      (at level 70, format "a  '⊑{' Φ '}'  b", no associativity).
+  Notation "a '⊑{' ϕ '}' b" :=
+    (behavior_order ϕ a b)
+      (at level 70, format "a  '⊑{' ϕ '}'  b", no associativity).
 
-  Notation "t '≲' '[' i ']' s '{{' Φ '}}'" :=
-    (esim W Pt Ps Φ i t s)
+  Notation "t '≲' '[' i ']' s '{{' ϕ '}}'" :=
+    (esim W Et Es ϕ i t s)
       (at level 1, no associativity).
 
-  Lemma terminating_esim Φ i t s:
-    t ≲[i] s {{ Φ }} ->
+  Lemma terminating_esim ϕ i t s:
+    t ≲[i] s {{ ϕ }} ->
     ∀ vt mt,
     Terminating vt mt ∈ t ->
-    ∃ b, b ∈ s ∧ Terminating vt mt ⊑{Φ} b.
+    ∃ b, b ∈ s ∧ Terminating vt mt ⊑{ϕ} b.
   Proof using Type.
     intros Hsim vt mt Hb.
     (* t Terminates -> it reduces to a final config *)
@@ -87,11 +88,11 @@ Section ESimSound.
         eapply IsSteping; now eauto.
   Qed.
 
-  Lemma esim_lfp_progress Φ i t s:
-    t ≲[i] s {{ Φ }} ->
-    diverges Pt t ->
-    stuck Ps s ∨
-      ∃ i' t' s', Ps ⊨ s ->> s' ∧ t' ≲[i'] s' {{ Φ }} ∧ diverges Pt t'.
+  Lemma esim_lfp_progress ϕ i t s:
+    t ≲[i] s {{ ϕ }} ->
+    diverges Et t ->
+    stuck Es s ∨
+      ∃ i' t' s', Es ⊨ s ->> s' ∧ t' ≲[i'] s' {{ ϕ }} ∧ diverges Et t'.
   Proof using Type.
     revert t s.
     (* Induction on the progress index *)
@@ -125,14 +126,14 @@ Section ESimSound.
       right. exists i', t', s'. now auto.
   Qed.
 
-  Lemma diverging_esim Φ i t s:
-    t ≲[i] s {{ Φ }} ->
+  Lemma diverging_esim ϕ i t s:
+    t ≲[i] s {{ ϕ }} ->
     Diverging ∈ t ->
-    ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
+    ∃ b, b ∈ s ∧ Diverging ⊑{ϕ} b.
   Proof using Type.
     intros Hsim Hdiv.
     (* We see in the future: can s be stuck ? *)
-    destruct (classic (∃ s', Ps ⊨ s ->>* s' ∧ stuck Ps s')) as [Hstuck | Hnstuck].
+    destruct (classic (∃ s', Es ⊨ s ->>* s' ∧ stuck Es s')) as [Hstuck | Hnstuck].
     - (* s can be stuck -> s has Undef behavior *)
       exists Undef. split; now apply has_undef_behavior || constructor.
     - (* s is never stuck -> s is diverging *)
@@ -154,8 +155,8 @@ Section ESimSound.
         econstructor; now eauto.
   Qed.
 
-  Lemma undef_esim Φ i t s:
-    t ≲[i] s {{ Φ }} ->
+  Lemma undef_esim ϕ i t s:
+    t ≲[i] s {{ ϕ }} ->
     Undef ∈ t ->
     Undef ∈ s.
   Proof using Type.
@@ -214,8 +215,8 @@ Section ESimSound.
         eapply IsSteping; now eauto.
   Qed.
 
-  Theorem esim_sound Φ i t s:
-    t ≲[i] s {{ Φ }} -> flex_refines Pt Ps Φ t s.
+  Theorem esim_sound ϕ i t s:
+    t ≲[i] s {{ ϕ }} -> flex_refines Et Es ϕ t s.
   Proof using Type.
     intros Hsim [] Hb.
     - eapply terminating_esim; now eauto.

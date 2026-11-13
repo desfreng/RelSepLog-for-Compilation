@@ -1,6 +1,6 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Values.
+From RSL.Language Require Export Values.
 
 From stdpp Require Import gmap.
 

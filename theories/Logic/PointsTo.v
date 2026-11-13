@@ -1,6 +1,6 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Memory.
+From RSL.Language Require Export Memory.
 
 From RSL.Logic Require Export BI.
 From RSL.Logic Require Import rPropDef Tactic.

@@ -1,42 +1,41 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Language WfRel.
+From RSL.Language Require Export Language.
+From RSL.Commons Require Export WfRel.
 
 From Coinduction Require Import all.
 
 Section EAltSimDef.
   Context {Λt Λs: lang}.
-  Context (J I: WfRel).
-  Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
+  Context (J I: WfRel) (Et: genv Λt) (Es: genv Λs) (ϕ: post Λt Λs).
 
   Variant ealt_sim_lfp' (gfp: J -> config Λt -> I -> config Λs -> Prop)
     : J -> config Λt -> I -> config Λs -> Prop :=
   | EAltBothFinal : ∀ j t i s,
-    both_final Φ t s -> ealt_sim_lfp' gfp j t i s
+    both_final ϕ t s -> ealt_sim_lfp' gfp j t i s
 
   | EAltSourceStuck : ∀ j t i s,
-    super_stuck Ps s -> ealt_sim_lfp' gfp j t i s
+    super_stuck Es s -> ealt_sim_lfp' gfp j t i s
 
   | EAltSourceSteps : ∀ j j' t i i' s s',
-    Ps ⊨ s ->> s' ->
+    Es ⊨ s ->> s' ->
     i' ⊏ i ->
     gfp  j' t i' s' ->
     ealt_sim_lfp' gfp j t i s
 
   | EAltTargetSteps : ∀ j t i s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' ->
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' ->
            ∃ j' i',
              j' ⊏ j ∧
              gfp j' t' i' s) ->
     ealt_sim_lfp' gfp j t i s
 
   | EAltBothSteps : ∀ j t i s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' ->
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' ->
            ∃ j' i' s' ,
-             Ps ⊨ s ->> s' ∧
+             Es ⊨ s ->> s' ∧
              gfp j' t' i' s') ->
     ealt_sim_lfp' gfp j t i s.
 
@@ -95,17 +94,17 @@ Section EAltSimDef.
       | j t i s Hstuck
       | j j'' t i i'' s Hstep Hlt Hs
       | j t i s Hprogress Ht
-      | j t i s Hprogress Hboth ]; intros j' i' Hleₜ Hleₛ.
+      | j t i s Hprogress Hboth ]; intros j' i' Hlet Hles.
     - now constructor.
     - now constructor.
-    - destruct Hleₛ as [ Hltₛ | -> ].
+    - destruct Hles as [ Hlts | -> ].
       + eapply EAltSourceSteps; try eassumption.
         eapply CIH.
         * eassumption.
         * reflexivity.
         * now left.
       + eapply EAltSourceSteps; eassumption.
-    - destruct Hleₜ as [ Hltₜ | -> ].
+    - destruct Hlet as [ Hltt | -> ].
       + apply EAltTargetSteps.
         { eassumption. }
         intros t' Hstep.

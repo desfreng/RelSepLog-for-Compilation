@@ -1,70 +1,67 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Language WfRel.
-From RSL.Logic Require Export BI.
-From RSL.Logic Require rPropDef.
+From RSL.Language Require Export Language.
+From RSL.Commons Require Export WfRel.
 
 From Coinduction Require Import all.
 
 Section FSimDef.
   Context {Λt Λs: lang}.
-  Context (J I: WfRel) (Pt: prog Λt) (Ps: prog Λs).
-
-  Abbreviation post := (value Λt -> value Λs -> memory -> memory -> Prop).
+  Context (J I: WfRel) (Et: genv Λt) (Es: genv Λs).
 
   Unset Elimination Schemes.
 
-  Inductive fsim_lfp'
-    (gfp: post -> config Λt -> J -> I -> config Λs -> Prop)
-    (ϕ : post) : config Λt -> J -> I -> config Λs -> Prop :=
+  Inductive free_step
+    (gfp: post Λt Λs -> config Λt -> J -> I -> config Λs -> Prop)
+    (ϕ : post Λt Λs) : config Λt -> J -> I -> config Λs -> Prop :=
   | FRelated : ∀ t j i s,
-    both_final ϕ t s -> fsim_lfp' gfp ϕ t j i s
+    both_final ϕ t s -> free_step gfp ϕ t j i s
 
   | FSourceStuck : ∀ t j i s,
-    super_stuck Ps s -> fsim_lfp' gfp ϕ t j i s
+    super_stuck Es s -> free_step gfp ϕ t j i s
 
   | FSourceSteps : ∀ t j i i' s s',
-    Ps ⊨ s ->> s' ->
-    fsim_lfp' gfp ϕ t j i' s' ->
-    fsim_lfp' gfp ϕ t j i s
+    Es ⊨ s ->> s' ->
+    free_step gfp ϕ t j i' s' ->
+    free_step gfp ϕ t j i s
 
   | FTargetSteps : ∀ t j i s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' -> ∃ j', fsim_lfp' gfp ϕ t' j' i s) ->
-    fsim_lfp' gfp ϕ t j i s
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' -> ∃ j', free_step gfp ϕ t' j' i s) ->
+    free_step gfp ϕ t j i s
 
   | FProgress : ∀ t j j' i i' s,
     j' ⊏ j ->
     i' ⊏ i ->
     gfp ϕ t j' i' s ->
-    fsim_lfp' gfp ϕ t j i s.
+    free_step gfp ϕ t j i s.
 
   Set Elimination Schemes.
 
   Section FSimInd.
-    Variable gfp : post -> config Λt -> J -> I -> config Λs -> Prop.
-    Variable ϕ : post.
+    Variable gfp : post Λt Λs -> config Λt -> J -> I -> config Λs -> Prop.
+    Variable ϕ : post Λt Λs.
     Variable P : config Λt -> J -> I -> config Λs -> Prop.
 
     Hypothesis HFinal:
       ∀ t j i s, both_final ϕ t s -> P t j i s.
 
     Hypothesis HStuck:
-      ∀ t j i s, super_stuck Ps s -> P t j i s.
+      ∀ t j i s, super_stuck Es s -> P t j i s.
 
     Hypothesis HSourceSteps:
       ∀ t j i i' s s',
-      Ps ⊨ s ->> s' ->
-      fsim_lfp' gfp ϕ t j i' s' ->
+      Es ⊨ s ->> s' ->
+      free_step gfp ϕ t j i' s' ->
       P t j i' s' ->
       P t j i s.
 
     Hypothesis HTargetSteps:
       ∀ t j i s,
-      can_progress Pt t ->
-      (∀ t', Pt ⊨ t ->> t' ->
+      can_progress Et t ->
+      (∀ t', Et ⊨ t ->> t' ->
              ∃ j',
-               fsim_lfp' gfp ϕ t' j' i s ∧
+               free_step gfp ϕ t' j' i s ∧
                P t' j' i s) ->
       P t j i s.
 
@@ -75,8 +72,8 @@ Section FSimDef.
       gfp ϕ t j' i' s ->
       P t j i s.
 
-    Lemma fsim_lfp'_ind: ∀ t j i s,
-      fsim_lfp' gfp ϕ t j i s -> P t j i s.
+    Lemma free_step_ind: ∀ t j i s,
+      free_step gfp ϕ t j i s -> P t j i s.
     Proof using HFinal HProgress HSourceSteps HStuck HTargetSteps.
       fix IH 5. intros t j i s Hsim.
       destruct Hsim as
@@ -97,9 +94,9 @@ Section FSimDef.
     Qed.
   End FSimInd.
 
-  Register Scheme fsim_lfp'_ind as ind_nodep for fsim_lfp'.
+  Register Scheme free_step_ind as ind_nodep for free_step.
 
-  Instance fsim_lfp'_mono : Proper (leq ==> leq) fsim_lfp'.
+  Instance free_step_mono : Proper (leq ==> leq) free_step.
   Proof using Type.
     intros gfp gfp' Hgfp ϕ t j i s Hsim.
     induction Hsim as [ | | | ? ? ? ? Hprogress Ht |  ? ? ? Hprogress Hboth].
@@ -113,17 +110,17 @@ Section FSimDef.
       apply Hgfp. eassumption.
   Qed.
 
-  Definition fsim_lfp := {| body := fsim_lfp' |}.
+  Definition fsim_lfp := {| body := free_step |}.
 
   Implicit Type (C: Chain fsim_lfp).
   Definition fsim := (gfp fsim_lfp).
 
   Lemma fsim_unroll ϕ t j i s :
-    gfp fsim_lfp ϕ t j i s -> fsim_lfp' (gfp fsim_lfp) ϕ t j i s.
+    gfp fsim_lfp ϕ t j i s -> free_step (gfp fsim_lfp) ϕ t j i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
 
   Lemma fsim_roll ϕ t j i s :
-    fsim_lfp' (gfp fsim_lfp) ϕ t j i s -> gfp fsim_lfp ϕ t j i s.
+    free_step (gfp fsim_lfp) ϕ t j i s -> gfp fsim_lfp ϕ t j i s.
   Proof using Type. apply (gfp_fp fsim_lfp). Qed.
   Lemma chain_mono (R: Chain fsim_lfp) ϕ t j i s:
     ∀ ϕ' j' i',
@@ -176,7 +173,7 @@ Section FSimDef.
   Qed.
 
   Lemma chain_stuck C ϕ t j i s :
-    super_stuck Ps s ->
+    super_stuck Es s ->
     elem C ϕ t j i s.
   Proof using Type.
     apply tower.
@@ -185,7 +182,7 @@ Section FSimDef.
   Qed.
 
   Lemma chain_source_step C ϕ t j i i' s s':
-    Ps ⊨ s ->> s' ->
+    Es ⊨ s ->> s' ->
     elem C ϕ t j i' s' ->
     elem C ϕ t j i s.
   Proof using Type.
@@ -198,8 +195,8 @@ Section FSimDef.
   Qed.
 
   Lemma chain_target_step C ϕ t j i s:
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' -> ∃ j', elem C ϕ t' j' i s) ->
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' -> ∃ j', elem C ϕ t' j' i s) ->
     elem C ϕ t j i s.
   Proof using Type.
     apply tower.

@@ -4,18 +4,18 @@ From iris.proofmode Require Import proofmode.
 (** Least and greatest fixpoint of a monotone function, *)
 (** defined entirely inside the logic. *)
 Class BiMonoPred {PROP: bi} {A: Type} (F : (A → PROP) → (A → PROP)) := {
-  bi_mono_pred Φ Ψ :
-    □ (∀ x, Φ x -∗ Ψ x) -∗ ∀ x, F Φ x -∗ F Ψ x;
+  bi_mono_pred ϕ Ψ :
+    □ (∀ x, ϕ x -∗ Ψ x) -∗ ∀ x, F ϕ x -∗ F Ψ x;
 }.
 
 Definition bi_least_fixpoint {PROP: bi} {A: Type}
   (F : (A → PROP) → (A → PROP)) (x : A) : PROP :=
-  tc_opaque (∀ Φ : A → PROP, □ (∀ x, F Φ x -∗ Φ x) -∗ Φ x)%I.
+  tc_opaque (∀ ϕ : A → PROP, □ (∀ x, F ϕ x -∗ ϕ x) -∗ ϕ x)%I.
 Global Arguments bi_least_fixpoint : simpl never.
 
 Definition bi_greatest_fixpoint {PROP: bi} {A: Type}
   (F : (A → PROP) → (A → PROP)) (x : A) : PROP :=
-  tc_opaque (∃ Φ : A → PROP, □ (∀ x, Φ x -∗ F Φ x) ∗ Φ x)%I.
+  tc_opaque (∃ ϕ : A → PROP, □ (∀ x, ϕ x -∗ F ϕ x) ∗ ϕ x)%I.
 Global Arguments bi_greatest_fixpoint : simpl never.
 
 Section least.
@@ -25,9 +25,9 @@ Section least.
     F (bi_least_fixpoint F) x ⊢ bi_least_fixpoint F x.
   Proof using Type*.
     unfold bi_least_fixpoint.
-    iIntros "HF" (Φ) "#Hincl".
+    iIntros "HF" (ϕ) "#Hincl".
     iApply "Hincl".
-    iApply (bi_mono_pred _ Φ with "[#] HF").
+    iApply (bi_mono_pred _ ϕ with "[#] HF").
     iIntros "!>" (y) "Hy". iApply ("Hy" with "[# //]").
   Qed.
 
@@ -49,10 +49,10 @@ Section least.
     The basic induction principle for least fixpoints: as inductive hypothesis,
     it allows to assume the statement to prove below exactly one application of [F].
    *)
-  Lemma least_fixpoint_iter (Φ : A → PROP) :
-    □ (∀ y, F Φ y -∗ Φ y) -∗ ∀ x, bi_least_fixpoint F x -∗ Φ x.
+  Lemma least_fixpoint_iter (ϕ : A → PROP) :
+    □ (∀ y, F ϕ y -∗ ϕ y) -∗ ∀ x, bi_least_fixpoint F x -∗ ϕ x.
   Proof using Type.
-    iIntros "#HΦ" (x) "HF".
+    iIntros "#Hϕ" (x) "HF".
     by iApply ("HF" with "[#]").
   Qed.
 
@@ -65,7 +65,7 @@ Section least.
   Qed.
 
   Lemma least_fixpoint_absorbing :
-    (∀ Φ, (∀ x, Absorbing (Φ x)) → (∀ x, Absorbing (F Φ x))) →
+    (∀ ϕ, (∀ x, Absorbing (ϕ x)) → (∀ x, Absorbing (F ϕ x))) →
     ∀ x, Absorbing (bi_least_fixpoint F x).
   Proof using Type*.
     intros ? x. rewrite /Absorbing /bi_absorbingly.
@@ -79,8 +79,8 @@ Section least.
   Qed.
 
  Lemma least_fixpoint_persistent_affine :
-    (∀ Φ, (∀ x, Affine (Φ x)) → (∀ x, Affine (F Φ x))) →
-    (∀ Φ, (∀ x, Persistent (Φ x)) → (∀ x, Persistent (F Φ x))) →
+    (∀ ϕ, (∀ x, Affine (ϕ x)) → (∀ x, Affine (F ϕ x))) →
+    (∀ ϕ, (∀ x, Persistent (ϕ x)) → (∀ x, Persistent (F ϕ x))) →
     ∀ x, Persistent (bi_least_fixpoint F x).
   Proof using Type*.
     intros ?? x. rewrite /Persistent -bi.intuitionistically_into_persistently_1.
@@ -91,8 +91,8 @@ Section least.
   Qed.
 
  Lemma least_fixpoint_persistent_absorbing :
-    (∀ Φ, (∀ x, Absorbing (Φ x)) → (∀ x, Absorbing (F Φ x))) →
-    (∀ Φ, (∀ x, Persistent (Φ x)) → (∀ x, Persistent (F Φ x))) →
+    (∀ ϕ, (∀ x, Absorbing (ϕ x)) → (∀ x, Absorbing (F ϕ x))) →
+    (∀ ϕ, (∀ x, Persistent (ϕ x)) → (∀ x, Persistent (F ϕ x))) →
     ∀ x, Persistent (bi_least_fixpoint F x).
   Proof using Type*.
     intros ??. pose proof (least_fixpoint_absorbing _). unfold Persistent.
@@ -106,7 +106,7 @@ End least.
 Lemma least_fixpoint_strong_mono {PROP: bi} {A: Type}
   (F : (A → PROP) → (A → PROP)) `{!BiMonoPred F}
     (G : (A → PROP) → (A → PROP)) `{!BiMonoPred G} :
-  □ (∀ Φ x, F Φ x -∗ G Φ x) -∗
+  □ (∀ ϕ x, F ϕ x -∗ G ϕ x) -∗
   ∀ x, bi_least_fixpoint F x -∗ bi_least_fixpoint G x.
 Proof.
   iIntros "#Hmon". iApply least_fixpoint_iter.
@@ -117,13 +117,13 @@ Qed.
 (** In addition to [least_fixpoint_iter], we provide two derived, stronger
 induction principles:
 
-- [least_fixpoint_ind] allows to assume [F (λ x, Φ x ∧ bi_least_fixpoint F x) y]
+- [least_fixpoint_ind] allows to assume [F (λ x, ϕ x ∧ bi_least_fixpoint F x) y]
   when proving the inductive step.
-  Intuitively, it does not only offer the induction hypothesis ([Φ] under an
+  Intuitively, it does not only offer the induction hypothesis ([ϕ] under an
   application of [F]), but also the induction predicate [bi_least_fixpoint F]
   itself (under an application of [F]).
 - [least_fixpoint_ind_wf] intuitively corresponds to a kind of well-founded
-  induction. It provides the hypothesis [F (bi_least_fixpoint (λ Ψ a, Φ a ∧ F Ψ a)) y]
+  induction. It provides the hypothesis [F (bi_least_fixpoint (λ Ψ a, ϕ a ∧ F Ψ a)) y]
   and thus allows to assume the induction hypothesis not just below one
   application of [F], but below any positive number (by unfolding the least
   fixpoint). The unfolding lemma [least_fixpoint_unfold] as well as
@@ -132,8 +132,8 @@ induction principles:
 Section least_ind.
   Context {PROP: bi} {A : Type} (F : (A → PROP) → (A → PROP)) `{!BiMonoPred F}.
 
-  Local Lemma Private_wf_pred_mono Φ :
-    BiMonoPred (λ (Ψ : A → PROP) (a : A), Φ a ∧ F Ψ a)%I.
+  Local Lemma Private_wf_pred_mono ϕ :
+    BiMonoPred (λ (Ψ : A → PROP) (a : A), ϕ a ∧ F Ψ a)%I.
   Proof using Type*.
     split.
     intros Ψ Ψ'.
@@ -143,9 +143,9 @@ Section least_ind.
   Qed.
   Local Existing Instance Private_wf_pred_mono.
 
-  Lemma least_fixpoint_ind_wf (Φ : A → PROP) :
-    □ (∀ y, F (bi_least_fixpoint (λ Ψ a, Φ a ∧ F Ψ a)) y -∗ Φ y) -∗
-    ∀ x, bi_least_fixpoint F x -∗ Φ x.
+  Lemma least_fixpoint_ind_wf (ϕ : A → PROP) :
+    □ (∀ y, F (bi_least_fixpoint (λ Ψ a, ϕ a ∧ F Ψ a)) y -∗ ϕ y) -∗
+    ∀ x, bi_least_fixpoint F x -∗ ϕ x.
   Proof using Type*.
     iIntros "#Hmon" (x). rewrite least_fixpoint_unfold. iIntros "Hx".
     iApply "Hmon". iApply (bi_mono_pred with "[] Hx").
@@ -154,9 +154,9 @@ Section least_ind.
     iSplit; last done. by iApply "Hmon".
   Qed.
 
-  Lemma least_fixpoint_ind (Φ : A → PROP) :
-    □ (∀ y, F (λ x, Φ x ∧ bi_least_fixpoint F x) y -∗ Φ y) -∗
-    ∀ x, bi_least_fixpoint F x -∗ Φ x.
+  Lemma least_fixpoint_ind (ϕ : A → PROP) :
+    □ (∀ y, F (λ x, ϕ x ∧ bi_least_fixpoint F x) y -∗ ϕ y) -∗
+    ∀ x, bi_least_fixpoint F x -∗ ϕ x.
   Proof using Type*.
     iIntros "#Hmon".
     iApply least_fixpoint_ind_wf.
@@ -177,9 +177,9 @@ Section greatest.
   Lemma greatest_fixpoint_unfold_1 x :
     bi_greatest_fixpoint F x ⊢ F (bi_greatest_fixpoint F) x.
   Proof using Type*.
-    iDestruct 1 as (Φ) "[#Hincl HΦ]".
-    iApply (bi_mono_pred Φ (bi_greatest_fixpoint F) with "[#]").
-    - iIntros "!>" (y) "Hy". iExists Φ. auto.
+    iDestruct 1 as (ϕ) "[#Hincl Hϕ]".
+    iApply (bi_mono_pred ϕ (bi_greatest_fixpoint F) with "[#]").
+    - iIntros "!>" (y) "Hy". iExists ϕ. auto.
     - by iApply "Hincl".
   Qed.
 
@@ -201,12 +201,12 @@ Section greatest.
     The following lemma provides basic coinduction capabilities,
     by requiring to reestablish the coinduction hypothesis after exactly one step.
    *)
-  Lemma greatest_fixpoint_coiter (Φ : A → PROP) :
-    □ (∀ y, Φ y -∗ F Φ y) -∗ ∀ x, Φ x -∗ bi_greatest_fixpoint F x.
-  Proof using Type. iIntros "#HΦ" (x) "Hx". iExists (Φ). auto. Qed.
+  Lemma greatest_fixpoint_coiter (ϕ : A → PROP) :
+    □ (∀ y, ϕ y -∗ F ϕ y) -∗ ∀ x, ϕ x -∗ bi_greatest_fixpoint F x.
+  Proof using Type. iIntros "#Hϕ" (x) "Hx". iExists (ϕ). auto. Qed.
 
   Lemma greatest_fixpoint_absorbing :
-    (∀ Φ, (∀ x, Absorbing (Φ x)) → (∀ x, Absorbing (F Φ x))) →
+    (∀ ϕ, (∀ x, Absorbing (ϕ x)) → (∀ x, Absorbing (F ϕ x))) →
     ∀ x, Absorbing (bi_greatest_fixpoint F x).
   Proof using Type*.
     intros ?. rewrite /Absorbing.
@@ -221,7 +221,7 @@ End greatest.
 Lemma greatest_fixpoint_strong_mono {PROP: bi} {A: Type}
   (F : (A → PROP) → (A → PROP)) `{!BiMonoPred F}
   (G : (A → PROP) → (A → PROP)) `{!BiMonoPred G} :
-  □ (∀ Φ x, F Φ x -∗ G Φ x) -∗
+  □ (∀ ϕ x, F ϕ x -∗ G ϕ x) -∗
   ∀ x, bi_greatest_fixpoint F x -∗ bi_greatest_fixpoint G x.
 Proof using Type*.
   iIntros "#Hmon". iApply greatest_fixpoint_coiter.
@@ -233,16 +233,16 @@ Qed.
 coinduction principles:
 
 - [greatest_fixpoint_coind] requires to prove
-  [F (λ x, Φ x ∨ bi_greatest_fixpoint F x) y] in the coinductive step instead of
-  [F Φ y] and thus instead allows to prove the original fixpoint again, after
+  [F (λ x, ϕ x ∨ bi_greatest_fixpoint F x) y] in the coinductive step instead of
+  [F ϕ y] and thus instead allows to prove the original fixpoint again, after
   taking one step.
 - [greatest_fixpoint_paco] allows for so-called parameterized coinduction, a
-  stronger coinduction principle, where [F (bi_greatest_fixpoint (λ Ψ a, Φ a ∨ F Ψ a)) y]
+  stronger coinduction principle, where [F (bi_greatest_fixpoint (λ Ψ a, ϕ a ∨ F Ψ a)) y]
   needs to be established in the coinductive step. It allows to prove the
-  hypothesis [Φ] not just after one step, but after any positive number of
+  hypothesis [ϕ] not just after one step, but after any positive number of
   unfoldings of the greatest fixpoint. This encodes a way of accumulating
   "knowledge" in the coinduction hypothesis: if you return to the "initial
-  point" [Φ] of the coinduction after some number of unfoldings (not just one),
+  point" [ϕ] of the coinduction after some number of unfoldings (not just one),
   the proof is done. (Interestingly, this is the dual to [least_fixpoint_ind_wf]).
   The unfolding lemma [greatest_fixpoint_unfold] and
   [greatest_fixpoint_strong_mono] may be useful when using this lemma.
@@ -256,22 +256,22 @@ Suppose that [F] defines a coinductive simulation relation, e.g.,
 and [sim e_t e_s := bi_greatest_fixpoint F].
 Suppose you want to show a simulation of two loops,
   [sim (while ...) (while ...)],
-i.e., [Φ '(e_t, e_s) := e_t = while ... ∧ e_s = while ...].
+i.e., [ϕ '(e_t, e_s) := e_t = while ... ∧ e_s = while ...].
 Then the standard coinduction principle [greatest_fixpoint_coiter] requires to
-establish the coinduction hypothesis [Φ] after precisely one unfolding of [sim],
+establish the coinduction hypothesis [ϕ] after precisely one unfolding of [sim],
 which is clearly not strong enough if the loop takes multiple steps of
 computation per iteration. But [greatest_fixpoint_paco] allows to establish a
-fixpoint to which [Φ] has been added as a disjunct. This fixpoint can be
+fixpoint to which [ϕ] has been added as a disjunct. This fixpoint can be
 unfolded arbitrarily many times, allowing to establish the coinduction
 hypothesis after any number of steps. This enables to take multiple simulation
-steps, before closing the coinduction by establishing the hypothesis [Φ]
+steps, before closing the coinduction by establishing the hypothesis [ϕ]
 again. *)
 
 Section greatest_coind.
   Context {PROP: bi} {A:Type} (F : (A → PROP) → (A → PROP)) `{!BiMonoPred F}.
 
-  Local Lemma Private_paco_mono Φ :
-    BiMonoPred (λ (Ψ : A → PROP) (a : A), Φ a ∨ F Ψ a)%I.
+  Local Lemma Private_paco_mono ϕ :
+    BiMonoPred (λ (Ψ : A → PROP) (a : A), ϕ a ∨ F Ψ a)%I.
   Proof using Type*.
     split.
     intros Ψ Ψ'. iIntros "#Mon" (x) "[H1|H2]"; first by iLeft.
@@ -279,20 +279,20 @@ Section greatest_coind.
   Qed.
   Local Existing Instance Private_paco_mono.
 
-  Lemma greatest_fixpoint_paco (Φ : A → PROP) :
-    □ (∀ y, Φ y -∗ F (bi_greatest_fixpoint (λ Ψ a, Φ a ∨ F Ψ a)) y) -∗
-    ∀ x, Φ x -∗ bi_greatest_fixpoint F x.
+  Lemma greatest_fixpoint_paco (ϕ : A → PROP) :
+    □ (∀ y, ϕ y -∗ F (bi_greatest_fixpoint (λ Ψ a, ϕ a ∨ F Ψ a)) y) -∗
+    ∀ x, ϕ x -∗ bi_greatest_fixpoint F x.
   Proof using Type*.
-    iIntros "#Hmon" (x) "HΦ". iDestruct ("Hmon" with "HΦ") as "HF".
+    iIntros "#Hmon" (x) "Hϕ". iDestruct ("Hmon" with "Hϕ") as "HF".
     rewrite greatest_fixpoint_unfold. iApply (bi_mono_pred with "[] HF").
     iIntros "!>" (y) "HG". iApply (greatest_fixpoint_coiter with "[] HG").
     iIntros "!>" (z) "Hf". rewrite greatest_fixpoint_unfold.
-    iDestruct "Hf" as "[HΦ|$]". by iApply "Hmon".
+    iDestruct "Hf" as "[Hϕ|$]". by iApply "Hmon".
   Qed.
 
-  Lemma greatest_fixpoint_coind (Φ : A → PROP) :
-    □ (∀ y, Φ y -∗ F (λ x, Φ x ∨ bi_greatest_fixpoint F x) y) -∗
-    ∀ x, Φ x -∗ bi_greatest_fixpoint F x.
+  Lemma greatest_fixpoint_coind (ϕ : A → PROP) :
+    □ (∀ y, ϕ y -∗ F (λ x, ϕ x ∨ bi_greatest_fixpoint F x) y) -∗
+    ∀ x, ϕ x -∗ bi_greatest_fixpoint F x.
   Proof using Type*.
     iIntros "#Ha". iApply greatest_fixpoint_paco. iModIntro.
     iIntros (y) "Hy". iSpecialize ("Ha" with "Hy").

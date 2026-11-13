@@ -12,8 +12,8 @@ Import RTLNotations.
 Section SyncRulesDef.
   Let Λt : lang := rtl_lang.
   Let Λs : lang := rtl_lang.
-  Context {Pt : prog Λt} {Ps : prog Λs}.
-  Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
+  Context {Et : genv Λt} {Es : genv Λs}.
+  Context {C : Chain (fsim_lfp WfNat WfNat Et Es)}.
 
   Implicit Types (ct : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank).
   Implicit Types (j i : WfNat).
@@ -22,7 +22,7 @@ Section SyncRulesDef.
 
   Lemma both_ret j i Q vt vs :
     Q vt vs -∗
-    [Pt, Ps, C] ([], ReturnState vt) <{j, i}= ([], ReturnState vs) {{ Q }}.
+    [Et, Es, C] ([], ReturnState vt) <{j, i}= ([], ReturnState vs) {{ Q }}.
   Proof using Type. by iApply (final). Qed.
 
   Lemma both_load ct ft pct ρt j i cs fs pcs ρs Q
@@ -36,11 +36,11 @@ Section SyncRulesDef.
     (∀ vt vs,
        ⌜same_val I vt vs⌟ -∗
        mem_inj I E -∗
-       [Pt, Ps, C] (ct, State ft pct' (⟦dstt ⇐ vt⟧ρt))
+       [Et, Es, C] (ct, State ft pct' (⟦dstt ⇐ vt⟧ρt))
             <{1+j, 1+i}=
            (cs, State fs pcs' (⟦dsts ⇐ vs⟧ρs)) {{ Q }}) -∗
     mem_inj I E -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     iIntros (Hpct Hpcs Haddrt Haddrs Hsame Hs) "Hsim Hinj".
     iApply (source_load_exploit with "[Hsim] Hinj"); eauto.
@@ -72,11 +72,11 @@ Section SyncRulesDef.
     same_val I valt vals ->
     (∀ ls, addrs = VPtr ls -> ls ∉ sdom E) ->
     (mem_inj I E -∗
-       [Pt, Ps, C] (ct, State ft pct' ρt)
+       [Et, Es, C] (ct, State ft pct' ρt)
             <{1+j, 1+i}=
            (cs, State fs pcs' ρs) {{ Q }}) -∗
     mem_inj I E -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     iIntros (Hpct Hpcs Haddrt Haddrs Hvalt Hvals HsameAddr HsameVal HnE) "Hsim Hinj".
     iApply (source_store_exploit with "[Hsim] Hinj"); eauto.
@@ -105,11 +105,11 @@ Section SyncRulesDef.
        lt →ₜ vt -∗
        ls →ₛ vs -∗
        mem_inj I E -∗
-       [Pt, Ps, C] (ct, State ft pct' (⟦dstt ⇐ VPtr lt⟧ρt))
+       [Et, Es, C] (ct, State ft pct' (⟦dstt ⇐ VPtr lt⟧ρt))
                     <{1+j, 1+i}=
                    (cs, State fs pcs' (⟦dsts ⇐ VPtr ls⟧ρs)) {{ Q }}) -∗
     mem_inj I E -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     iIntros (Hpct Hpcs) "Hsim Hinj".
     iApply (source_alloc); eauto.
@@ -129,11 +129,11 @@ Section SyncRulesDef.
     same_val I addrt addrs ->
     (∀ ls, addrs = VPtr ls -> ls ∉ sdom E) ->
     (mem_inj I E -∗
-     [Pt, Ps, C] (ct, State ft pct' ρt)
+     [Et, Es, C] (ct, State ft pct' ρt)
                   <{1+j, 1+i}=
                  (cs, State fs pcs' ρs) {{ Q }}) -∗
     mem_inj I E -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     iIntros (Hpct Hpcs Hsrct Hsrcs Hrel HnE) "Hsim Hinj".
     iApply (source_free_exploit with "[Hsim] Hinj"); eauto.
@@ -156,20 +156,20 @@ Section SyncRulesDef.
     pct' pcs' dstt dsts fnamet fnames regt regs valt vals fnt fns:
     ft@pct is <<{ dstt := @call fnamet regt -> pct' }>> ->
     fs@pcs is <<{ dsts := @call fnames regs -> pcs' }>> ->
-    find_fun Pt fnamet = Some fnt ->
-    find_fun Ps fnames = Some fns ->
+    find_fun Et fnamet = Some fnt ->
+    find_fun Es fnames = Some fns ->
     ρt @ regt ⇒ valt ->
     ρs @ regs ⇒ vals ->
-    [Pt, Ps, C] {{ Pre }} fnt <{j, i}= fns {{ Post }} -∗
+    [Et, Es, C] {{ Pre }} fnt <{j, i}= fns {{ Post }} -∗
     Pre valt vals -∗
     (∀ j' i' vt vs,
        ⌜j < j'⌟ -∗
        ⌜i < i'⌟ -∗
        Post vt vs -∗
-       [Pt, Ps, C] (ct, State ft pct' (⟦dstt ⇐ vt⟧ρt))
+       [Et, Es, C] (ct, State ft pct' (⟦dstt ⇐ vt⟧ρt))
          <{j', i'}=
        (cs, State fs pcs' (⟦dsts ⇐ vs⟧ρs)) {{ Q }}) -∗
-    [Pt, Ps, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] (ct, State ft pct ρt) <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpct Hpcs Hfnt Hfns Hvalt Hvals.
     unfold hoare, sim. unseal.

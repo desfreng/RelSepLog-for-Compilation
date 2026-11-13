@@ -8,8 +8,8 @@ Import RTLNotations.
 Section TargetRulesDef.
   Let Λt : lang := rtl_lang.
   Context {Λs : lang}.
-  Context {Pt : prog Λt} {Ps : prog Λs}.
-  Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
+  Context {Et : genv Λt} {Es : genv Λs}.
+  Context {C : Chain (fsim_lfp WfNat WfNat Et Es)}.
 
   Context (σt : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank)
     (j i : WfNat) (ss : state Λs) (Q : value Λt -> value Λs -> rProp).
@@ -24,29 +24,29 @@ Section TargetRulesDef.
 
   Lemma target_nop pc:
     ft@pct is <<{ nop -> pc }>> ->
-    [Pt, Ps, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_ret r v:
     ft@pct is <<{ ret r }>> ->
     ρt@r ⇒ v ->
-    [Pt, Ps, C] (σt, ReturnState v) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, ReturnState v) <{1+j, i}= ss {{ Q }} -∗
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_op pc dst op regs args v:
     ft@pct is <<{ dst := @op regs -> pc }>> ->
     ρt @ regs ⇒ args ->
     eval_op op args = Some v ->
-    [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_random pc dst:
     ft@pct is <<{ dst := random () -> pc }>> ->
-    (∀ v, [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ VInt v⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    (∀ v, [Et, Es, C] (σt, State ft pc (⟦dst ⇐ VInt v⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc. unfold sim. unseal.
     intros ? ? [-> ->] ? ? _ _ Hsim.
@@ -62,9 +62,9 @@ Section TargetRulesDef.
     ft@pct is <<{ dst := !src -> pc }>> ->
     ρt @ src ⇒ VPtr l ->
     (l →ₜ v -∗
-     [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
+     [Et, Es, C] (σt, State ft pc (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
     l →ₜ v -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc Haddr. unfold sim. unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim.
@@ -96,9 +96,9 @@ Section TargetRulesDef.
     ρt @ dst ⇒ VPtr l ->
     ρt @ src ⇒ v ->
     (l →ₜ v -∗
-     [Pt, Ps, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
+     [Et, Es, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
     l →ₜ old -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc Haddr Hv. unfold sim. unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim.
@@ -135,8 +135,8 @@ Section TargetRulesDef.
     ft@pct is <<{ dst := alloc () -> pc }>> ->
     (∀ l v,
        l →ₜ v -∗
-       [Pt, Ps, C] (σt, State ft pc (⟦dst ⇐ VPtr l⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+       [Et, Es, C] (σt, State ft pc (⟦dst ⇐ VPtr l⟧ρt)) <{1+j, i}= ss {{ Q }}) -∗
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc. unfold sim. unseal.
     intros ? ? [-> ->] mt ms _ _ Hsim.
@@ -173,9 +173,9 @@ Section TargetRulesDef.
     ft@pct is <<{ free src -> pc }>> ->
     ρt @ src ⇒ VPtr l ->
     (freeₜ l -∗
-       [Pt, Ps, C]  (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
+       [Et, Es, C]  (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }}) -∗
     l →ₜ v -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type.
     intros Hpc Hsrc. unfold sim. unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim.
@@ -215,30 +215,30 @@ Section TargetRulesDef.
     ft@pct is <<{ if reg then goto pcT else goto pcF }>> ->
     ρt @ reg ⇒ VBool b ->
     let pc := if b then pcT else pcF in
-    [Pt, Ps, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, State ft pc ρt) <{1+j, i}= ss {{ Q }} -∗
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_call dst sig args pc' fn vals st:
     ft@pct is <<{ dst := @call sig args -> pc' }>> ->
-    find_fun Pt sig = Some fn ->
+    find_fun Et sig = Some fn ->
     ρt@args ⇒ vals ->
     st = Stackframe dst ft pc' ρt ->
-    [Pt, Ps, C] (st :: σt, CallState fn vals) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (st :: σt, CallState fn vals) <{1+j, i}= ss {{ Q }} -∗
+    [Et, Es, C] (σt, State ft pct ρt) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma target_callstate args:
     length args = length (rtl_fn_regs ft) ->
     ρt = init_regs (rtl_fn_regs ft) args ->
     pct = rtl_fn_entrypoint ft ->
-    [Pt, Ps, C] (σt, State ft pct ρt) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (σt, CallState ft args) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, State ft pct ρt) <{1+j, i}= ss {{ Q }} -∗
+    [Et, Es, C] (σt, CallState ft args) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
   Lemma source_retstate fn dst v:
-    [Pt, Ps, C] (σt, State fn pct (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
-    [Pt, Ps, C] (Stackframe dst fn pct ρt :: σt, ReturnState v) <{j, i}= ss {{ Q }}.
+    [Et, Es, C] (σt, State fn pct (⟦dst ⇐ v⟧ρt)) <{1+j, i}= ss {{ Q }} -∗
+    [Et, Es, C] (Stackframe dst fn pct ρt :: σt, ReturnState v) <{j, i}= ss {{ Q }}.
   Proof using Type. by target_step. Qed.
 
 End TargetRulesDef.

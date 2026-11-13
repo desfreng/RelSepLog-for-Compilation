@@ -2,23 +2,21 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Commons.OrdTree.
-
-From RSL Require Import Simulations.FreeSim.
-From RSL Require Import Simulations.Equiv.GSim.
+From RSL.Commons Require Import OrdTree.
+From RSL.Simulations Require Export Free Equiv.GSim.
 
 Section PROOF.
   Context {Λt Λs: lang}.
   Context (J I: WfRel).
-  Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
+  Context (Et: genv Λt) (Es: genv Λs).
+  Context (ϕ: post Λt Λs).
 
   Definition StatePair := (config Λt * config Λs)%type.
 
   Lemma fsim_implies_gsim: ∀ j t i s,
-    fsim J I Pt Ps Φ t j i s ->
+    fsim J I Et Es ϕ t j i s ->
     ∃ b a,
-      gsim J I (WfOrdTree StatePair) Pt Ps Φ j b t i a s.
+      gsim J I (WfOrdTree StatePair) Et Es ϕ j b t i a s.
   Proof using Type.
     intros t j i s Hsim.
     apply fsim_unroll in Hsim.
@@ -39,13 +37,13 @@ Section PROOF.
       + eassumption.
     - pose (P := fun a: StatePair =>
                    let (t', s') := a in
-                   s' = s ∧ Pt ⊨ t ->> t').
+                   s' = s ∧ Et ⊨ t ->> t').
 
       pose (R := fun (a: StatePair) (o: ord_tree StatePair) =>
                    let (t', s') := a in
-                   s' = s ∧ Pt ⊨ t ->> t' ∧
+                   s' = s ∧ Et ⊨ t ->> t' ∧
                    ∃ (j: J) a,
-                     gsim _ _ _ Pt Ps Φ j o t' i a s).
+                     gsim _ _ _ Et Es ϕ j o t' i a s).
 
       assert (Hord: ∀ a, P a -> ∃ o, R a o).
       { intros [t' s'] [Heq Hstep]. subst s'.
@@ -57,10 +55,10 @@ Section PROOF.
       pose (R2 := fun (a: StatePair) (o: ord_tree StatePair) =>
                     let (t', s') := a in
                     s' = s ∧
-                    Pt ⊨ t ->> t' ∧
+                    Et ⊨ t ->> t' ∧
                     ∃ (j': J) b',
                        b' ⊏ b ∧
-                      gsim _ _ _ Pt Ps Φ j' b' t' i o s).
+                      gsim _ _ _ Et Es ϕ j' b' t' i o s).
       assert (Hord2: ∀ a, P a -> ∃ o, R2 a o).
       { intros [t' s'] [Heq Hstep]. subst s'.
         destruct (Hjoin1 (t', s)) as [b' [Hrw Hlt]].

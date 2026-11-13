@@ -4,7 +4,7 @@ From RSL.Logic Require Import Logic.
 From RSL.RTL Require Import SimRules.
 
 Section identity.
-  Context (Pt Ps : prog rtl_lang).
+  Context (Et Es : genv rtl_lang).
 
   Definition fun_equivalent (f1 f2: rtl_function) :=
     rtl_fn_name f1 = rtl_fn_name f2 ∧
@@ -20,8 +20,8 @@ Section identity.
 
   Hypothesis fun_incl:
     ∀ fn fs,
-    find_fun Ps fn = Some fs ->
-    ∃ ft, find_fun Pt fn = Some ft ∧ fun_equivalent ft fs.
+    find_fun Es fn = Some fs ->
+    ∃ ft, find_fun Et fn = Some ft ∧ fun_equivalent ft fs.
 
   Definition id_sim_inv : SInv rtl_lang rtl_lang WfNat WfNat :=
     fun st j i ss ϕ =>
@@ -38,7 +38,7 @@ Section identity.
     fun_equivalent ft fs ->
     (∀ r, ρt @ r <{ I }> ρs @ r) ->
     mem_inj I ∅ -∗
-    [Pt, Ps, C] ([], State ft pc ρt) <{ j, i }= ([], State fs pc ρs) {{ samer I }}.
+    [Et, Es, C] ([], State ft pc ρt) <{ j, i }= ([], State fs pc ρs) {{ samer I }}.
   Proof using fun_incl.
     iIntros (Heq Hsame) "Hinj".
     iApply (coind id_sim_inv).
@@ -129,7 +129,7 @@ Section identity.
         iApply "CIH"; try (iPureIntro; simpl; lia).
         iExists I, ft, fs, _, _, _. iFrame. iPureIntro. by split_and!.
 
-      - destruct (find_fun Ps fname) as [fns|] eqn:Hfns; last by iApply (source_call_fail).
+      - destruct (find_fun Es fname) as [fns|] eqn:Hfns; last by iApply (source_call_fail).
         destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
         destruct (fun_incl _ _ Hfns) as (fnt & Hfnt & Heq).
         iApply (both_call (same_args I) (samer I) with "[] [Hinj]");
@@ -189,7 +189,7 @@ Section identity.
 
   Lemma hoare_refl (j i: nat) C ft fs I :
     fun_equivalent ft fs ->
-    ⊢ [Pt, Ps, C] {{ same_args I }} ft <{j, i}= fs {{ samer I }}.
+    ⊢ [Et, Es, C] {{ same_args I }} ft <{j, i}= fs {{ samer I }}.
   Proof using fun_incl.
     intros Heq.
     iIntros "!>" (valt vals) "[%Harg Hinj]".

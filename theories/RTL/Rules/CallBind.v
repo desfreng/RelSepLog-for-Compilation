@@ -3,12 +3,13 @@ From RSL Require Import Prelude.
 From Coinduction Require Import tower.
 
 From RSL.RTL Require Import RTL Semantics.
-From RSL.Simulations Require Import FreeSim.
+From RSL.Simulations Require Import Free.
+From RSL.Logic Require Import BI.
 
 Section CallBindLemma.
   Context {I J: WfRel}.
-  Context {Pt Ps : prog rtl_lang}.
-  Context {C: Chain (fsim_lfp J I Pt Ps)}.
+  Context {Et Es : genv rtl_lang}.
+  Context {C: Chain (fsim_lfp J I Et Es)}.
 
   Context (ct : list stackframe) (ft : rtl_function) (pct : node) (ρt : regbank).
   Context (j: J) (i: I).

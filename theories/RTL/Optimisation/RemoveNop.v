@@ -83,8 +83,8 @@ Lemma remove_nop_find_fun {Ps} d fn f:
 Proof using Type. by apply opt_fun_list. Qed.
 
 Section remove_nop.
-  Context (Ps : prog rtl_lang) (depth : nat).
-  Let Pt : prog rtl_lang := remove_nop depth Ps.
+  Context (Es : genv rtl_lang) (depth : nat).
+  Let Et : genv rtl_lang := remove_nop depth Es.
 
   Definition remove_nop_sim_inv : SInv rtl_lang rtl_lang WfNat WfNat :=
     fun st j i ss ϕ =>
@@ -98,7 +98,7 @@ Section remove_nop.
       )%I.
 
   Lemma remove_nop_soundness C f I :
-    ⊢ [Pt, Ps, C] {{ same_args I }} (remove_nop_fun depth f) <{0, 0}= f {{ samer I }}.
+    ⊢ [Et, Es, C] {{ same_args I }} (remove_nop_fun depth f) <{0, 0}= f {{ samer I }}.
   Proof using Type.
     iIntros "!>" (valt vals) "[%Harg Hinj]".
     iApply (source_callstate_exploit).
@@ -195,7 +195,7 @@ Section remove_nop.
           iApply "CIH"; try (iPureIntro; simpl; lia).
           iExists I, f, _, _, _, _, _. iFrame. iPureIntro. by split_and!.
 
-        - destruct (find_fun Ps fname) as [fn |] eqn:Hfn; last by iApply (source_call_fail).
+        - destruct (find_fun Es fname) as [fn |] eqn:Hfn; last by iApply (source_call_fail).
           destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
           iApply (both_call (same_args I) (samer I) with "[] [Hinj]").
           { simpl. rewrite lookup_fmap Hi. by simpl. } all: eauto.
@@ -334,7 +334,7 @@ Section remove_nop.
           iApply "CIH"; try (iPureIntro; simpl; lia).
           iExists I, f, _, _, _, _, _. iFrame. iPureIntro. by split_and!.
 
-        - destruct (find_fun Ps fname) as [fn |] eqn:Hfn; last by iApply (source_call_fail).
+        - destruct (find_fun Es fname) as [fn |] eqn:Hfn; last by iApply (source_call_fail).
           destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
           iApply (both_call (same_args I) (samer I) with "[] [Hinj]");
             try done.

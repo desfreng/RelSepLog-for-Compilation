@@ -258,6 +258,8 @@ Section LexProdWfRel.
     |}.
 End LexProdWfRel.
 
+Arguments ord_pair {_ _} _ _.
+
 Section UnionWfRel.
   Context (W X: WfRel).
 
@@ -273,3 +275,123 @@ Section UnionWfRel.
       trans := le_AsB_trans;
     |}.
 End UnionWfRel.
+
+Section SumWfRel.
+  Context (W X: WfRel).
+
+  Variant sum_prod : Type := sum_pair (w: W) (x: X).
+
+  Variant sum_lt_ : relation sum_prod :=
+  | sum_lt_left' : ∀ w1 w2 x, w1 ⊏ w2 -> sum_lt_ (sum_pair w1 x) (sum_pair w2 x)
+  | sum_lt_right' : ∀ w x1 x2, x1 ⊏ x2 -> sum_lt_ (sum_pair w x1) (sum_pair w x2).
+
+  Local Lemma sum_lt__wf : well_founded sum_lt_.
+  Proof using Type.
+    intros [w x]. revert x.
+    induction w as [w IHw] using (well_founded_induction wf).
+    intros x.
+    induction x as [x IHx] using (well_founded_induction wf).
+    constructor.
+    intros [w' x'] H. inv H.
+    - by apply IHw.
+    - by apply IHx.
+  Qed.
+
+  Definition sum_lt : relation sum_prod := clos_trans _ sum_lt_.
+
+  Local Lemma sum_lt_trans : Transitive sum_lt.
+  Proof using Type. by econstructor. Qed.
+
+  Lemma sum_lt_left_eq w1 w2 x :
+    w1 ⊏ w2 -> sum_lt (sum_pair w1 x) (sum_pair w2 x).
+  Proof using Type. intros Hw. by do 2 constructor. Qed.
+
+  Lemma sum_lt_right_eq w x1 x2 :
+    x1 ⊏ x2 -> sum_lt (sum_pair w x1) (sum_pair w x2).
+  Proof using Type. intros Hx. by do 2 constructor. Qed.
+
+  Lemma sum_lt_diag w1 w2 x1 x2 :
+    w1 ⊏ w2 ->
+    x1 ⊏ x2 ->
+    sum_lt (sum_pair w1 x1) (sum_pair w2 x2).
+  Proof using Type.
+    intros Hw Hx. eapply sum_lt_trans; by do 2 constructor.
+  Qed.
+
+  Lemma sum_lt_left w1 w2 x1 x2 :
+    w1 ⊏ w2 ->
+    x1 ⊑ x2 ->
+    sum_lt (sum_pair w1 x1) (sum_pair w2 x2).
+  Proof using Type.
+    intros Hw [Hx | ->]; last by do 2 constructor.
+    eapply sum_lt_trans; by do 2 constructor.
+  Qed.
+
+  Lemma sum_lt_right w1 w2 x1 x2 :
+    x1 ⊏ x2 ->
+    w1 ⊑ w2 ->
+    sum_lt (sum_pair w1 x1) (sum_pair w2 x2).
+  Proof using Type.
+    intros Hx [Hw | ->]; last by do 2 constructor.
+    eapply sum_lt_trans; by do 2 constructor.
+  Qed.
+
+  Canonical Structure WfSum : WfRel :=
+    {|
+      wf := wf_clos_trans _ _ sum_lt__wf;
+      trans := sum_lt_trans;
+    |}.
+End SumWfRel.
+
+Section Doubled.
+  Context (W: WfRel).
+
+  Variant doubled : Type :=
+    | Low (w: W)
+    | High (w: W).
+
+  (* Isomorphic to lexprod of W and WfBool *)
+  Variant doubled_lt : relation doubled :=
+    | LL_lt : ∀ w1 w2, w1 ⊏ w2 → doubled_lt (Low w1)  (Low w2)
+    | LH_lt : ∀ w1 w2, w1 ⊏ w2 → doubled_lt (Low w1)  (High w2)
+    | HL_lt : ∀ w1 w2, w1 ⊏ w2 → doubled_lt (High w1) (Low w2)
+    | HH_lt : ∀ w1 w2, w1 ⊏ w2 → doubled_lt (High w1) (High w2)
+    | Low_High : ∀ w, doubled_lt (Low w) (High w).
+
+  Local Lemma doubled_lt_wf : well_founded doubled_lt.
+  Proof using Type.
+    assert (∀ w, Acc doubled_lt (Low w) ∧ Acc doubled_lt (High w)) as H.
+    {
+      intros w.
+      induction w as [w IHw] using (well_founded_induction wf).
+      assert (Acc doubled_lt (Low w)) as HLow.
+      {
+        constructor. intros y Hy. inv Hy; by apply IHw.
+      }
+      split; [exact HLow|].
+      constructor. intros y Hy. inv Hy.
+      - by apply IHw.
+      - by apply IHw.
+      - by apply HLow.
+    }
+    intros [w|w]; apply H.
+  Qed.
+
+  Local Lemma doubled_lt_trans : Transitive doubled_lt.
+  Proof using Type.
+    intros x y z H1 H2. inv H1; inv H2;
+      constructor; eassumption || (etransitivity; eassumption).
+  Qed.
+
+  Canonical Structure WfDoubled : WfRel :=
+    {|
+      wf := doubled_lt_wf;
+      trans := doubled_lt_trans;
+    |}.
+
+  Lemma low_high w : Low w ⊏ High w.
+  Proof using Type. by constructor. Qed.
+End Doubled.
+
+Arguments Low {_} _.
+Arguments High {_} _.

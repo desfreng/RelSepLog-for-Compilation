@@ -1,6 +1,6 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Language.
+From RSL.Language Require Export Language.
 
 From RSL.RTL Require Export RTL Notations.
 
@@ -108,62 +108,23 @@ Definition is_rtl_final (s: rtl_state) : option (val) :=
 
 Lemma rtl_final_no_step s v:
   is_rtl_final s = Some v ->
-  ∀ m p s', ~rtl_step p (s, m) s'.
+  ∀ p m s', ~rtl_step p (s, m) s'.
 Proof.
   intros H ? ? ? Hstep.
   destruct s as [[] []]; inv H. inv Hstep.
 Qed.
 
-Lemma rtl_memory_mono p s m s' m':
-  rtl_step p (s, m) (s', m') ->
-  dom m ⊆ dom m'.
-Proof.
-  intros Hstep.
-  inv Hstep as [ | | | | | | ? ? ? ? ? ? ? ? ? ? ? ? Hm | | | | | ]; try done.
-  - by erewrite update_at_dom.
-  - apply alloc_at_dom in Hm as <-.
-    by set_solver.
-  - by erewrite update_at_dom.
-Qed.
-
-Lemma can_step_mono p s m t mm:
-  rtl_step p (s, m) t ->
-  ∃ t, rtl_step p (s, m ∪ mm) t.
-Proof.
-  intros H. inv H.
-  - eexists. by eapply exec_Inop.
-  - eexists. by eapply exec_Iret.
-  - eexists. by eapply exec_Iop.
-  - eexists. by eapply exec_Irand with (i := inhabitant).
-  - eexists.
-    eapply exec_Iload; try done.
-    by apply get_at_mono.
-  - eexists.
-    eapply exec_Istore; try done.
-    by apply update_at_mono.
-  - destruct (can_alloc (m ∪ mm) inhabitant) as (l' & m'' & Hm).
-    by do 2 econstructor.
-  - eexists.
-    eapply exec_Ifree; try done.
-    by apply update_at_mono.
-  - eexists. by eapply exec_Icond.
-  - eexists. by eapply exec_Icall.
-  - eexists. by eapply exec_function.
-  - eexists. by eapply exec_return.
-Qed.
-
 Lemma rtl_mixin_lang : LangMixin rtl_step is_rtl_final.
 Proof.
   constructor.
-  - by apply rtl_final_no_step.
-  - by eapply can_step_mono.
+  by apply rtl_final_no_step.
 Qed.
 
 Definition rtl_lang : lang := Lang _ _ _ _ _ rtl_mixin_lang.
 
 Section SemProp.
   Let Λ : lang := rtl_lang.
-  Context (P: prog Λ).
+  Context (E: genv Λ).
   Implicit Type s : config Λ.
   Implicit Type v : value Λ.
 
@@ -177,31 +138,33 @@ Section SemProp.
 
   Lemma ret_no_nsteps s v m : ∀ n t,
     is_final s = Some (v, m) ->
-    P ⊨ s -{ n }> t ->
+    E ⊨ s ->>_(n) t ->
     t = ([], ReturnState v, m) ∧ n = 0.
   Proof using Type.
     intros n t Hfin H.
     apply is_final_struct in Hfin. subst.
     destruct n.
     - now inv H.
-    - destruct (nsteps_inv_l _ _ _ H) as (y & Hstep & _).
+    - destruct (nsteps_inv_l _ _ _ _ H) as (y & Hstep & _).
       inv Hstep.
   Qed.
 
   Lemma ret_no_step s v m: ∀ t,
     is_final s = Some (v, m) ->
-    P ⊨ s ->>* t ->
+    E ⊨ s ->>* t ->
     t = ([], ReturnState v, m).
   Proof using Type.
     intros t Hfin H.
-    destruct (rtc_nsteps_1 _ _ H) as [].
-    eapply ret_no_nsteps; eassumption.
+    apply is_final_struct in Hfin. subst.
+    apply steps_inv_l in H as [-> | (? & Hstep & ?)].
+    - done.
+    - by inv Hstep.
   Qed.
 
   (** Lift and Unlift lemmas for step *)
   Lemma lift_step σ σ' Σ ps pt m m':
-    P ⊨ (σ, ps, m) ->> (σ', pt, m') ->
-    P ⊨ (σ ++ Σ, ps, m) ->> (σ' ++ Σ, pt, m').
+    E ⊨ (σ, ps, m) ->> (σ', pt, m') ->
+    E ⊨ (σ ++ Σ, ps, m) ->> (σ' ++ Σ, pt, m').
   Proof using Type.
     intros H; inv H.
     - by eapply exec_Inop.
@@ -219,8 +182,8 @@ Section SemProp.
   Qed.
 
   Lemma unlift_step σ ps m σ' pt m' Σ:
-    P ⊨ (σ ++ Σ, ps, m) ->> (σ' ++ Σ, pt, m') ->
-    P ⊨ (σ, ps, m) ->> (σ', pt, m').
+    E ⊨ (σ ++ Σ, ps, m) ->> (σ' ++ Σ, pt, m') ->
+    E ⊨ (σ, ps, m) ->> (σ', pt, m').
   Proof using Type.
     intros H; inv H;
       rewrite ?app_comm_cons in *;
@@ -240,8 +203,8 @@ Section SemProp.
   Qed.
 
   Theorem lift_steps σ ps m σ' pt m' Σ:
-    P ⊨ (σ, ps, m) ->>* (σ', pt, m') ->
-    P ⊨ (σ ++ Σ, ps, m) ->>* (σ' ++ Σ, pt, m').
+    E ⊨ (σ, ps, m) ->>* (σ', pt, m') ->
+    E ⊨ (σ ++ Σ, ps, m) ->>* (σ' ++ Σ, pt, m').
   Proof using Type.
     intros Hrtc.
     remember (σ, ps, m) as x eqn:Hx.
@@ -251,29 +214,29 @@ Section SemProp.
     - subst. inv Hy. reflexivity.
     - subst. destruct y as [[] ?].
       etransitivity.
-      + apply rtc_once. apply lift_step. eassumption.
+      + apply steps_one. apply lift_step. eassumption.
       + eauto.
   Qed.
 
   Lemma ret_can_progress frame σ v m :
-    can_progress P (frame :: σ, ReturnState v, m).
+    can_progress E (frame :: σ, ReturnState v, m).
   Proof using Type. destruct frame. by do 2 econstructor. Qed.
 
   Lemma ret_empty_final v m:
-    ~ can_progress P ([], ReturnState v, m).
+    ~ can_progress E ([], ReturnState v, m).
   Proof using Type. intros [u H]. inv H. Qed.
 
   Lemma lift_can_progress σ Σ ps m:
-    can_progress P (σ, ps, m) ->
-    can_progress P (σ ++ Σ, ps, m).
+    can_progress E (σ, ps, m) ->
+    can_progress E (σ ++ Σ, ps, m).
   Proof using Type.
     intros [[[] ?] Ht]. eexists. apply lift_step. eassumption.
   Qed.
 
   Lemma unlift_can_progress σ Σ ps m:
     is_final ((σ, ps, m) : config Λ)= None ->
-    can_progress P (σ ++ Σ, ps, m) ->
-    can_progress P (σ, ps, m).
+    can_progress E (σ ++ Σ, ps, m) ->
+    can_progress E (σ, ps, m).
   Proof using Type.
     intros Hfin [[[] ?] Ht].
     inv Ht.
@@ -294,8 +257,8 @@ Section SemProp.
 
   Lemma step_frame_preserved σ Σ ps m t'' :
     is_final ((σ, ps, m) : config Λ) = None ->
-    P ⊨ (σ ++ Σ, ps, m) ->> t'' ->
-    ∃ σ' pt m', t'' = (σ' ++ Σ, pt, m') ∧ P ⊨ (σ, ps, m) ->> (σ', pt, m').
+    E ⊨ (σ ++ Σ, ps, m) ->> t'' ->
+    ∃ σ' pt m', t'' = (σ' ++ Σ, pt, m') ∧ E ⊨ (σ, ps, m) ->> (σ', pt, m').
   Proof using Type.
     intros Hnf Hstep.
     destruct t'' as [[σ'' pt] m'].
@@ -310,8 +273,8 @@ Section SemProp.
   Qed.
 
   Lemma unlift_stuck σ Σ ps m :
-    stuck P (σ, ps, m) ->
-    stuck P (σ ++ Σ, ps, m).
+    stuck E (σ, ps, m) ->
+    stuck E (σ ++ Σ, ps, m).
   Proof using Type.
     intros [Hfin Hcan].
     split.
@@ -321,8 +284,8 @@ Section SemProp.
   Qed.
 
   Lemma unlift_super_stuck σ Σ ps m :
-    super_stuck P (σ, ps, m) ->
-    super_stuck P (σ ++ Σ, ps, m).
+    super_stuck E (σ, ps, m) ->
+    super_stuck E (σ ++ Σ, ps, m).
   Proof using Type.
     intros [Hfin Hcan].
     split.

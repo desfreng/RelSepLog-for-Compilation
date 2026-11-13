@@ -82,8 +82,8 @@ Lemma simple_opt_find_fun {Ps} fn f:
 Proof using Type. by apply opt_fun_list. Qed.
 
 Section simple_opt.
-  Context (Ps : prog rtl_lang).
-  Let Pt : prog rtl_lang := simple_opt Ps.
+  Context (Es : genv rtl_lang).
+  Let Et : genv rtl_lang := simple_opt Es.
 
   Definition simple_opt_sim_inv : SInv rtl_lang rtl_lang WfNat WfNat :=
     fun st j i ss ϕ =>
@@ -96,7 +96,7 @@ Section simple_opt.
       )%I.
 
   Lemma simple_opt_soundness C f I :
-    ⊢ [Pt, Ps, C] {{ same_args I }} (simple_opt_fun f) <{0, 0}= f {{ samer I }}.
+    ⊢ [Et, Es, C] {{ same_args I }} (simple_opt_fun f) <{0, 0}= f {{ samer I }}.
   Proof using Type.
     iIntros "!>" (valt vals) "[%Harg Hinj]".
     iApply (source_callstate_exploit).
@@ -230,7 +230,7 @@ Section simple_opt.
         iApply "CIH"; try (iPureIntro; simpl; lia).
         iExists I, f, _, _, _. iFrame. iPureIntro. by split_and!.
 
-      - destruct (find_fun Ps fname) as [fn |] eqn:Hfn; last by iApply (source_call_fail).
+      - destruct (find_fun Es fname) as [fn |] eqn:Hfn; last by iApply (source_call_fail).
         destruct (multiple_same args Hsame) as (vals & valt & Hvalt & Hvals & Hval).
         iApply (both_call (same_args I) (samer I) with "[] [Hinj]").
         { simpl. rewrite lookup_fmap Hi. by simpl. } all: eauto.

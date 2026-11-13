@@ -28,8 +28,8 @@ Ltac source_step :=
 Section SourceRulesDef.
   Context {Λt : lang}.
   Let Λs : lang := rtl_lang.
-  Context {Pt : prog Λt} {Ps : prog Λs}.
-  Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
+  Context {Et : genv Λt} {Es : genv Λs}.
+  Context {C : Chain (fsim_lfp WfNat WfNat Et Es)}.
 
   Context (st : state Λt) (j i : WfNat) (σs : list stackframe)
     (fs : rtl_function) (pcs : node) (ρs : regbank)
@@ -37,35 +37,35 @@ Section SourceRulesDef.
 
   Lemma source_nop pc:
     fs@pcs is <<{ nop -> pc }>> ->
-    [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc ρs) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, 1+i}= (σs, State fs pc ρs) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
   Lemma source_nop_noinc pc:
     fs@pcs is <<{ nop -> pc }>> ->
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pc ρs) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, i}= (σs, State fs pc ρs) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
   Lemma source_ret r v:
     fs@pcs is <<{ ret r }>> ->
     ρs@r ⇒ v ->
-    [Pt, Ps, C] st <{j, 1+i}= (σs, ReturnState v) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, 1+i}= (σs, ReturnState v) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
   Lemma source_op pc dst op regs args v:
     fs@pcs is <<{ dst := @op regs -> pc }>> ->
     ρs @ regs ⇒ args ->
     eval_op op args = Some v ->
-    [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ v⟧ρs)) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ v⟧ρs)) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
   Lemma source_random pc dst v:
     fs@pcs is <<{ dst := random () -> pc}>> ->
-    [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ VInt v⟧ρs)) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ VInt v⟧ρs)) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpc. unfold sim. unseal.
     intros ? ? [-> ->] ? ? _ _ Hsim.
@@ -80,9 +80,9 @@ Section SourceRulesDef.
     fs@pcs is <<{ dst := !src -> pc }>> ->
     ρs @ src ⇒ VPtr l ->
     (l →ₛ vs -∗
-     [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ vs⟧ρs)) {{ Q }}) -∗
+     [Et, Es, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ vs⟧ρs)) {{ Q }}) -∗
     l →ₛ vs -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpc Haddr. unfold sim. unseal.
     intros ? ? [-> ->] mt ms _ _ Hsim. smap.
@@ -103,9 +103,9 @@ Section SourceRulesDef.
     ρs @ dst ⇒ VPtr l ->
     ρs @ src ⇒ v ->
     (l →ₛ v -∗
-     [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc ρs) {{ Q }}) -∗
+     [Et, Es, C] st <{j, 1+i}= (σs, State fs pc ρs) {{ Q }}) -∗
     l →ₛ old -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpc Haddr Hsrc. unfold sim. unseal.
     intros ? ? [-> ->] mt ms _ _ Hsim. smap.
@@ -130,8 +130,8 @@ Section SourceRulesDef.
     fs@pcs is <<{ dst := alloc () -> pc }>> ->
     (∀ l,
        l →ₛ v -∗
-       [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ VPtr l⟧ρs)) {{ Q }}) -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+       [Et, Es, C] st <{j, 1+i}= (σs, State fs pc (⟦dst ⇐ VPtr l⟧ρs)) {{ Q }}) -∗
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpc. unfold sim. unseal.
     intros ? ? [-> ->] mtS msS _ _ Hsim.
@@ -168,9 +168,9 @@ Section SourceRulesDef.
     fs@pcs is <<{ free src -> pc }>> ->
     ρs @ src ⇒ VPtr l ->
     (freeₛ l -∗
-       [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc ρs) {{ Q }}) -∗
+       [Et, Es, C] st <{j, 1+i}= (σs, State fs pc ρs) {{ Q }}) -∗
     l →ₛ v -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpc Haddr. unfold sim. unseal.
     intros ? ? [-> ->] mt ms _ _ Hsim. smap.
@@ -197,30 +197,30 @@ Section SourceRulesDef.
     fs@pcs is <<{ if reg then goto pcT else goto pcF }>> ->
     ρs @ reg ⇒ VBool b ->
     let pc := if b then pcT else pcF in
-    [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pc ρs) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, 1+i}= (σs, State fs pc ρs) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
   Lemma source_call dst sig args pc' fn vals ss:
     fs@pcs is <<{ dst := @call sig args -> pc' }>> ->
-    find_fun Ps sig = Some fn ->
+    find_fun Es sig = Some fn ->
     ρs@args ⇒ vals ->
     ss = Stackframe dst fs pc' ρs ->
-    [Pt, Ps, C] st <{j, 1+i}= (ss :: σs, CallState fn vals) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, 1+i}= (ss :: σs, CallState fn vals) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (σs, State fs pcs ρs) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
   Lemma source_callstate args:
     length args = length (rtl_fn_regs fs) ->
     ρs = init_regs (rtl_fn_regs fs) args ->
     pcs = rtl_fn_entrypoint fs ->
-    [Pt, Ps, C] st <{j, 1+i}= (σs, State fs pcs ρs) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (σs, CallState fs args) {{ Q }}.
+    [Et, Es, C] st <{j, 1+i}= (σs, State fs pcs ρs) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (σs, CallState fs args) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
   Lemma source_retstate v fn pc dst:
-    [Pt, Ps, C] st <{j, 1+i}= (σs, State fn pc (⟦dst ⇐ v⟧ρs)) {{ Q }} -∗
-    [Pt, Ps, C] st <{j, i}= (Stackframe dst fn pc ρs :: σs, ReturnState v) {{ Q }}.
+    [Et, Es, C] st <{j, 1+i}= (σs, State fn pc (⟦dst ⇐ v⟧ρs)) {{ Q }} -∗
+    [Et, Es, C] st <{j, i}= (Stackframe dst fn pc ρs :: σs, ReturnState v) {{ Q }}.
   Proof using Type. by source_step. Qed.
 
 End SourceRulesDef.

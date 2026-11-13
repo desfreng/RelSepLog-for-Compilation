@@ -20,16 +20,16 @@ Notation
 
 Section HoareRules.
   Context {J I: WfRel}.
-  Context {Pt Ps : prog rtl_lang}.
+  Context {Et Es : genv rtl_lang}.
 
-  Implicit Type C : Chain (fsim_lfp J I Pt Ps).
+  Implicit Type C : Chain (fsim_lfp J I Et Es).
   Context {C}.
 
   Context {ft : rtl_function} {j: J} {i: I} {fs : rtl_function}.
 
   Lemma frame F P Q:
-    [Pt, Ps, C] {{ P }} ft <{j, i}= fs {{ Q }} -∗
-    [Pt, Ps, C] {{ fun valt vals => P valt vals ∗ F }} ft <{j, i}= fs {{ fun vt vs => Q vt vs ∗ F }}.
+    [Et, Es, C] {{ P }} ft <{j, i}= fs {{ Q }} -∗
+    [Et, Es, C] {{ fun valt vals => P valt vals ∗ F }} ft <{j, i}= fs {{ fun vt vs => Q vt vs ∗ F }}.
   Proof using Type.
     iIntros "#H !>" (valt vals) "[HPre HF]".
     iIntros (W) "HW".
@@ -41,8 +41,8 @@ Section HoareRules.
   Lemma consequence P P' Q Q':
     □ (∀ valt vals, P valt vals -∗ P' valt vals) -∗
     □ (∀ vt vs, Q' vt vs -∗ Q vt vs) -∗
-    [Pt, Ps, C] {{ P' }} ft <{j, i}= fs {{ Q' }} -∗
-    [Pt, Ps, C] {{ P }} ft <{j, i}= fs {{ Q }}.
+    [Et, Es, C] {{ P' }} ft <{j, i}= fs {{ Q' }} -∗
+    [Et, Es, C] {{ P }} ft <{j, i}= fs {{ Q }}.
   Proof using Type.
     iIntros "#HP #HQ #H !>" (valt vals) "Hpre".
     iIntros (W) "HW".

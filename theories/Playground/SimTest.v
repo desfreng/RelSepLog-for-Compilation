@@ -8,9 +8,9 @@ Import RTLNotations.
 Section T.
   Let Λt : lang := rtl_lang.
   Let Λs : lang := rtl_lang.
-  Context (Pt : prog Λt) (Ps : prog Λs).
+  Context (Et : genv Λt) (Es : genv Λs).
 
-  Abbreviation fsim := (fsim WfNat WfNat Pt Ps).
+  Abbreviation fsim := (fsim WfNat WfNat Et Es).
 
   Let reg_n : reg := 1.
   Let reg_res : reg := 2.
@@ -87,7 +87,7 @@ Section T.
           ⌟)%I.
 
   Lemma fact_same C I :
-    ⊢ [Pt, Ps, C] {{ same_args I }} fact_good <{0, 0}= fact_bad {{ samer I }}.
+    ⊢ [Et, Es, C] {{ same_args I }} fact_good <{0, 0}= fact_bad {{ samer I }}.
   Proof using Type.
     iIntros "!>" (valt vals) "(%Hsame_arg & Hinj)".
     iApply (source_callstate_exploit).

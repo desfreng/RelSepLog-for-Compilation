@@ -1,32 +1,33 @@
 From RSL Require Import Prelude.
 
-From Stdlib Require Import Classical.
 From Coinduction Require Import all.
 
-From RSL Require Import Commons.Behaviors.
-From RSL Require Import Simulations.FreeSim.
+From RSL.Simulations Require Export Free.
+From RSL.Language Require Export Behaviors.
+
+From Stdlib Require Import Classical.
 
 Section FSimSound.
   Context {Λt Λs: lang}.
   Context {J I: WfRel}.
-  Context (Pt: prog Λt) (Ps: prog Λs).
+  Context (Et: genv Λt) (Es: genv Λs).
 
-  Instance behₜ_elem : ElemOf behavior (config Λt) := beh Pt.
-  Instance behₛ_elem : ElemOf behavior (config Λs) := beh Ps.
+  Instance beht_elem : ElemOf behavior (config Λt) := beh Et.
+  Instance behs_elem : ElemOf behavior (config Λs) := beh Es.
 
-  Notation "a '⊑{' Φ '}' b" :=
-    (behavior_order Φ a b)
-      (at level 70, format "a  '⊑{' Φ '}'  b", no associativity).
+  Notation "a '⊑{' ϕ '}' b" :=
+    (behavior_order ϕ a b)
+      (at level 70, format "a  '⊑{' ϕ '}'  b", no associativity).
 
-  Notation " t '<{' j ',' i '}=' s '{{' Φ '}}'" :=
-    (fsim J I Pt Ps Φ t j i s)
+  Notation " t '<{' j ',' i '}=' s '{{' ϕ '}}'" :=
+    (fsim J I Et Es ϕ t j i s)
       (at level 1, i at level 0, j at level 0, no associativity).
 
-  Lemma terminating_fsim Φ t j i s:
-    t <{ j, i }= s {{ Φ }} ->
+  Lemma terminating_fsim ϕ t j i s:
+    t <{ j, i }= s {{ ϕ }} ->
     ∀ vt mt,
     Terminating vt mt ∈ t ->
-    ∃ b, b ∈ s ∧ Terminating vt mt ⊑{Φ} b.
+    ∃ b, b ∈ s ∧ Terminating vt mt ⊑{ϕ} b.
   Proof using Type.
     intros Hsim vt mt Hb.
     (* t Terminates -> it reduces to a final config *)
@@ -88,14 +89,14 @@ Section FSimSound.
         edestruct IHi as (b & Hbeh & Horder); now eauto.
   Qed.
 
-  Lemma fsim_lfp_progress Φ t j s i:
-    t <{ j, i }= s {{ Φ }} ->
-    diverges Pt t ->
-    stuck Ps s ∨
+  Lemma fsim_lfp_progress ϕ t j s i:
+    t <{ j, i }= s {{ ϕ }} ->
+    diverges Et t ->
+    stuck Es s ∨
       ∃ t' j' s' i',
-        Ps ⊨ s ->> s' ∧
-        diverges Pt t' ∧
-        t' <{ j', i' }= s' {{ Φ }}.
+        Es ⊨ s ->> s' ∧
+        diverges Et t' ∧
+        t' <{ j', i' }= s' {{ ϕ }}.
   Proof using Type.
     (* Induction on the progress index of s *)
     revert t j.
@@ -132,14 +133,14 @@ Section FSimSound.
       + right. repeat econstructor; now eauto.
   Qed.
 
-  Lemma diverging_fsim Φ t j s i:
-    t <{ j, i }= s {{ Φ }} ->
+  Lemma diverging_fsim ϕ t j s i:
+    t <{ j, i }= s {{ ϕ }} ->
     Diverging ∈ t ->
-    ∃ b, b ∈ s ∧ Diverging ⊑{Φ} b.
+    ∃ b, b ∈ s ∧ Diverging ⊑{ϕ} b.
   Proof using Type.
     intros Hsim Hdiv.
     (* We see in the future: can s be stuck ? *)
-    destruct (classic (∃ s', Ps ⊨ s ->>* s' ∧ stuck Ps s')) as [Hstuck | Hnstuck].
+    destruct (classic (∃ s', Es ⊨ s ->>* s' ∧ stuck Es s')) as [Hstuck | Hnstuck].
     - (* s can be stuck -> s has Undef behavior *)
       exists Undef. split; now apply has_undef_behavior || constructor.
     - (* s is never stuck -> s is diverging *)
@@ -162,8 +163,8 @@ Section FSimSound.
         econstructor; now eauto.
   Qed.
 
-  Lemma undef_fsim Φ t j s i:
-    t <{ j, i }= s {{ Φ }} ->
+  Lemma undef_fsim ϕ t j s i:
+    t <{ j, i }= s {{ ϕ }} ->
     Undef ∈ t ->
     Undef ∈ s.
   Proof using Type.
@@ -222,9 +223,9 @@ Section FSimSound.
         eapply IHi; now eauto.
   Qed.
 
-  Theorem fsim_sound Φ t j s i:
-    t <{ j, i }= s {{ Φ }} ->
-    flex_refines Pt Ps Φ t s.
+  Theorem fsim_sound ϕ t j s i:
+    t <{ j, i }= s {{ ϕ }} ->
+    flex_refines Et Es ϕ t s.
   Proof using Type.
     intros Hsim [] Hb.
     - eapply terminating_fsim; now eauto.

@@ -1,7 +1,7 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Import Tactics.
-From RSL.Commons Require Export WfRel Memory.
+From RSL.Language Require Export Memory.
+From RSL.Commons Require Import Tactics WfRel.
 
 From Ltac2 Require Ltac2 Printf.
 

@@ -57,17 +57,17 @@ Section laws.
     intros P P' HP. split; intros mt ms; repeat split; by apply HP.
   Qed.
 
-  Lemma pure_intro Φ P : Φ -> P ⊢ ⌜Φ⌝.
+  Lemma pure_intro ϕ P : ϕ -> P ⊢ ⌜ϕ⌝.
   Proof using Type.
     unseal.
     intros H mt ms HP. by apply H.
   Qed.
 
-  Lemma pure_elim Φ P :
-    (Φ -> ⌜True⌝ ⊢ P) -> ⌜Φ⌝ ⊢ P.
+  Lemma pure_elim ϕ P :
+    (ϕ -> ⌜True⌝ ⊢ P) -> ⌜ϕ⌝ ⊢ P.
   Proof using Type.
     unseal.
-    intros H mt ms HΦ. by apply H.
+    intros H mt ms Hϕ. by apply H.
   Qed.
 
   (** ** Logical Connectives *)
@@ -165,16 +165,16 @@ Section laws.
     intros x y H. split; intros mt ms HA a; by apply H.
   Qed.
 
-  Lemma forall_intro A P (Ψ: A -> rPropDef) :
-    (∀ a, (P ⊢ Ψ a)) ->
-    P ⊢ (∀ a, Ψ a).
+  Lemma forall_intro A P (ψ: A -> rPropDef) :
+    (∀ a, (P ⊢ ψ a)) ->
+    P ⊢ (∀ a, ψ a).
   Proof using Type.
     unseal.
     intros H mt ms HP a. by apply H.
   Qed.
 
-  Lemma forall_elim A (Ψ: A -> rPropDef) a :
-    (∀a, Ψ a) ⊢ Ψ a.
+  Lemma forall_elim A (ψ: A -> rPropDef) a :
+    (∀a, ψ a) ⊢ ψ a.
   Proof using Type.
     unseal.
     intros mt ms H. apply H.
@@ -189,16 +189,16 @@ Section laws.
     intros x y H. split; intros mt ms []; eexists; by apply H.
   Qed.
 
-  Lemma exist_intro A (Ψ: A -> rPropDef) a :
-    (Ψ a) ⊢ ∃ a, Ψ a.
+  Lemma exist_intro A (ψ: A -> rPropDef) a :
+    (ψ a) ⊢ ∃ a, ψ a.
   Proof using Type.
     unseal.
     intros mt ms H. eexists. by apply H.
   Qed.
 
-  Lemma exist_elim A (Ψ: A -> rPropDef) P :
-    (∀ a, (Ψ a) ⊢ P) ->
-    (∃ a, Ψ a) ⊢ P.
+  Lemma exist_elim A (ψ: A -> rPropDef) P :
+    (∀ a, (ψ a) ⊢ P) ->
+    (∃ a, ψ a) ⊢ P.
   Proof using Type.
     unseal.
     intros H mt ms []. by eapply H.
@@ -330,14 +330,14 @@ Section laws.
     unseal. by intros mt ms HP.
   Qed.
 
-  Lemma later_forall_2 {A} (Φ : A -> rPropDef) : (∀ a, ▷ Φ a) ⊢ ▷ ∀ a, Φ a.
+  Lemma later_forall_2 {A} (ϕ : A -> rPropDef) : (∀ a, ▷ ϕ a) ⊢ ▷ ∀ a, ϕ a.
   Proof using Type.
     unseal.
     intros mt ms H a. by apply H.
   Qed.
 
-  Lemma later_exist_false {A} (Φ : A -> rPropDef) :
-    (▷ ∃ a, Φ a) ⊢ ▷ False ∨ (∃ a, ▷ Φ a).
+  Lemma later_exist_false {A} (ϕ : A -> rPropDef) :
+    (▷ ∃ a, ϕ a) ⊢ ▷ False ∨ (∃ a, ▷ ϕ a).
   Proof using Type.
     unseal.
     intros mt ms H. by right.
@@ -433,14 +433,14 @@ Section laws.
     - exact HQ.
   Qed.
 
-  Lemma persistently_forall_2 {A} (Ψ : A -> rPropDef) :
-    (∀ a, □ (Ψ a)) ⊢ □ (∀ a, Ψ a).
+  Lemma persistently_forall_2 {A} (ψ : A -> rPropDef) :
+    (∀ a, □ (ψ a)) ⊢ □ (∀ a, ψ a).
   Proof using Type.
     unseal.
     intros mt ms H. by apply H.
   Qed.
-  Lemma persistently_exist_1 {A} (Ψ : A -> rPropDef) :
-    □ (∃ a, Ψ a) ⊢ ∃ a, □ Ψ a.
+  Lemma persistently_exist_1 {A} (ψ : A -> rPropDef) :
+    □ (∃ a, ψ a) ⊢ ∃ a, □ ψ a.
   Proof using Type.
     unseal.
     intros mt ms H. by apply H.

@@ -9,8 +9,8 @@ Import RTLNotations.
 Section FailingSourceRulesDef.
   Context {Λt : lang}.
   Let Λs : lang := rtl_lang.
-  Context {Pt : prog Λt} {Ps : prog Λs}.
-  Context {C : Chain (fsim_lfp WfNat WfNat Pt Ps)}.
+  Context {Et : genv Λt} {Es : genv Λs}.
+  Context {C : Chain (fsim_lfp WfNat WfNat Et Es)}.
 
   Context (st : state Λt) (j i : WfNat) (cs : list stackframe)
     (fs : rtl_function) (pcs : node) (ρs : regbank)
@@ -19,7 +19,7 @@ Section FailingSourceRulesDef.
   Lemma source_fail :
     (rtl_fn_code fs) !! pcs = None ->
     True -∗
-    [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpc. unfold sim. unseal.
     intros ? ? [-> ->] mt ms _ _ _.
@@ -32,7 +32,7 @@ Section FailingSourceRulesDef.
     ρs @ regs ⇒ args ->
     eval_op op args = None ->
     True -∗
-    [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpc Hargs Hv. unfold sim. unseal.
     intros ? ? [-> ->] mt ms _ _ _.
@@ -42,9 +42,9 @@ Section FailingSourceRulesDef.
 
   Lemma source_call_fail dst sig args pc' :
     fs@pcs is <<{ dst := @call sig args -> pc' }>> ->
-    find_fun Ps sig = None ->
+    find_fun Es sig = None ->
     True -∗
-    [Pt, Ps, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
+    [Et, Es, C] st <{j, i}= (cs, State fs pcs ρs) {{ Q }}.
   Proof using Type.
     intros Hpc Hfun. unfold sim. unseal.
     intros ? ? [-> ->] mtP msP _ _ Hsim.
@@ -55,7 +55,7 @@ Section FailingSourceRulesDef.
   Lemma source_callstate_fail args:
     length args ≠ length (rtl_fn_regs fs) ->
     True -∗
-    [Pt, Ps, C] st <{j, i}= (cs, CallState fs args) {{ Q }}.
+    [Et, Es, C] st <{j, i}= (cs, CallState fs args) {{ Q }}.
   Proof using Type.
     intros Hlen. unfold sim. unseal.
     intros ? ? [-> ->] mt ms _ _ Hsim.

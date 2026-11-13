@@ -1,6 +1,7 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Memory RegisterBank NoDup.
+From RSL.Language Require Export Memory.
+From RSL.Commons Require Export RegisterBank NoDup.
 
 From stdpp Require Import gmap.
 From stdpp Require Import strings.

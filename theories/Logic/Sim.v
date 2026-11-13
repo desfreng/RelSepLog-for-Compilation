@@ -3,29 +3,29 @@ From RSL Require Import Prelude.
 From Coinduction Require Export tower.
 
 From RSL.Logic Require Export BI.
-From RSL.Simulations Require Export FreeSim.
+From RSL.Simulations Require Export Free.
 
 From RSL.Logic Require Import rPropDef Tactic.
 
-Program Definition sim_def {Λt Λs J I} Pt Ps C t j i s Q : rProp :=
+Program Definition sim_def {Λt Λs J I} Et Es C t j i s Q : rProp :=
   {|
     rProp_holds mt ms :=
       let Ψ vt vs := rProp_holds (Q vt vs : rProp)
-      in elem (C: Chain (@fsim_lfp Λt Λs J I Pt Ps)) Ψ (t, mt) j i (s, ms)
+      in elem (C: Chain (@fsim_lfp Λt Λs J I Et Es)) Ψ (t, mt) j i (s, ms)
   |}.
 
-Definition sim {Λt Λs J I} Pt Ps C t j i s Q : rProp :=
-  ∀ P, P -∗ @sim_def Λt Λs J I Pt Ps C t j i s (fun vt vs => Q vt vs ∗ P).
+Definition sim {Λt Λs J I} Et Es C t j i s Q : rProp :=
+  ∀ P, P -∗ @sim_def Λt Λs J I Et Es C t j i s (fun vt vs => Q vt vs ∗ P).
 
 Notation
-  "'[' Pt ',' Ps ',' C ']' t '<{' j ',' i '}=' s '{{' Q '}}'" :=
-  (sim Pt Ps C t j i s Q%I)
+  "'[' Et ',' Es ',' C ']' t '<{' j ',' i '}=' s '{{' Q '}}'" :=
+  (sim Et Es C t j i s Q%I)
     (at level 0, t at level 0, s at level 0, no associativity).
 
 Section SimRules.
   Context {Λt Λs: lang} {J I: WfRel}.
-  Context {Pt: prog Λt} {Ps: prog Λs}.
-  Context {C: Chain (fsim_lfp J I Pt Ps)}.
+  Context {Et: genv Λt} {Es: genv Λs}.
+  Context {C: Chain (fsim_lfp J I Et Es)}.
 
   Implicit Types (t: state Λt) (j: J) (i: I) (s: state Λs)
     (Q: value Λt -> value Λs -> rProp).
@@ -34,7 +34,7 @@ Section SimRules.
     is_value t = Some vt ->
     is_value s = Some vs ->
     Q vt vs -∗
-    [Pt, Ps, C] t <{j, i}= s {{ Q }}.
+    [Et, Es, C] t <{j, i}= s {{ Q }}.
   Proof using Type.
     intros Ht Hs.
     unfold sim. unseal.
@@ -51,8 +51,8 @@ Section SimRules.
     (∀ vt vs, Q' vt vs -∗ Q vt vs) -∗
     ⌜j ⊑ j'⌟ -∗
     ⌜i ⊑ i'⌟ -∗
-    [Pt, Ps, C] st <{j, i}= ss {{ Q' }} -∗
-    [Pt, Ps, C] st <{j', i'}= ss {{ Q }}.
+    [Et, Es, C] st <{j, i}= ss {{ Q' }} -∗
+    [Et, Es, C] st <{j', i'}= ss {{ Q }}.
   Proof using Type.
     unfold sim. unseal.
     intros ? ? [-> ->].
@@ -101,13 +101,13 @@ Section SimRules.
             ⌜j ⊏ j'⌟ -∗
             ⌜i ⊏ i'⌟ -∗
             Inv st' j i ss' Q' -∗
-            [Pt, Ps, C] st' <{j', i'}= ss' {{ Q' }}
+            [Et, Es, C] st' <{j', i'}= ss' {{ Q' }}
        ) -∗
        Inv st j i ss Q -∗
-       [Pt, Ps, C] st <{j, i}= ss {{ Q }}
+       [Et, Es, C] st <{j, i}= ss {{ Q }}
     ) -∗
     Inv st j i ss Q -∗
-    [Pt, Ps, C] st <{j, i}= ss {{ Q }}.
+    [Et, Es, C] st <{j, i}= ss {{ Q }}.
   Proof using Type.
     unfold sim. unseal.
     intros ? ? [-> ->].
@@ -143,8 +143,8 @@ Section SimRules.
 
   Lemma sim_frame t s j i Q F:
     F -∗
-    [Pt, Ps, C] t <{j, i}= s {{ Q }} -∗
-    [Pt, Ps, C] t <{j, i}= s {{ fun vt vs => Q vt vs ∗ F }}.
+    [Et, Es, C] t <{j, i}= s {{ Q }} -∗
+    [Et, Es, C] t <{j, i}= s {{ fun vt vs => Q vt vs ∗ F }}.
   Proof using Type.
     iIntros "HF Hsim".
     iApply (sim_mono with "[HF] [//] [//] Hsim").

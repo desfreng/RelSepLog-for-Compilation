@@ -1,33 +1,34 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Language WfRel.
+From RSL.Language Require Export Language.
+From RSL.Commons Require Export WfRel.
 
 From Coinduction Require Import all.
 
 Section ISimDef.
   Context {Λt Λs: lang}.
-  Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
+  Context (Et: genv Λt) (Es: genv Λs).
+  Context (ϕ: post Λt Λs).
 
   Inductive isim_lfp'
     (gfp: config Λt -> config Λs -> Prop) : config Λt -> config Λs-> Prop :=
   | IRelated : ∀ t s,
-    both_final Φ t s -> isim_lfp' gfp t s
+    both_final ϕ t s -> isim_lfp' gfp t s
 
   | ISourceStuck : ∀ t s,
-    super_stuck Ps s -> isim_lfp' gfp t s
+    super_stuck Es s -> isim_lfp' gfp t s
 
   | ISourceSteps : ∀ t s s',
-    Ps ⊨ s ->> s' -> isim_lfp' gfp t s' -> isim_lfp' gfp t s
+    Es ⊨ s ->> s' -> isim_lfp' gfp t s' -> isim_lfp' gfp t s
 
   | ITargetSteps : ∀ t s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' -> isim_lfp' gfp t' s) ->
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' -> isim_lfp' gfp t' s) ->
     isim_lfp' gfp t s
 
   | IBothSteps : ∀ t s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' -> ∃ s', Ps ⊨ s ->> s' ∧ gfp t' s') ->
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' -> ∃ s', Es ⊨ s ->> s' ∧ gfp t' s') ->
     isim_lfp' gfp t s.
 
   Instance isim_lfp'_proper : Proper (leq ==> leq) isim_lfp'.

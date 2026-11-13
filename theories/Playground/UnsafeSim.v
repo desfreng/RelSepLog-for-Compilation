@@ -1,26 +1,26 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Language Behaviors.
+From RSL.Language Require Export Language Behaviors.
+From RSL.Commons Require Export WfRel.
 
 From Coinduction Require Import all.
 
 Section USimDef.
   Context {Λt Λs: lang}.
-  Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
+  Context (Et: genv Λt) (Es: genv Λs) (ϕ: post Λt Λs).
 
   Variant usim_lfp' (gfp: config Λt -> config Λs -> Prop)
     : config Λt -> config Λs -> Prop :=
   | URelated : ∀ t s,
-    both_final Φ t s -> usim_lfp' gfp t s
+    both_final ϕ t s -> usim_lfp' gfp t s
 
   | UTargetSteps : ∀ t s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' -> gfp t' s) ->
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' -> gfp t' s) ->
     usim_lfp' gfp t s
 
   | USourceSteps : ∀ t s s',
-    Ps ⊨ s ->> s' ->
+    Es ⊨ s ->> s' ->
     gfp t s' ->
     usim_lfp' gfp t s.
 
@@ -48,7 +48,7 @@ Section USimDef.
   Definition usim := gfp usim_lfp.
 
   Lemma loop_target t :
-    strong_diverge Pt t ->
+    strong_diverge Et t ->
     ∀ s, usim t s.
   Proof using Type.
     unfold usim.
@@ -64,7 +64,7 @@ Section USimDef.
   Qed.
 
   Lemma loop_source s :
-    diverges Ps s ->
+    diverges Es s ->
     ∀ t, usim t s.
   Proof using Type.
     unfold usim.

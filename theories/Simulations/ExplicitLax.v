@@ -1,38 +1,38 @@
 From RSL Require Import Prelude.
 
-From RSL.Commons Require Export Language WfRel.
+From RSL.Language Require Export Language.
+From RSL.Commons Require Export WfRel.
 
 From Coinduction Require Import all.
 
 Section ESimLaxDef.
   Context {Λt Λs: lang}.
-  Context (W: WfRel) (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
+  Context (W: WfRel) (Et: genv Λt) (Es: genv Λs) (ϕ: post Λt Λs).
 
   Inductive esim_lax_lfp' (gfp: W -> config Λt -> config Λs -> Prop)
     : W -> config Λt -> config Λs -> Prop :=
   | ELaxRelated : ∀ i t s,
-    both_final Φ t s ->
+    both_final ϕ t s ->
     esim_lax_lfp' gfp i t s
 
   | ELaxSourceStuck : ∀ i t s,
-    super_stuck Ps s ->
+    super_stuck Es s ->
     esim_lax_lfp' gfp i t s
 
   | ELaxSourceSteps : ∀ i i' t s s',
-    Ps ⊨ s ->>+ s' ->
+    Es ⊨ s ->>+ s' ->
     i' ⊏ i ->
     gfp i' t s' ->
     esim_lax_lfp' gfp i t s
 
   | ELaxTargetSteps : ∀ i t s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' -> ∃ i', i' ⊏ i ∧ gfp i' t' s) ->
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' -> ∃ i', i' ⊏ i ∧ gfp i' t' s) ->
     esim_lax_lfp' gfp i t s
 
   | ELaxBothSteps : ∀ i t s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' -> ∃ i' s', Ps ⊨ s ->>+ s' ∧ gfp i' t' s') ->
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' -> ∃ i' s', Es ⊨ s ->>+ s' ∧ gfp i' t' s') ->
     esim_lax_lfp' gfp i t s.
 
   Program Definition esim_lax_lfp : mon (W -> config Λt -> config Λs -> Prop) :=

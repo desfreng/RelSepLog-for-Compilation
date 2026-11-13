@@ -2,39 +2,39 @@ From RSL Require Import Prelude.
 
 From Coinduction Require Import all.
 
-From RSL Require Import Simulations.FreeSim.
+From RSL.Simulations Require Export Free.
 
 Section GSimDef.
   Context {Λt Λs: lang}.
   Context (J I W: WfRel).
-  Context (Pt: prog Λt) (Ps: prog Λs).
-  Context (Φ: value Λt -> value Λs -> memory -> memory -> Prop).
+  Context (Et: genv Λt) (Es: genv Λs).
+  Context (ϕ: post Λt Λs).
 
   Unset Elimination Schemes.
 
   Inductive gsim : J -> W -> config Λt -> I -> W -> config Λs -> Prop :=
   | GRelated : ∀ j b t i a s,
-    both_final Φ t s -> gsim j b t i a s
+    both_final ϕ t s -> gsim j b t i a s
 
   | GSourceStuck : ∀ j b t i a s,
-    super_stuck Ps s -> gsim j b t i a s
+    super_stuck Es s -> gsim j b t i a s
 
   | GSourceSteps : ∀ j b t i i' a s s' a',
-    Ps ⊨ s ->> s' ->
+    Es ⊨ s ->> s' ->
     a' ⊏ a ->
     gsim j b t i' a' s' ->
     gsim j b t i a s
 
   | GTargetSteps : ∀ j b t i a s,
-    can_progress Pt t ->
-    (∀ t', Pt ⊨ t ->> t' -> ∃ j' b',
+    can_progress Et t ->
+    (∀ t', Et ⊨ t ->> t' -> ∃ j' b',
          b' ⊏ b ∧ gsim j' b' t' i a s) ->
     gsim j b t i a s
 
   | GProgress : ∀ j j' b t i i' a s,
     j' ⊏ j ->
     i' ⊏ i ->
-    fsim J I Pt Ps Φ t j' i' s ->
+    fsim J I Et Es ϕ t j' i' s ->
     gsim j b t i a s.
 
   Set Elimination Schemes.
@@ -43,14 +43,14 @@ Section GSimDef.
     Variable P : J -> W -> config Λt -> I -> W -> config Λs -> Prop.
 
     Hypothesis HFinal:
-      ∀ j b t i a s, both_final Φ t s -> P j b t i a s.
+      ∀ j b t i a s, both_final ϕ t s -> P j b t i a s.
 
     Hypothesis HStuck:
-      ∀ j b t i a s, super_stuck Ps s -> P j b t i a s.
+      ∀ j b t i a s, super_stuck Es s -> P j b t i a s.
 
     Hypothesis HSourceSteps:
       ∀ j b t i i' a s s' a',
-      Ps ⊨ s ->> s' ->
+      Es ⊨ s ->> s' ->
       a' ⊏ a ->
       gsim j b t i' a' s' ->
       P j b t i' a' s' ->
@@ -58,8 +58,8 @@ Section GSimDef.
 
     Hypothesis HTargetSteps:
       ∀ j b t i a s,
-      can_progress Pt t ->
-      (∀ t', Pt ⊨ t ->> t' ->
+      can_progress Et t ->
+      (∀ t', Et ⊨ t ->> t' ->
              ∃ j' b',
                b' ⊏ b ∧
                gsim j' b' t' i a s ∧
@@ -70,7 +70,7 @@ Section GSimDef.
       ∀ j j' b t i i' a s,
       j' ⊏ j ->
       i' ⊏ i ->
-      fsim J I Pt Ps Φ t j' i' s ->
+      fsim J I Et Es ϕ t j' i' s ->
       P j b t i a s.
 
     Lemma gsim_ind: ∀ j b t i a s,
